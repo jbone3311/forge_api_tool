@@ -1,0 +1,20 @@
+photorealistic
+cinematic
+documentary
+fine art
+minimalist
+dramatic
+serene
+moody
+vibrant
+monochrome
+black and white
+color graded
+HDR
+wide angle
+telephoto
+aerial
+ground level
+close-up
+panoramic
+symmetrical 

@@ -21,8 +21,17 @@
                     <div id="forge-status" class="me-3">
                         <span class="badge bg-secondary">Checking...</span>
                     </div>
-                    <button id="refresh-status" class="btn btn-outline-light btn-sm">
+                    <button id="refresh-status" class="btn btn-outline-light btn-sm me-2">
                         <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button id="connect-forge" class="btn btn-success btn-sm me-2" onclick="showConnectModal()">
+                        <i class="fas fa-plug"></i> Connect
+                    </button>
+                    <button id="disconnect-forge" class="btn btn-warning btn-sm me-2" onclick="disconnectForge()" style="display: none;">
+                        <i class="fas fa-unplug"></i> Disconnect
+                    </button>
+                    <button id="shutdown-app" class="btn btn-danger btn-sm" onclick="shutdownApplication()">
+                        <i class="fas fa-power-off"></i> Shutdown
                     </button>
                 </div>
             </div>
@@ -186,6 +195,185 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" onclick="addJob()">Add Job</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connect to Forge Modal -->
+    <div class="modal fade" id="connectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Connect to Forge API</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="connect-form">
+                        <div class="mb-3">
+                            <label for="server-url" class="form-label">Forge Server URL</label>
+                            <input type="url" class="form-control" id="server-url" 
+                                   value="http://127.0.0.1:7860/" required>
+                            <div class="form-text">Enter the URL of your Forge server</div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Default:</strong> http://127.0.0.1:7860/<br>
+                            <strong>Note:</strong> Make sure your Forge server is running and accessible.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="connectForge()">
+                        <i class="fas fa-plug"></i> Connect
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shutdown Confirmation Modal -->
+    <div class="modal fade" id="shutdownModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Shutdown</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Warning:</strong> This will completely shut down the Forge API Tool application.
+                    </div>
+                    <p>Are you sure you want to shutdown the application?</p>
+                    <ul>
+                        <li>Any active jobs will be stopped</li>
+                        <li>All progress will be saved</li>
+                        <li>The web interface will become unavailable</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmShutdown()">
+                        <i class="fas fa-power-off"></i> Yes, Shutdown
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Config Modal -->
+    <div class="modal fade" id="newConfigModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Configuration</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>Choose Template</h6>
+                            <div id="config-templates" class="list-group">
+                                <div class="text-center">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h6>Configuration Details</h6>
+                            <form id="new-config-form">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="config-name" class="form-label">Configuration Name</label>
+                                            <input type="text" class="form-control" id="config-name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="config-description" class="form-label">Description</label>
+                                            <input type="text" class="form-control" id="config-description">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="config-model-type" class="form-label">Model Type</label>
+                                            <select class="form-select" id="config-model-type" required>
+                                                <option value="sd">Stable Diffusion</option>
+                                                <option value="sdxl">SDXL</option>
+                                                <option value="flux">Flux</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="config-sampler" class="form-label">Sampler</label>
+                                            <select class="form-select" id="config-sampler" required>
+                                                <option value="Euler a">Euler a</option>
+                                                <option value="DPM++ 2M Karras">DPM++ 2M Karras</option>
+                                                <option value="DPM++ SDE Karras">DPM++ SDE Karras</option>
+                                                <option value="UniPC">UniPC</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="config-steps" class="form-label">Steps</label>
+                                            <input type="number" class="form-control" id="config-steps" min="1" max="100" value="20" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="config-width" class="form-label">Width</label>
+                                            <input type="number" class="form-control" id="config-width" min="256" max="2048" value="512" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="config-height" class="form-label">Height</label>
+                                            <input type="number" class="form-control" id="config-height" min="256" max="2048" value="512" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="config-prompt" class="form-label">Base Prompt</label>
+                                    <textarea class="form-control" id="config-prompt" rows="2" required 
+                                              placeholder="e.g., a beautiful __STYLE__ __SUBJECT__"></textarea>
+                                    <div class="form-text">Use __WILDCARD_NAME__ for wildcards (Automatic1111 format)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="config-negative-prompt" class="form-label">Negative Prompt</label>
+                                    <textarea class="form-control" id="config-negative-prompt" rows="2" 
+                                              placeholder="e.g., blurry, low quality, distorted"></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="config-wildcards" class="form-label">Wildcards (JSON format)</label>
+                                    <textarea class="form-control" id="config-wildcards" rows="4" 
+                                              placeholder='{"STYLE": "wildcards/style.txt", "SUBJECT": "wildcards/subject.txt"}'></textarea>
+                                    <div class="form-text">Enter as JSON object with wildcard names as keys and file paths as values</div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createConfig()">
+                        <i class="fas fa-plus"></i> Create Configuration
+                    </button>
                 </div>
             </div>
         </div>

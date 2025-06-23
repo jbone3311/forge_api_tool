@@ -5,15 +5,22 @@ import sys
 import json
 import time
 from datetime import datetime
+import base64
 
 # Add the core directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'core'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+core_path = os.path.join(project_root, 'core')
+sys.path.insert(0, core_path)
 
-from core.config_handler import ConfigHandler
-from core.wildcard_manager import WildcardManagerFactory
-from core.prompt_builder import PromptBuilder
-from core.forge_api import ForgeAPIClient
-from core.batch_runner import BatchRunner
+from config_handler import ConfigHandler
+from wildcard_manager import WildcardManagerFactory
+from prompt_builder import PromptBuilder
+from forge_api import ForgeAPIClient
+from batch_runner import BatchRunner
+from image_analyzer import ImageAnalyzer
+from output_manager import OutputManager
+from logger import logger
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'forge-api-tool-secret-key'
@@ -26,6 +33,8 @@ prompt_builder = PromptBuilder(wildcard_factory)
 forge_client = ForgeAPIClient()
 batch_runner = BatchRunner()
 batch_runner.set_forge_client(forge_client)
+image_analyzer = ImageAnalyzer()
+output_manager = OutputManager()
 
 # Global variables for tracking
 current_job = None
@@ -231,19 +240,114 @@ def clear_all_jobs():
 
 @app.route('/api/forge/status')
 def get_forge_status():
-    """Get Forge API status."""
+    """Get Forge API connection status."""
     try:
-        connected = forge_client.test_connection()
+        # Test connection to Forge API
         models = forge_client.get_models()
         samplers = forge_client.get_samplers()
         
         return jsonify({
-            'connected': connected,
-            'models': models,
-            'samplers': samplers
+            'connected': True,
+            'models': models if models else [],
+            'samplers': samplers if samplers else [],
+            'server_url': forge_client.server_url,
+            'last_check': datetime.now().isoformat()
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({
+            'connected': False,
+            'error': str(e),
+            'server_url': forge_client.server_url,
+            'last_check': datetime.now().isoformat()
+        })
+
+
+@app.route('/api/forge/connect', methods=['POST'])
+def connect_forge():
+    """Connect to Forge API."""
+    try:
+        data = request.get_json()
+        server_url = data.get('server_url', 'http://127.0.0.1:7860/')
+        
+        # Update the Forge client with new server URL
+        forge_client.server_url = server_url.rstrip('/')
+        
+        # Test the connection
+        models = forge_client.get_models()
+        samplers = forge_client.get_samplers()
+        
+        logger.info(f"Successfully connected to Forge API at {server_url}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Connected to Forge API at {server_url}',
+            'models': models if models else [],
+            'samplers': samplers if samplers else [],
+            'server_url': forge_client.server_url
+        })
+    except Exception as e:
+        logger.error(f"Failed to connect to Forge API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'server_url': forge_client.server_url
+        }), 400
+
+
+@app.route('/api/forge/disconnect', methods=['POST'])
+def disconnect_forge():
+    """Disconnect from Forge API."""
+    try:
+        # Reset the Forge client
+        forge_client.server_url = 'http://127.0.0.1:7860/'
+        
+        logger.info("Disconnected from Forge API")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Disconnected from Forge API'
+        })
+    except Exception as e:
+        logger.error(f"Error disconnecting from Forge API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+
+@app.route('/api/shutdown', methods=['POST'])
+def shutdown_application():
+    """Shutdown the application gracefully."""
+    try:
+        # Stop any active processing
+        global processing_active
+        if processing_active:
+            batch_runner.stop_processing()
+            processing_active = False
+        
+        # Save any pending data
+        logger.info("Shutting down Forge API Tool...")
+        
+        # Schedule shutdown after response is sent
+        def delayed_shutdown():
+            time.sleep(1)  # Give time for response to be sent
+            os._exit(0)
+        
+        import threading
+        shutdown_thread = threading.Thread(target=delayed_shutdown)
+        shutdown_thread.daemon = True
+        shutdown_thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Application shutting down...'
+        })
+    except Exception as e:
+        logger.error(f"Error during shutdown: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
 
 
 @app.route('/api/forge/validate-config/<config_name>')
@@ -343,6 +447,430 @@ def handle_get_queue_status():
     """Handle queue status request."""
     status = batch_runner.get_queue_status()
     emit('queue_status', status)
+
+
+# Image Analysis Endpoints
+@app.route('/api/analyze-image', methods=['POST'])
+def analyze_image():
+    """Analyze an uploaded image to extract settings."""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not image_analyzer.validate_image_format(file.filename):
+            return jsonify({'error': 'Unsupported image format'}), 400
+        
+        # Read image data
+        image_data = file.read()
+        image_base64 = base64.b64encode(image_data).decode('utf-8')
+        
+        # Analyze image
+        result = image_analyzer.analyze_image(image_base64)
+        
+        logger.log_app_event('image_analysis', {
+            'filename': file.filename,
+            'success': result.get('success', False)
+        })
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.log_error(f"Image analysis failed: {e}")
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/supported-formats')
+def get_supported_formats():
+    """Get supported image formats for analysis."""
+    return jsonify(image_analyzer.get_supported_formats())
+
+
+# Configuration Management Endpoints
+@app.route('/api/config/upload', methods=['POST'])
+def upload_config():
+    """Upload a new configuration file."""
+    try:
+        if 'config' not in request.files:
+            return jsonify({'error': 'No config file provided'}), 400
+        
+        file = request.files['config']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not file.filename.endswith('.json'):
+            return jsonify({'error': 'Only JSON files are supported'}), 400
+        
+        # Read and validate config
+        config_data = json.load(file)
+        config_name = config_data.get('name', file.filename.replace('.json', ''))
+        
+        # Save config
+        config_handler.save_config(config_name, config_data)
+        
+        logger.log_config_operation('upload', config_name, True)
+        
+        return jsonify({
+            'success': True,
+            'config_name': config_name,
+            'message': 'Configuration uploaded successfully'
+        })
+        
+    except Exception as e:
+        logger.log_config_operation('upload', 'unknown', False, {'error': str(e)})
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/config/create', methods=['POST'])
+def create_config():
+    """Create a new configuration from scratch."""
+    try:
+        config_data = request.get_json()
+        if not config_data:
+            return jsonify({'error': 'No configuration data provided'}), 400
+        
+        config_name = config_data.get('name')
+        if not config_name:
+            return jsonify({'error': 'Configuration name is required'}), 400
+        
+        # Check if config already exists
+        if config_handler.config_exists(config_name):
+            return jsonify({'error': f'Configuration "{config_name}" already exists'}), 400
+        
+        # Save config
+        config_handler.save_config(config_name, config_data)
+        
+        logger.log_config_operation('create', config_name, True)
+        
+        return jsonify({
+            'success': True,
+            'config_name': config_name,
+            'message': 'Configuration created successfully'
+        })
+        
+    except Exception as e:
+        logger.log_config_operation('create', 'unknown', False, {'error': str(e)})
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/config/templates')
+def get_config_templates():
+    """Get available configuration templates."""
+    templates = [
+        {
+            'name': 'Quick Start',
+            'description': 'Simple configuration for basic image generation',
+            'template': {
+                'name': 'Quick Start',
+                'description': 'A simple configuration to get started quickly',
+                'model_type': 'sd',
+                'prompt_settings': {
+                    'base_prompt': 'a beautiful __STYLE__ __SUBJECT__',
+                    'negative_prompt': 'blurry, low quality, distorted, ugly, bad anatomy'
+                },
+                'wildcards': {
+                    'STYLE': 'wildcards/style.txt',
+                    'SUBJECT': 'wildcards/subject.txt'
+                },
+                'generation_settings': {
+                    'steps': 20,
+                    'width': 512,
+                    'height': 512,
+                    'batch_size': 1,
+                    'sampler': 'Euler a',
+                    'cfg_scale': 7.0,
+                    'seed': 'random'
+                },
+                'model_settings': {
+                    'checkpoint': '',
+                    'vae': '',
+                    'text_encoder': '',
+                    'gpu_weight': 1.0,
+                    'swap_method': 'weight',
+                    'swap_location': 'cpu'
+                },
+                'output_settings': {
+                    'output_dir': 'outputs/quick_start',
+                    'filename_pattern': '{prompt_hash}_{seed}_{timestamp}',
+                    'save_metadata': True,
+                    'save_prompt_list': True
+                },
+                'wildcard_settings': {
+                    'randomization_mode': 'smart_cycle',
+                    'cycle_length': 10,
+                    'shuffle_on_reset': True
+                },
+                'alwayson_scripts': {}
+            }
+        },
+        {
+            'name': 'Anime Style',
+            'description': 'Configuration for anime and manga style artwork',
+            'template': {
+                'name': 'Anime Style',
+                'description': 'Generate anime and manga style artwork',
+                'model_type': 'sd',
+                'prompt_settings': {
+                    'base_prompt': 'anime style __CHARACTER__ __ACTION__ __SETTING__, __ART_STYLE__',
+                    'negative_prompt': 'blurry, low quality, distorted, ugly, bad anatomy, realistic'
+                },
+                'wildcards': {
+                    'CHARACTER': 'wildcards/people_types.txt',
+                    'ACTION': 'wildcards/portrait_poses.txt',
+                    'SETTING': 'wildcards/locations.txt',
+                    'ART_STYLE': 'wildcards/style.txt'
+                },
+                'generation_settings': {
+                    'steps': 25,
+                    'width': 512,
+                    'height': 768,
+                    'batch_size': 1,
+                    'sampler': 'DPM++ 2M Karras',
+                    'cfg_scale': 8.0,
+                    'seed': 'random'
+                },
+                'model_settings': {
+                    'checkpoint': '',
+                    'vae': '',
+                    'text_encoder': '',
+                    'gpu_weight': 1.0,
+                    'swap_method': 'weight',
+                    'swap_location': 'cpu'
+                },
+                'output_settings': {
+                    'output_dir': 'outputs/anime_style',
+                    'filename_pattern': '{prompt_hash}_{seed}_{timestamp}',
+                    'save_metadata': True,
+                    'save_prompt_list': True
+                },
+                'wildcard_settings': {
+                    'randomization_mode': 'smart_cycle',
+                    'cycle_length': 15,
+                    'shuffle_on_reset': True
+                },
+                'alwayson_scripts': {}
+            }
+        },
+        {
+            'name': 'Landscape Photography',
+            'description': 'Configuration for landscape photography',
+            'template': {
+                'name': 'Landscape Photography',
+                'description': 'High-quality landscape photography',
+                'model_type': 'sd',
+                'prompt_settings': {
+                    'base_prompt': 'a stunning __STYLE__ photograph of __LOCATION__, __LIGHTING__, __WEATHER__',
+                    'negative_prompt': 'blurry, low quality, distorted, ugly, bad anatomy, watermark'
+                },
+                'wildcards': {
+                    'STYLE': 'wildcards/landscape_styles.txt',
+                    'LOCATION': 'wildcards/landscape_locations.txt',
+                    'LIGHTING': 'wildcards/lighting_conditions.txt',
+                    'WEATHER': 'wildcards/weather_conditions.txt'
+                },
+                'generation_settings': {
+                    'steps': 30,
+                    'width': 1024,
+                    'height': 768,
+                    'batch_size': 1,
+                    'sampler': 'DPM++ 2M Karras',
+                    'cfg_scale': 7.0,
+                    'seed': 'random'
+                },
+                'model_settings': {
+                    'checkpoint': '',
+                    'vae': '',
+                    'text_encoder': '',
+                    'gpu_weight': 1.0,
+                    'swap_method': 'weight',
+                    'swap_location': 'cpu'
+                },
+                'output_settings': {
+                    'output_dir': 'outputs/landscape_photography',
+                    'filename_pattern': '{prompt_hash}_{seed}_{timestamp}',
+                    'save_metadata': True,
+                    'save_prompt_list': True
+                },
+                'wildcard_settings': {
+                    'randomization_mode': 'smart_cycle',
+                    'cycle_length': 20,
+                    'shuffle_on_reset': True
+                },
+                'alwayson_scripts': {}
+            }
+        }
+    ]
+    
+    return jsonify(templates)
+
+
+@app.route('/api/config/<config_name>', methods=['PUT'])
+def update_config(config_name):
+    """Update an existing configuration."""
+    try:
+        config_data = request.get_json()
+        if not config_data:
+            return jsonify({'error': 'No configuration data provided'}), 400
+        
+        # Validate and save config
+        config_handler.save_config(config_name, config_data)
+        
+        logger.log_config_operation('update', config_name, True)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Configuration updated successfully'
+        })
+        
+    except Exception as e:
+        logger.log_config_operation('update', config_name, False, {'error': str(e)})
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/config/<config_name>', methods=['DELETE'])
+def delete_config(config_name):
+    """Delete a configuration."""
+    try:
+        config_handler.delete_config(config_name)
+        
+        logger.log_config_operation('delete', config_name, True)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Configuration deleted successfully'
+        })
+        
+    except Exception as e:
+        logger.log_config_operation('delete', config_name, False, {'error': str(e)})
+        return jsonify({'error': str(e)}), 400
+
+
+# Output Management Endpoints
+@app.route('/api/outputs/summary')
+def get_output_summary():
+    """Get output summary."""
+    try:
+        config_name = request.args.get('config_name')
+        summary = output_manager.get_output_summary(config_name)
+        return jsonify(summary)
+    except Exception as e:
+        logger.log_error(f"Failed to get output summary: {e}")
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/outputs/search')
+def search_outputs():
+    """Search for images by prompt content."""
+    try:
+        query = request.args.get('query', '')
+        config_name = request.args.get('config_name')
+        
+        if not query:
+            return jsonify({'error': 'Search query is required'}), 400
+        
+        results = output_manager.search_images(query, config_name)
+        return jsonify(results)
+    except Exception as e:
+        logger.log_error(f"Failed to search outputs: {e}")
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/outputs/cleanup', methods=['POST'])
+def cleanup_outputs():
+    """Clean up old output files."""
+    try:
+        data = request.get_json() or {}
+        days_to_keep = data.get('days_to_keep', 30)
+        config_name = data.get('config_name')
+        
+        cleaned_files = output_manager.cleanup_old_files(days_to_keep, config_name)
+        
+        logger.log_app_event('output_cleanup', {
+            'days_to_keep': days_to_keep,
+            'config_name': config_name,
+            'files_cleaned': len(cleaned_files)
+        })
+        
+        return jsonify({
+            'success': True,
+            'files_cleaned': len(cleaned_files),
+            'cleaned_files': cleaned_files
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to cleanup outputs: {e}")
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/outputs/export/<config_name>', methods=['POST'])
+def export_outputs(config_name):
+    """Export outputs for a configuration."""
+    try:
+        data = request.get_json() or {}
+        export_path = data.get('export_path', f'exports/{config_name}_{datetime.now().strftime("%Y%m%d_%H%M%S")}')
+        
+        export_dir = output_manager.export_config_outputs(config_name, export_path)
+        
+        logger.log_app_event('output_export', {
+            'config_name': config_name,
+            'export_path': export_dir
+        })
+        
+        return jsonify({
+            'success': True,
+            'export_path': export_dir
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to export outputs: {e}")
+        return jsonify({'error': str(e)}), 400
+
+
+# Logging Endpoints
+@app.route('/api/logs/summary')
+def get_logs_summary():
+    """Get logging summary."""
+    try:
+        summary = logger.get_session_summary()
+        return jsonify(summary)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/logs/cleanup', methods=['POST'])
+def cleanup_logs():
+    """Clean up old log files."""
+    try:
+        data = request.get_json() or {}
+        days_to_keep = data.get('days_to_keep', 30)
+        
+        logger.cleanup_old_logs(days_to_keep)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Logs older than {days_to_keep} days cleaned up'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+# Error handling
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Endpoint not found'}), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.log_error(f"Internal server error: {error}")
+    return jsonify({'error': 'Internal server error'}), 500
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.log_error(f"Unhandled exception: {e}")
+    return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
 if __name__ == '__main__':

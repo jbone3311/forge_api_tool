@@ -1,0 +1,20 @@
+clear sky
+partly cloudy
+overcast
+stormy
+rainy
+snowy
+foggy
+misty
+windy
+calm
+humid
+dry
+crisp
+warm
+cold
+breezy
+still
+turbulent
+peaceful
+dramatic 

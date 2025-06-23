@@ -1,6 +1,6 @@
 import re
 from typing import Dict, List, Any, Tuple
-from .wildcard_manager import WildcardManagerFactory
+from wildcard_manager import WildcardManagerFactory
 
 
 class PromptBuilder:
@@ -11,7 +11,7 @@ class PromptBuilder:
     
     def build_prompt(self, config: Dict[str, Any]) -> str:
         """Build a single prompt by substituting wildcards."""
-        template = config['prompt_settings']['prompt_template']
+        template = config['prompt_settings']['base_prompt']
         wildcards = config['wildcards']
         
         # Extract wildcard names from template
@@ -24,7 +24,7 @@ class PromptBuilder:
                 wildcard_path = wildcards[wildcard_name]
                 manager = self.wildcard_factory.get_manager(wildcard_path)
                 value = manager.get_next()
-                prompt = prompt.replace(f"{{{wildcard_name}}}", value)
+                prompt = prompt.replace(f"__{wildcard_name}__", value)
             else:
                 # Keep the wildcard placeholder if not found
                 print(f"Warning: Wildcard '{wildcard_name}' not found in config")
@@ -41,7 +41,7 @@ class PromptBuilder:
     
     def preview_prompts(self, config: Dict[str, Any], count: int = 5) -> List[str]:
         """Preview prompts without consuming wildcards."""
-        template = config['prompt_settings']['prompt_template']
+        template = config['prompt_settings']['base_prompt']
         wildcards = config['wildcards']
         
         # Extract wildcard names from template
@@ -64,12 +64,12 @@ class PromptBuilder:
                 if wildcard_name in wildcard_previews:
                     values = wildcard_previews[wildcard_name]
                     if i < len(values):
-                        prompt = prompt.replace(f"{{{wildcard_name}}}", values[i])
+                        prompt = prompt.replace(f"__{wildcard_name}__", values[i])
                     else:
                         # If we don't have enough preview values, use the first one
-                        prompt = prompt.replace(f"{{{wildcard_name}}}", values[0] if values else f"{{{wildcard_name}}}")
+                        prompt = prompt.replace(f"__{wildcard_name}__", values[0] if values else f"__{wildcard_name}__")
                 else:
-                    prompt = prompt.replace(f"{{{wildcard_name}}}", f"{{{wildcard_name}}}")
+                    prompt = prompt.replace(f"__{wildcard_name}__", f"__{wildcard_name}__")
             preview_prompts.append(prompt)
         
         return preview_prompts
@@ -107,8 +107,9 @@ class PromptBuilder:
         return usage_info
     
     def _extract_wildcards(self, template: str) -> List[str]:
-        """Extract wildcard names from template string."""
-        pattern = r'\{([^}]+)\}'
+        """Extract wildcard names from template string using Automatic1111 format."""
+        # Automatic1111 uses __WILDCARD_NAME__ format
+        pattern = r'__([A-Z_]+)__'
         return re.findall(pattern, template)
     
     def _get_usage_status(self, percentage: float) -> str:
@@ -144,7 +145,7 @@ class PromptBuilder:
     
     def get_prompt_stats(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Get statistics about the prompt template and wildcards."""
-        template = config['prompt_settings']['prompt_template']
+        template = config['prompt_settings']['base_prompt']
         wildcards = config['wildcards']
         
         wildcard_names = self._extract_wildcards(template)
@@ -193,7 +194,7 @@ class PromptBuilder:
         
         for i in range(count):
             # Get current wildcard values without consuming them
-            template = config['prompt_settings']['prompt_template']
+            template = config['prompt_settings']['base_prompt']
             wildcards = config['wildcards']
             wildcard_names = self._extract_wildcards(template)
             
@@ -210,12 +211,12 @@ class PromptBuilder:
                     if i < len(preview_values):
                         value = preview_values[i]
                     else:
-                        value = preview_values[0] if preview_values else f"{{{wildcard_name}}}"
+                        value = preview_values[0] if preview_values else f"__{wildcard_name}__"
                     
                     wildcard_values[wildcard_name] = value
-                    prompt = prompt.replace(f"{{{wildcard_name}}}", value)
+                    prompt = prompt.replace(f"__{wildcard_name}__", value)
                 else:
-                    wildcard_values[wildcard_name] = f"{{{wildcard_name}}}"
+                    wildcard_values[wildcard_name] = f"__{wildcard_name}__"
             
             prompts.append({
                 'index': i + 1,
@@ -223,4 +224,16 @@ class PromptBuilder:
                 'wildcard_values': wildcard_values
             })
         
+        return prompts
+    
+    def generate_prompts(self, config: Dict[str, Any], count: int) -> List[Dict[str, Any]]:
+        """Generate multiple prompts with metadata."""
+        prompts = []
+        for i in range(count):
+            prompt = self.build_prompt(config)
+            prompts.append({
+                'prompt': prompt,
+                'index': i,
+                'seed': config.get('generation_settings', {}).get('seed', 'random')
+            })
         return prompts 

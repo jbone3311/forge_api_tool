@@ -1,20 +1,20 @@
 {
-  "name": "template_config",
-  "description": "Template configuration for Forge API Tool",
+  "name": "Quick Start",
+  "description": "A simple configuration to get started quickly",
   "model_type": "sd",
   "model_settings": {
     "checkpoint": "sd-v1-5.safetensors",
     "vae": "",
     "text_encoder": "",
-    "gpu_weight": null,
-    "swap_method": "queue",
+    "gpu_weight": 1,
+    "swap_method": "weight",
     "swap_location": "cpu"
   },
   "generation_settings": {
     "sampler": "Euler a",
     "scheduler": "Simple",
-    "steps": 30,
-    "cfg_scale": 7.0,
+    "steps": 20,
+    "cfg_scale": 7,
     "distilled_cfg_scale": null,
     "width": 512,
     "height": 512,
@@ -23,16 +23,16 @@
     "seed": "random"
   },
   "prompt_settings": {
-    "prompt_template": "a photo of a __ANIMAL__ in __LOCATION__, __STYLE__, cinematic lighting",
-    "negative_prompt": "low quality, blurry, distorted, ugly, bad anatomy"
+    "prompt_template": "a beautiful __STYLE__ __ANIMAL__ in __LOCATION__",
+    "negative_prompt": "blurry, low quality, distorted, ugly, bad anatomy"
   },
   "wildcards": {
+    "STYLE": "./wildcards/styles.txt",
     "ANIMAL": "./wildcards/animals.txt",
-    "LOCATION": "./wildcards/locations.txt",
-    "STYLE": "./wildcards/styles.txt"
+    "LOCATION": "./wildcards/locations.txt"
   },
   "output_settings": {
-    "dir": "./outputs/{config_name}/{timestamp}/",
+    "dir": "./outputs/Quick Start/{timestamp}/",
     "format": "png",
     "save_metadata": true,
     "save_prompts": true
@@ -46,4 +46,4 @@
     "timeout": 300,
     "retry_attempts": 3
   }
-} 
+}

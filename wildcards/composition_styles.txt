@@ -1,0 +1,20 @@
+rule of thirds
+symmetrical
+leading lines
+framed
+diagonal
+centered
+off-center
+low angle
+high angle
+eye level
+close-up
+wide shot
+medium shot
+extreme close-up
+establishing shot
+detail shot
+action shot
+still life
+portrait orientation
+landscape orientation 

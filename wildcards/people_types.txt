@@ -1,0 +1,20 @@
+woman
+man
+girl
+boy
+elderly woman
+elderly man
+teenager
+child
+baby
+adult
+young adult
+middle-aged person
+senior
+artist
+scientist
+teacher
+doctor
+engineer
+musician
+athlete 

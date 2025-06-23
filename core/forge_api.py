@@ -15,6 +15,16 @@ class ForgeAPIClient:
         self.timeout = timeout
         self.session = requests.Session()
     
+    @property
+    def server_url(self) -> str:
+        """Get the current server URL."""
+        return self.base_url
+    
+    @server_url.setter
+    def server_url(self, url: str):
+        """Set the server URL and update the base_url."""
+        self.base_url = url.rstrip('/')
+    
     def test_connection(self) -> bool:
         """Test if Forge API is accessible."""
         try:

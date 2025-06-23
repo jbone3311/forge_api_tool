@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSocket();
     loadInitialData();
     setupEventListeners();
+    setupConfigModalRefresh();
 });
 
 // Initialize WebSocket connection
@@ -298,22 +299,35 @@ function updateForgeStatus() {
         .then(response => response.json())
         .then(data => {
             const statusElement = document.getElementById('forge-status');
-            const badge = statusElement.querySelector('.badge');
+            const connectBtn = document.getElementById('connect-forge');
+            const disconnectBtn = document.getElementById('disconnect-forge');
             
             if (data.connected) {
-                badge.className = 'badge bg-success';
-                badge.textContent = 'Forge Connected';
+                statusElement.innerHTML = `
+                    <span class="badge bg-success">
+                        <i class="fas fa-check-circle"></i> Connected
+                    </span>
+                `;
+                connectBtn.style.display = 'none';
+                disconnectBtn.style.display = 'inline-block';
             } else {
-                badge.className = 'badge bg-danger';
-                badge.textContent = 'Forge Disconnected';
+                statusElement.innerHTML = `
+                    <span class="badge bg-danger">
+                        <i class="fas fa-times-circle"></i> Disconnected
+                    </span>
+                `;
+                connectBtn.style.display = 'inline-block';
+                disconnectBtn.style.display = 'none';
             }
         })
         .catch(error => {
-            console.error('Error checking Forge status:', error);
+            console.error('Error updating Forge status:', error);
             const statusElement = document.getElementById('forge-status');
-            const badge = statusElement.querySelector('.badge');
-            badge.className = 'badge bg-danger';
-            badge.textContent = 'Connection Error';
+            statusElement.innerHTML = `
+                <span class="badge bg-secondary">
+                    <i class="fas fa-question-circle"></i> Unknown
+                </span>
+            `;
         });
 }
 
@@ -627,9 +641,272 @@ function createToastContainer() {
 
 function refreshConfigs() {
     loadConfigs();
-    showToast('Configurations refreshed', 'success');
 }
 
+// Show new config modal
 function showNewConfigModal() {
-    showToast('New config feature coming soon!', 'info');
+    const modal = new bootstrap.Modal(document.getElementById('newConfigModal'));
+    modal.show();
+    loadConfigTemplates();
+}
+
+// Load configuration templates
+function loadConfigTemplates() {
+    fetch('/api/config/templates')
+        .then(response => response.json())
+        .then(templates => {
+            const container = document.getElementById('config-templates');
+            const templateHtml = templates.map(template => `
+                <button type="button" class="list-group-item list-group-item-action" 
+                        onclick="loadTemplate('${template.name}')">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${template.name}</h6>
+                    </div>
+                    <p class="mb-1">${template.description}</p>
+                </button>
+            `).join('');
+            container.innerHTML = templateHtml;
+        })
+        .catch(error => {
+            console.error('Error loading templates:', error);
+            document.getElementById('config-templates').innerHTML = 
+                '<div class="alert alert-danger">Error loading templates</div>';
+        });
+}
+
+// Load a template into the form
+function loadTemplate(templateName) {
+    fetch('/api/config/templates')
+        .then(response => response.json())
+        .then(templates => {
+            const template = templates.find(t => t.name === templateName);
+            if (template) {
+                const config = template.template;
+                
+                // Fill form fields
+                document.getElementById('config-name').value = config.name;
+                document.getElementById('config-description').value = config.description;
+                document.getElementById('config-model-type').value = config.model_type;
+                document.getElementById('config-sampler').value = config.generation_settings.sampler;
+                document.getElementById('config-steps').value = config.generation_settings.steps;
+                document.getElementById('config-width').value = config.generation_settings.width;
+                document.getElementById('config-height').value = config.generation_settings.height;
+                document.getElementById('config-prompt').value = config.prompt_settings.base_prompt;
+                document.getElementById('config-negative-prompt').value = config.prompt_settings.negative_prompt;
+                
+                // Convert wildcards to JSON string
+                const wildcardsJson = JSON.stringify(config.wildcards, null, 2);
+                document.getElementById('config-wildcards').value = wildcardsJson;
+                
+                showToast(`Loaded template: ${templateName}`, 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading template:', error);
+            showToast('Error loading template', 'error');
+        });
+}
+
+// Create new configuration
+function createConfig() {
+    const form = document.getElementById('new-config-form');
+    const formData = new FormData(form);
+    
+    // Get form values
+    const configData = {
+        name: document.getElementById('config-name').value,
+        description: document.getElementById('config-description').value,
+        model_type: document.getElementById('config-model-type').value,
+        prompt_settings: {
+            base_prompt: document.getElementById('config-prompt').value,
+            negative_prompt: document.getElementById('config-negative-prompt').value
+        },
+        wildcards: {},
+        generation_settings: {
+            steps: parseInt(document.getElementById('config-steps').value),
+            width: parseInt(document.getElementById('config-width').value),
+            height: parseInt(document.getElementById('config-height').value),
+            batch_size: 1,
+            sampler: document.getElementById('config-sampler').value,
+            cfg_scale: 7.0,
+            seed: "random"
+        },
+        model_settings: {
+            checkpoint: "",
+            vae: "",
+            text_encoder: "",
+            gpu_weight: 1.0,
+            swap_method: "weight",
+            swap_location: "cpu"
+        },
+        output_settings: {
+            output_dir: `outputs/${document.getElementById('config-name').value.toLowerCase().replace(/\s+/g, '_')}`,
+            filename_pattern: "{prompt_hash}_{seed}_{timestamp}",
+            save_metadata: true,
+            save_prompt_list: true
+        },
+        wildcard_settings: {
+            randomization_mode: "smart_cycle",
+            cycle_length: 10,
+            shuffle_on_reset: true
+        },
+        alwayson_scripts: {}
+    };
+    
+    // Parse wildcards JSON
+    try {
+        const wildcardsText = document.getElementById('config-wildcards').value;
+        if (wildcardsText.trim()) {
+            configData.wildcards = JSON.parse(wildcardsText);
+        }
+    } catch (e) {
+        showToast('Invalid wildcards JSON format', 'error');
+        return;
+    }
+    
+    // Validate required fields
+    if (!configData.name || !configData.prompt_settings.base_prompt) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    // Send request to create config
+    fetch('/api/config/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newConfigModal'));
+            modal.hide();
+            loadConfigs(); // Refresh config list
+        } else {
+            showToast(data.error || 'Failed to create configuration', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating config:', error);
+        showToast('Error creating configuration', 'error');
+    });
+}
+
+// Show connect modal
+function showConnectModal() {
+    const modal = new bootstrap.Modal(document.getElementById('connectModal'));
+    modal.show();
+}
+
+// Connect to Forge API
+function connectForge() {
+    const serverUrl = document.getElementById('server-url').value;
+    
+    if (!serverUrl) {
+        showToast('Please enter a server URL', 'error');
+        return;
+    }
+    
+    fetch('/api/forge/connect', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            server_url: serverUrl
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            updateForgeStatus();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('connectModal'));
+            modal.hide();
+        } else {
+            showToast(data.error || 'Failed to connect', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error connecting to Forge:', error);
+        showToast('Error connecting to Forge API', 'error');
+    });
+}
+
+// Disconnect from Forge API
+function disconnectForge() {
+    if (!confirm('Are you sure you want to disconnect from the Forge API?')) {
+        return;
+    }
+    
+    fetch('/api/forge/disconnect', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            updateForgeStatus();
+        } else {
+            showToast(data.error || 'Failed to disconnect', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error disconnecting from Forge:', error);
+        showToast('Error disconnecting from Forge API', 'error');
+    });
+}
+
+// Show shutdown confirmation modal
+function shutdownApplication() {
+    const modal = new bootstrap.Modal(document.getElementById('shutdownModal'));
+    modal.show();
+}
+
+// Confirm and execute shutdown
+function confirmShutdown() {
+    fetch('/api/shutdown', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'info');
+            // Show shutdown message and disable interface
+            document.body.innerHTML = `
+                <div class="container-fluid d-flex align-items-center justify-content-center" style="height: 100vh;">
+                    <div class="text-center">
+                        <i class="fas fa-power-off fa-3x text-muted mb-3"></i>
+                        <h3>Application Shutting Down...</h3>
+                        <p class="text-muted">The Forge API Tool is shutting down. You can close this window.</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            showToast(data.error || 'Failed to shutdown', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error shutting down:', error);
+        showToast('Error shutting down application', 'error');
+    });
+}
+
+// Add event listener to refresh configs when New Config modal closes
+function setupConfigModalRefresh() {
+    const modal = document.getElementById('newConfigModal');
+    if (modal) {
+        modal.addEventListener('hidden.bs.modal', function () {
+            loadConfigs();
+        });
+    }
 } 

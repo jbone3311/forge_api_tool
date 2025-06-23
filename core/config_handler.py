@@ -33,13 +33,21 @@ class ConfigHandler:
         except Exception as e:
             raise ValueError(f"Error loading config {config_name}: {e}")
     
-    def save_config(self, config: Dict[str, Any], config_name: str):
+    def save_config(self, config_name: str, config: Dict[str, Any]):
         """Save a configuration to file."""
-        config_path = os.path.join(self.config_dir, f"{config_name}.json")
-        
         try:
+            # Ensure config directory exists
+            os.makedirs(self.config_dir, exist_ok=True)
+            
+            # Set defaults and validate
+            config = self._set_defaults(config)
+            self._validate_config(config)
+            
+            # Save to file
+            config_path = os.path.join(self.config_dir, f"{config_name}.json")
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2)
+                
         except Exception as e:
             raise ValueError(f"Error saving config {config_name}: {e}")
     
@@ -51,6 +59,11 @@ class ConfigHandler:
                 if file.endswith('.json') and file != 'template.json':
                     configs.append(file.replace('.json', ''))
         return sorted(configs)
+    
+    def config_exists(self, config_name: str) -> bool:
+        """Check if a configuration exists."""
+        config_path = os.path.join(self.config_dir, f"{config_name}.json")
+        return os.path.exists(config_path)
     
     def create_config_from_template(self, name: str, description: str = "") -> Dict[str, Any]:
         """Create a new configuration from template."""
@@ -152,9 +165,10 @@ class ConfigHandler:
         # General defaults
         general_defaults = {
             'prompt_settings': {
-                'prompt_template': 'a photo of a {animal} in {location}, {style}, cinematic lighting',
+                'base_prompt': 'a photo of a __ANIMAL__ in __LOCATION__, __STYLE__, cinematic lighting',
                 'negative_prompt': 'low quality, blurry, distorted, ugly, bad anatomy'
             },
+            'wildcards': {},
             'output_settings': {
                 'dir': f"./outputs/{config.get('name', 'default')}/{{timestamp}}/",
                 'format': 'png',
@@ -218,13 +232,14 @@ class ConfigHandler:
             raise ValueError("Width and height must be at most 2048")
     
     def extract_wildcards_from_template(self, template: str) -> List[str]:
-        """Extract wildcard names from prompt template."""
-        pattern = r'\{([^}]+)\}'
+        """Extract wildcard names from prompt template using Automatic1111 format."""
+        # Automatic1111 uses __WILDCARD_NAME__ format
+        pattern = r'__([A-Z_]+)__'
         return re.findall(pattern, template)
     
     def validate_wildcards(self, config: Dict[str, Any]) -> Dict[str, List[str]]:
         """Validate that all wildcards in template have corresponding files/lists."""
-        template = config['prompt_settings']['prompt_template']
+        template = config['prompt_settings']['base_prompt']
         wildcard_names = self.extract_wildcards_from_template(template)
         
         missing_wildcards = []
@@ -241,6 +256,17 @@ class ConfigHandler:
             'available': available_wildcards
         }
     
+    def delete_config(self, config_name: str):
+        """Delete a configuration file."""
+        try:
+            config_path = os.path.join(self.config_dir, f"{config_name}.json")
+            if os.path.exists(config_path):
+                os.remove(config_path)
+            else:
+                raise FileNotFoundError(f"Config {config_name} not found")
+        except Exception as e:
+            raise ValueError(f"Error deleting config {config_name}: {e}")
+    
     def get_config_summary(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Get a summary of configuration for display."""
         wildcard_validation = self.validate_wildcards(config)
@@ -254,12 +280,12 @@ class ConfigHandler:
             'width': config['generation_settings']['width'],
             'height': config['generation_settings']['height'],
             'batch_size': config['generation_settings']['batch_size'],
-            'num_batches': config['generation_settings']['num_batches'],
-            'total_images': config['generation_settings']['batch_size'] * config['generation_settings']['num_batches'],
+            'num_batches': config['generation_settings'].get('num_batches', 1),
+            'total_images': config['generation_settings']['batch_size'] * config['generation_settings'].get('num_batches', 1),
             'wildcards': {
                 'available': len(wildcard_validation['available']),
                 'missing': len(wildcard_validation['missing']),
                 'missing_list': wildcard_validation['missing']
             },
-            'prompt_template': config['prompt_settings']['prompt_template']
+            'prompt_template': config['prompt_settings']['base_prompt']
         } 

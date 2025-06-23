@@ -5,11 +5,11 @@ from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime
 import random
 
-from .config_handler import ConfigHandler
-from .wildcard_manager import WildcardManagerFactory
-from .prompt_builder import PromptBuilder
-from .forge_api import ForgeAPIClient
-from .job_queue import JobQueue, Job
+from config_handler import ConfigHandler
+from wildcard_manager import WildcardManagerFactory
+from prompt_builder import PromptBuilder
+from forge_api import ForgeAPIClient
+from job_queue import JobQueue, Job
 
 
 class BatchRunner:
