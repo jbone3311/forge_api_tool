@@ -1,0 +1,49 @@
+{
+  "name": "template_config",
+  "description": "Template configuration for Forge API Tool",
+  "model_type": "sd",
+  "model_settings": {
+    "checkpoint": "sd-v1-5.safetensors",
+    "vae": "",
+    "text_encoder": "",
+    "gpu_weight": null,
+    "swap_method": "queue",
+    "swap_location": "cpu"
+  },
+  "generation_settings": {
+    "sampler": "Euler a",
+    "scheduler": "Simple",
+    "steps": 30,
+    "cfg_scale": 7.0,
+    "distilled_cfg_scale": null,
+    "width": 512,
+    "height": 512,
+    "batch_size": 1,
+    "num_batches": 10,
+    "seed": "random"
+  },
+  "prompt_settings": {
+    "prompt_template": "a photo of a {animal} in {location}, {style}, cinematic lighting",
+    "negative_prompt": "low quality, blurry, distorted, ugly, bad anatomy"
+  },
+  "wildcards": {
+    "animal": "./wildcards/animals.txt",
+    "location": "./wildcards/locations.txt",
+    "style": "./wildcards/styles.txt"
+  },
+  "output_settings": {
+    "dir": "./outputs/{config_name}/{timestamp}/",
+    "format": "png",
+    "save_metadata": true,
+    "save_prompts": true
+  },
+  "controlnet": [],
+  "alwayson_scripts": {
+    "Lora": []
+  },
+  "forge_api": {
+    "base_url": "http://127.0.0.1:7860",
+    "timeout": 300,
+    "retry_attempts": 3
+  }
+} 
