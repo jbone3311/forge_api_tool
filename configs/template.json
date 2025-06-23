@@ -26,11 +26,6 @@
     "prompt_template": "a photo of a __ANIMAL__ in __LOCATION__, __STYLE__, cinematic lighting",
     "negative_prompt": "low quality, blurry, distorted, ugly, bad anatomy"
   },
-  "wildcards": {
-    "ANIMAL": "./wildcards/animals.txt",
-    "LOCATION": "./wildcards/locations.txt",
-    "STYLE": "./wildcards/styles.txt"
-  },
   "output_settings": {
     "dir": "./outputs/{config_name}/{timestamp}/",
     "format": "png",
