@@ -22,6 +22,7 @@ A web-based dashboard for managing batch image generation using Forge's API with
 2. **Set up Wildcards**:
    - Place your wildcard `.txt` files in the `wildcards/` directory
    - Example: `wildcards/animals.txt`, `wildcards/locations.txt`
+   - **📖 See [Wildcards Instruction Manual](wildcards_instructions.md) for detailed usage**
 
 3. **Create Configs**:
    - Add JSON configuration files to `configs/` directory
@@ -49,6 +50,7 @@ Forge-API-Tool/
 ├── core/                 # Core Python modules
 ├── queue.json           # Persistent job queue
 ├── wildcard_usage.json  # Usage statistics
+├── wildcards_instructions.md  # Complete wildcard documentation
 └── requirements.txt     # Python dependencies
 ```
 
@@ -68,6 +70,8 @@ The smart wildcard system:
 - Cycles through all items once before repeating
 - Tracks usage statistics to avoid overuse
 - Provides preview functionality
+
+**📖 For complete wildcard documentation, see [Wildcards Instruction Manual](wildcards_instructions.md)**
 
 ## API Integration
 
