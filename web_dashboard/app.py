@@ -62,10 +62,21 @@ def dashboard():
 
 
 @app.route('/api/configs')
-def get_configs():
+def list_configs():
     """Get list of all configurations."""
     configs = config_handler.list_configs()
-    return jsonify(configs)
+    summaries = []
+    for name in configs:
+        try:
+            config = config_handler.load_config(name)
+            summary = config_handler.get_config_summary(config)
+            summary['missing_wildcards'] = config.get('missing_wildcards', [])
+            summary['missing_wildcard_files'] = config.get('missing_wildcard_files', [])
+            summary['error'] = False
+        except Exception as e:
+            summary = {'name': name, 'error': True, 'error_message': str(e)}
+        summaries.append(summary)
+    return jsonify(summaries)
 
 
 @app.route('/api/config/<config_name>')
@@ -851,6 +862,26 @@ def cleanup_logs():
             'success': True,
             'message': f'Logs older than {days_to_keep} days cleaned up'
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/config/<config_name>/missing_wildcards', methods=['GET'])
+def get_missing_wildcards(config_name):
+    """Get missing wildcards and files for a config."""
+    try:
+        missing = config_handler.get_missing_wildcards(config_name)
+        return jsonify(missing)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/config/<config_name>/create_missing_wildcards', methods=['POST'])
+def create_missing_wildcards(config_name):
+    """Create missing wildcard files for a config."""
+    try:
+        created = config_handler.create_missing_wildcard_files(config_name)
+        return jsonify({'created': created, 'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 

@@ -91,8 +91,12 @@ class WildcardManager:
     
     def _reshuffle(self):
         """Reshuffle the list with a new random starting point."""
-        self.index = random.randint(0, len(self.items) - 1)
-        self.shuffled = self._shuffle_from_index()
+        if not self.items:
+            self.index = 0
+            self.shuffled = []
+        else:
+            self.index = random.randint(0, len(self.items) - 1)
+            self.shuffled = self._shuffle_from_index()
     
     def reset(self):
         """Force a full reshuffle from new random point."""

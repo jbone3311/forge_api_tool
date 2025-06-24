@@ -1,0 +1,30 @@
+wide angle
+telephoto
+macro
+fisheye
+portrait
+landscape
+aerial
+ground level
+bird's eye
+worm's eye
+close-up
+medium shot
+long shot
+extreme close-up
+extreme long shot
+low angle
+high angle
+eye level
+dutch angle
+straight on
+profile
+three-quarter
+back view
+over the shoulder
+point of view
+establishing shot
+insert shot
+cutaway
+reaction shot
+master shot 

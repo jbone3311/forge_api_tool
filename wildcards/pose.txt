@@ -1,0 +1,31 @@
+standing
+sitting
+walking
+running
+jumping
+lying down
+kneeling
+crouching
+leaning
+reclining
+dancing
+fighting
+casting spell
+aiming bow
+swinging sword
+meditating
+praying
+reading
+writing
+painting
+cooking
+gardening
+fishing
+hunting
+exploring
+resting
+working
+celebrating
+mourning
+contemplating
+observing 

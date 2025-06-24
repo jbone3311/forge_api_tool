@@ -11,27 +11,27 @@ class ConfigHandler:
     def __init__(self, config_dir: str = "configs"):
         self.config_dir = config_dir
         self.template_path = os.path.join(config_dir, "template.json")
+        os.makedirs(config_dir, exist_ok=True)
         
     def load_config(self, config_name: str) -> Dict[str, Any]:
         """Load a configuration file by name."""
         config_path = os.path.join(self.config_dir, f"{config_name}.json")
-        
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found: {config_path}")
-        
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-            
             # Set default values
             config = self._set_defaults(config)
-            
-            # Validate configuration
-            self._validate_config(config)
-            
+            # Validate configuration (structure only)
+            self._validate_config(config, config_name)
+            # Check for missing wildcards
+            wildcards_info = self.validate_wildcards(config)
+            config['missing_wildcards'] = wildcards_info['missing']
+            config['missing_wildcard_files'] = wildcards_info['missing_files']
             return config
         except Exception as e:
-            raise ValueError(f"Error loading config {config_name}: {e}")
+            raise ValueError(f"Error loading config '{config_name}': {e}")
     
     def save_config(self, config_name: str, config: Dict[str, Any]):
         """Save a configuration to file."""
@@ -52,12 +52,11 @@ class ConfigHandler:
             raise ValueError(f"Error saving config {config_name}: {e}")
     
     def list_configs(self) -> List[str]:
-        """List all available configuration files."""
+        """List all available configuration names."""
         configs = []
-        if os.path.exists(self.config_dir):
-            for file in os.listdir(self.config_dir):
-                if file.endswith('.json') and file != 'template.json':
-                    configs.append(file.replace('.json', ''))
+        for filename in os.listdir(self.config_dir):
+            if filename.endswith('.json'):
+                configs.append(filename[:-5])  # Remove .json extension
         return sorted(configs)
     
     def config_exists(self, config_name: str) -> bool:
@@ -100,7 +99,7 @@ class ConfigHandler:
                 'generation_settings': {
                     'sampler': 'Euler a',
                     'scheduler': 'Simple',
-                    'steps': 30,
+                    'steps': 20,
                     'cfg_scale': 7.0,
                     'distilled_cfg_scale': None,
                     'width': 512,
@@ -113,21 +112,21 @@ class ConfigHandler:
         elif model_type == 'xl':
             defaults = {
                 'model_settings': {
-                    'checkpoint': 'sdxl-v1.safetensors',
-                    'vae': '',
-                    'text_encoder': 'clip_l.safetensors',
+                    'checkpoint': 'sd_xl_base_1.0.safetensors',
+                    'vae': 'sdxl_vae.safetensors',
+                    'text_encoder': '',
                     'gpu_weight': None,
                     'swap_method': 'queue',
                     'swap_location': 'cpu'
                 },
                 'generation_settings': {
-                    'sampler': 'Euler a',
-                    'scheduler': 'Karras',
-                    'steps': 30,
+                    'sampler': 'DPM++ 2M Karras',
+                    'scheduler': 'Simple',
+                    'steps': 25,
                     'cfg_scale': 7.0,
                     'distilled_cfg_scale': None,
-                    'width': 512,
-                    'height': 768,
+                    'width': 1024,
+                    'height': 1024,
                     'batch_size': 1,
                     'num_batches': 10,
                     'seed': 'random'
@@ -202,58 +201,56 @@ class ConfigHandler:
         
         return result
     
-    def _validate_config(self, config: Dict[str, Any]):
+    def _validate_config(self, config: Dict[str, Any], config_name: str = "<unknown>"):
         """Validate configuration structure and values."""
         required_fields = ['name', 'model_type', 'model_settings', 'generation_settings', 
-                          'prompt_settings', 'wildcards', 'output_settings']
+                          'prompt_settings', 'output_settings']
         
         for field in required_fields:
             if field not in config:
-                raise ValueError(f"Missing required field: {field}")
+                raise ValueError(f"Config '{config_name}': Missing required field: {field}")
         
         # Validate model type
         if config['model_type'] not in ['sd', 'xl', 'flux']:
-            raise ValueError(f"Invalid model type: {config['model_type']}")
-        
-        # Validate wildcard files exist
-        for wildcard_name, wildcard_path in config['wildcards'].items():
-            if isinstance(wildcard_path, str) and not os.path.exists(wildcard_path):
-                print(f"Warning: Wildcard file not found: {wildcard_path}")
+            raise ValueError(f"Config '{config_name}': Invalid model type: {config['model_type']}")
         
         # Validate generation settings
         gen_settings = config['generation_settings']
         if gen_settings['steps'] < 1 or gen_settings['steps'] > 100:
-            raise ValueError("Steps must be between 1 and 100")
+            raise ValueError(f"Config '{config_name}': Steps must be between 1 and 100 (got {gen_settings['steps']})")
         
         if gen_settings['width'] < 64 or gen_settings['height'] < 64:
-            raise ValueError("Width and height must be at least 64")
+            raise ValueError(f"Config '{config_name}': Width and height must be at least 64 (got {gen_settings['width']}x{gen_settings['height']})")
         
         if gen_settings['width'] > 2048 or gen_settings['height'] > 2048:
-            raise ValueError("Width and height must be at most 2048")
+            raise ValueError(f"Config '{config_name}': Width and height must be at most 2048 (got {gen_settings['width']}x{gen_settings['height']})")
     
     def extract_wildcards_from_template(self, template: str) -> List[str]:
         """Extract wildcard names from prompt template using Automatic1111 format."""
-        # Automatic1111 uses __WILDCARD_NAME__ format
         pattern = r'__([A-Z_]+)__'
         return re.findall(pattern, template)
     
     def validate_wildcards(self, config: Dict[str, Any]) -> Dict[str, List[str]]:
-        """Validate that all wildcards in template have corresponding files/lists."""
+        """Validate that all wildcards in template have corresponding files."""
         template = config['prompt_settings']['base_prompt']
         wildcard_names = self.extract_wildcards_from_template(template)
         
         missing_wildcards = []
         available_wildcards = []
+        missing_files = []
         
         for wildcard_name in wildcard_names:
-            if wildcard_name not in config['wildcards']:
-                missing_wildcards.append(wildcard_name)
-            else:
+            wildcard_path = os.path.join('wildcards', f'{wildcard_name.lower()}.txt')
+            if os.path.exists(wildcard_path):
                 available_wildcards.append(wildcard_name)
+            else:
+                missing_wildcards.append(wildcard_name)
+                missing_files.append(wildcard_path)
         
         return {
             'missing': missing_wildcards,
-            'available': available_wildcards
+            'available': available_wildcards,
+            'missing_files': missing_files
         }
     
     def delete_config(self, config_name: str):
@@ -270,8 +267,7 @@ class ConfigHandler:
     def get_config_summary(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Get a summary of configuration for display."""
         wildcard_validation = self.validate_wildcards(config)
-        
-        return {
+        summary = {
             'name': config['name'],
             'description': config.get('description', ''),
             'model_type': config['model_type'],
@@ -285,7 +281,29 @@ class ConfigHandler:
             'wildcards': {
                 'available': len(wildcard_validation['available']),
                 'missing': len(wildcard_validation['missing']),
-                'missing_list': wildcard_validation['missing']
+                'missing_list': wildcard_validation['missing'],
+                'missing_files': wildcard_validation['missing_files']
             },
             'prompt_template': config['prompt_settings']['base_prompt']
-        } 
+        }
+        if wildcard_validation['missing']:
+            summary['error'] = f"Missing wildcard files: {', '.join(wildcard_validation['missing_files'])} for wildcards: {', '.join(wildcard_validation['missing'])}"
+        return summary 
+
+    def get_missing_wildcards(self, config_name: str):
+        """Return missing wildcards and files for a config name."""
+        config = self.load_config(config_name)
+        return {
+            'missing_wildcards': config.get('missing_wildcards', []),
+            'missing_wildcard_files': config.get('missing_wildcard_files', [])
+        }
+
+    def create_missing_wildcard_files(self, config_name: str, default_items: int = 10):
+        """Create missing wildcard files for a config, with placeholder content."""
+        missing = self.get_missing_wildcards(config_name)
+        for wildcard, path in zip(missing['missing_wildcards'], missing['missing_wildcard_files']):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w', encoding='utf-8') as f:
+                for i in range(1, default_items+1):
+                    f.write(f"{wildcard.lower()}_{i}\n")
+        return missing['missing_wildcard_files'] 

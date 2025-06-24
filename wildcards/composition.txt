@@ -1,0 +1,31 @@
+rule of thirds
+golden ratio
+symmetrical
+asymmetrical
+balanced
+unbalanced
+centered
+off-center
+leading lines
+diagonal
+horizontal
+vertical
+radial
+circular
+triangular
+rectangular
+framed
+open
+closed
+tight
+loose
+crowded
+sparse
+layered
+flat
+deep
+shallow
+wide
+narrow
+tall
+short 

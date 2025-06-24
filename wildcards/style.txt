@@ -1,0 +1,31 @@
+realistic
+impressionist
+expressionist
+abstract
+surrealist
+cubist
+romantic
+baroque
+renaissance
+modern
+contemporary
+vintage
+retro
+futuristic
+minimalist
+maximalist
+art deco
+art nouveau
+gothic
+byzantine
+medieval
+classical
+neoclassical
+romantic
+victorian
+edwardian
+art nouveau
+bauhaus
+pop art
+op art
+digital art 

@@ -91,7 +91,17 @@ function displayConfigs(configs) {
 function createConfigCard(config) {
     const statusClass = config.error ? 'error' : 'success';
     const statusIcon = config.error ? 'fa-exclamation-triangle' : 'fa-check-circle';
-    
+    let missingWildcardsHtml = '';
+    if (config.missing_wildcards && config.missing_wildcards.length > 0) {
+        missingWildcardsHtml = `
+            <div class="alert alert-warning p-2 mt-2 mb-2">
+                <strong>Missing wildcards:</strong> ${config.missing_wildcards.join(', ')}<br>
+                <button class="btn btn-warning btn-sm mt-2" onclick="createMissingWildcards('${config.name}')">
+                    <i class="fas fa-plus-circle"></i> Create missing wildcard files
+                </button>
+            </div>
+        `;
+    }
     return `
         <div class="card config-card ${statusClass} mb-3 fade-in">
             <div class="card-body">
@@ -119,26 +129,28 @@ function createConfigCard(config) {
                 <div class="config-info">
                     <div class="config-info-item">
                         <div class="config-info-label">Model</div>
-                        <div class="config-info-value">${config.model_type.toUpperCase()}</div>
+                        <div class="config-info-value">${config.model_type ? config.model_type.toUpperCase() : ''}</div>
                     </div>
                     <div class="config-info-item">
                         <div class="config-info-label">Resolution</div>
-                        <div class="config-info-value">${config.width}×${config.height}</div>
+                        <div class="config-info-value">${config.width || ''}×${config.height || ''}</div>
                     </div>
                     <div class="config-info-item">
                         <div class="config-info-label">Steps</div>
-                        <div class="config-info-value">${config.steps}</div>
+                        <div class="config-info-value">${config.steps || ''}</div>
                     </div>
                     <div class="config-info-item">
                         <div class="config-info-label">Total Images</div>
-                        <div class="config-info-value">${config.total_images}</div>
+                        <div class="config-info-value">${config.total_images || ''}</div>
                     </div>
                 </div>
                 
                 <div class="mb-2">
                     <strong>Prompt Template:</strong>
-                    <div class="preview-prompt">${config.prompt_template}</div>
+                    <div class="preview-prompt">${config.prompt_template || ''}</div>
                 </div>
+                
+                ${missingWildcardsHtml}
                 
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -909,4 +921,20 @@ function setupConfigModalRefresh() {
             loadConfigs();
         });
     }
+}
+
+function createMissingWildcards(configName) {
+    fetch(`/api/config/${configName}/create_missing_wildcards`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Missing wildcard files created!', 'success');
+                loadConfigs();
+            } else {
+                showToast(data.error || 'Failed to create wildcard files', 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Error creating wildcard files', 'error');
+        });
 } 

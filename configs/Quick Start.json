@@ -23,7 +23,7 @@
     "seed": "random"
   },
   "prompt_settings": {
-    "prompt_template": "a beautiful __STYLE__ __ANIMAL__ in __LOCATION__",
+    "base_prompt": "a beautiful __STYLE__ __ANIMAL__ in __LOCATION__",
     "negative_prompt": "blurry, low quality, distorted, ugly, bad anatomy"
   },
   "output_settings": {

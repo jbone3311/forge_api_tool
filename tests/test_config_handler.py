@@ -135,15 +135,27 @@ class TestConfigHandler(unittest.TestCase):
     
     def test_validate_wildcards(self):
         """Test wildcard validation."""
-        config = self.test_config.copy()
-        config["wildcards"] = {
-            "STYLE": "wildcards/style.txt"
+        config = {
+            'name': 'test_config',
+            'model_type': 'sd',
+            'prompt_settings': {
+                'base_prompt': 'a beautiful __STYLE__ __ANIMAL__ in __LOCATION__'
+            },
+            'model_settings': {},
+            'generation_settings': {},
+            'output_settings': {}
         }
         
         validation = self.handler.validate_wildcards(config)
         
-        self.assertIn("STYLE", validation["available"])
-        self.assertEqual(len(validation["available"]), 1)
+        # Should have 3 wildcards in the template
+        self.assertEqual(len(validation['missing']) + len(validation['available']), 3)
+        
+        # Check that the wildcards are correctly identified
+        all_wildcards = validation['missing'] + validation['available']
+        self.assertIn('STYLE', all_wildcards)
+        self.assertIn('ANIMAL', all_wildcards)
+        self.assertIn('LOCATION', all_wildcards)
     
     def test_get_config_summary(self):
         """Test getting configuration summary."""

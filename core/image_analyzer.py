@@ -16,25 +16,40 @@ class ImageAnalyzer:
         """Analyze an image to extract generation settings."""
         try:
             # Decode base64 image data
+            if image_data.startswith('data:image'):
+                # Remove data URL prefix
+                image_data = image_data.split(',')[1]
+            
             image_bytes = base64.b64decode(image_data)
             image = Image.open(io.BytesIO(image_bytes))
             
-            # Extract metadata
-            metadata = self._extract_metadata(image)
-            
-            # Extract generation parameters
-            params = self._extract_parameters(metadata)
-            
-            # Extract prompt information
-            prompt_info = self._extract_prompt_info(metadata)
-            
-            return {
-                'success': True,
-                'metadata': metadata,
-                'parameters': params,
-                'prompt_info': prompt_info,
-                'suggested_config': self._create_suggested_config(params, prompt_info)
+            # Extract basic image info
+            result = {
+                'width': image.width,
+                'height': image.height,
+                'format': image.format,
+                'mode': image.mode,
+                'success': True
             }
+            
+            # Try to extract metadata
+            metadata = self._extract_metadata_from_image(image)
+            if metadata:
+                result['metadata'] = metadata
+                
+                # Extract parameters from metadata
+                params = self._extract_parameters(metadata)
+                if params:
+                    result['parameters'] = params
+                
+                # Extract prompt information
+                prompt_info = self._extract_prompt_info(metadata)
+                if prompt_info:
+                    result['prompt_info'] = prompt_info
+                    result['prompt'] = prompt_info.get('prompt', '')
+                    result['negative_prompt'] = prompt_info.get('negative_prompt', '')
+            
+            return result
             
         except Exception as e:
             return {
@@ -42,64 +57,70 @@ class ImageAnalyzer:
                 'error': str(e)
             }
     
-    def _extract_metadata(self, image: Image.Image) -> Dict[str, Any]:
+    def _extract_metadata_from_image(self, image: Image.Image) -> Optional[Dict[str, Any]]:
         """Extract metadata from image."""
-        metadata = {}
-        
-        # Extract PNG metadata
-        if hasattr(image, 'info') and image.info:
-            metadata.update(image.info)
-        
-        # Extract EXIF data
-        if hasattr(image, '_getexif') and image._getexif():
-            metadata['exif'] = dict(image._getexif())
-        
-        # Extract PNG text chunks
-        if hasattr(image, 'text') and image.text:
-            metadata['text'] = dict(image.text)
-        
-        return metadata
+        try:
+            # Try to get EXIF data
+            exif = image.getexif()
+            if exif:
+                return dict(exif)
+            
+            # Try to get other metadata
+            if hasattr(image, 'info') and image.info:
+                return image.info
+            
+            return None
+        except Exception:
+            return None
     
     def _extract_parameters(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Extract generation parameters from metadata."""
         params = {}
         
         # Look for common parameter keys
-        parameter_keys = [
-            'parameters', 'prompt', 'negative_prompt', 'steps', 'sampler',
-            'cfg_scale', 'seed', 'width', 'height', 'model', 'vae'
-        ]
+        parameter_keys = ['parameters', 'prompt', 'negative_prompt', 'steps', 'cfg_scale', 
+                         'sampler', 'seed', 'width', 'height', 'model', 'vae']
         
         for key in parameter_keys:
             if key in metadata:
                 params[key] = metadata[key]
         
-        # Parse parameters string if it exists
+        # Try to parse parameters string if present
         if 'parameters' in metadata:
-            params.update(self._parse_parameters_string(metadata['parameters']))
+            parsed_params = self._parse_parameters_string(metadata['parameters'])
+            params.update(parsed_params)
         
         return params
     
-    def _parse_parameters_string(self, params_str: str) -> Dict[str, Any]:
-        """Parse parameters string into individual parameters."""
+    def _parse_parameters_string(self, param_string: str) -> Dict[str, Any]:
+        """Parse parameters string to extract individual values."""
         params = {}
         
-        # Common patterns in parameter strings
-        patterns = {
+        # Extract prompt and negative prompt
+        prompt_match = re.search(r'^([^,]+?)(?:,|$)', param_string)
+        if prompt_match:
+            params['prompt'] = prompt_match.group(1).strip()
+        
+        # Extract negative prompt
+        neg_prompt_match = re.search(r'Negative prompt: ([^,]+?)(?:,|$)', param_string)
+        if neg_prompt_match:
+            params['negative_prompt'] = neg_prompt_match.group(1).strip()
+        
+        # Extract other parameters
+        param_patterns = {
             'steps': r'Steps: (\d+)',
-            'sampler': r'Sampler: ([^,]+)',
             'cfg_scale': r'CFG scale: ([\d.]+)',
+            'sampler': r'Sampler: ([^,]+)',
             'seed': r'Seed: (\d+)',
-            'size': r'Size: (\d+)x(\d+)',
+            'width': r'Size: (\d+)x(\d+)',
             'model': r'Model: ([^,]+)',
-            'vae': r'VAE: ([^,]+)',
-            'negative_prompt': r'Negative prompt: ([^,]+)',
+            'vae': r'VAE: ([^,]+)'
         }
         
-        for param_name, pattern in patterns.items():
-            match = re.search(pattern, params_str)
+        for param_name, pattern in param_patterns.items():
+            match = re.search(pattern, param_string)
             if match:
-                if param_name == 'size':
+                if param_name == 'width':
                     params['width'] = int(match.group(1))
                     params['height'] = int(match.group(2))
                 else:
@@ -154,8 +175,7 @@ class ImageAnalyzer:
             'model_type': 'sd',
             'prompt_settings': {
                 'base_prompt': prompt_info.get('prompt', ''),
-                'negative_prompt': prompt_info.get('negative_prompt', ''),
-                'wildcards': {}
+                'negative_prompt': prompt_info.get('negative_prompt', '')
             },
             'generation_settings': {
                 'steps': int(params.get('steps', 20)),
@@ -174,23 +194,21 @@ class ImageAnalyzer:
                 'swap_location': 'cpu'
             },
             'output_settings': {
-                'output_dir': 'outputs/extracted_config',
-                'filename_pattern': '{prompt_hash}_{seed}_{timestamp}',
+                'dir': 'outputs/extracted_config/{timestamp}/',
+                'format': 'png',
                 'save_metadata': True,
-                'save_prompt_list': True
+                'save_prompts': True
             },
-            'wildcard_settings': {
-                'randomization_mode': 'smart_cycle',
-                'cycle_length': 10,
-                'shuffle_on_reset': True
+            'controlnet': [],
+            'alwayson_scripts': {
+                'Lora': []
             },
-            'alwayson_scripts': {}
+            'forge_api': {
+                'base_url': 'http://127.0.0.1:7860',
+                'timeout': 300,
+                'retry_attempts': 3
+            }
         }
-        
-        # Add wildcards if detected
-        if prompt_info.get('wildcards'):
-            for wildcard in prompt_info['wildcards']:
-                config['prompt_settings']['wildcards'][wildcard] = f'wildcards/{wildcard}.txt'
         
         return config
     
@@ -217,33 +235,45 @@ class ImageAnalyzer:
             'description': 'Configuration created from image analysis',
             'model_type': 'sd',
             'model_settings': {
-                'width': analysis_result.get('width', 512),
-                'height': analysis_result.get('height', 512),
-                'steps': 20,
-                'cfg_scale': 7.0,
-                'sampler': 'DPM++ 2M Karras'
+                'checkpoint': '',
+                'vae': '',
+                'text_encoder': '',
+                'gpu_weight': 1.0,
+                'swap_method': 'weight',
+                'swap_location': 'cpu'
+            },
+            'generation_settings': {
+                'sampler': 'DPM++ 2M Karras',
+                'scheduler': 'Simple',
+                'steps': int(analysis_result.get('steps', 20)),
+                'cfg_scale': float(analysis_result.get('cfg_scale', 7.0)),
+                'distilled_cfg_scale': None,
+                'width': int(analysis_result.get('width', 512)),
+                'height': int(analysis_result.get('height', 512)),
+                'batch_size': 1,
+                'num_batches': 10,
+                'seed': 'random'
             },
             'prompt_settings': {
                 'base_prompt': analysis_result.get('prompt', ''),
-                'negative_prompt': ''
+                'negative_prompt': analysis_result.get('negative_prompt', '')
             },
-            'wildcards': {},
             'output_settings': {
-                'output_dir': f'outputs/{config_name.lower().replace(" ", "_")}',
-                'filename_pattern': '{prompt_hash}_{seed}_{timestamp}',
-                'save_metadata': True
+                'dir': f'outputs/{config_name.lower().replace(" ", "_")}/{{timestamp}}/',
+                'format': 'png',
+                'save_metadata': True,
+                'save_prompts': True
             },
-            'batch_settings': {
-                'batch_size': 1,
-                'total_images': 1
+            'controlnet': [],
+            'alwayson_scripts': {
+                'Lora': []
+            },
+            'forge_api': {
+                'base_url': 'http://127.0.0.1:7860',
+                'timeout': 300,
+                'retry_attempts': 3
             }
         }
-        
-        # Add wildcards if detected
-        if 'prompt' in analysis_result:
-            wildcards = self._detect_wildcards(analysis_result['prompt'])
-            for wildcard in wildcards:
-                config['wildcards'][wildcard] = f'{wildcard_dir}/{wildcard.lower()}.txt'
         
         return config
     
@@ -349,4 +379,12 @@ class ImageAnalyzer:
         with open(file_path, 'w') as f:
             f.write('\n'.join(suggestions))
         
-        return file_path 
+        return file_path
+    
+    def error_handling(self, error_type: str, error_message: str) -> Dict[str, Any]:
+        """Handle errors during image analysis."""
+        return {
+            'success': False,
+            'error_type': error_type,
+            'error_message': error_message
+        } 

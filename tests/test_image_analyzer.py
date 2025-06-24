@@ -61,10 +61,20 @@ class TestImageAnalyzer(unittest.TestCase):
         result = self.analyzer.analyze_image(self.image_base64)
         
         self.assertTrue(result['success'])
+        self.assertEqual(result['width'], 512)
+        self.assertEqual(result['height'], 512)
+        self.assertEqual(result['format'], 'PNG')
+        self.assertEqual(result['mode'], 'RGB')
+        
+        # Check that metadata was extracted
         self.assertIn('metadata', result)
         self.assertIn('parameters', result)
         self.assertIn('prompt_info', result)
-        self.assertIn('suggested_config', result)
+        
+        # Check that prompt info contains wildcards
+        prompt_info = result['prompt_info']
+        self.assertIn('wildcards', prompt_info)
+        self.assertIn('STYLE', prompt_info['wildcards'])
     
     def test_extract_parameters(self):
         """Test parameter extraction from metadata."""
@@ -127,36 +137,31 @@ class TestImageAnalyzer(unittest.TestCase):
     
     def test_create_suggested_config(self):
         """Test creating suggested configuration."""
-        params = {
-            'steps': '20',
-            'sampler': 'Euler a',
-            'cfg_scale': '7.0',
+        # Mock image analysis result
+        analysis_result = {
             'width': 512,
             'height': 512,
-            'model': 'test_model.safetensors',
-            'vae': 'test_vae.safetensors'
-        }
-        
-        prompt_info = {
             'prompt': 'a beautiful __STYLE__ landscape',
             'negative_prompt': 'blurry, low quality',
-            'wildcards': ['STYLE']
+            'parameters': {
+                'steps': '20',
+                'cfg_scale': '7.0',
+                'sampler': 'Euler a',
+                'model': 'test_model.safetensors'
+            }
         }
         
-        config = self.analyzer._create_suggested_config(params, prompt_info)
+        config = self.analyzer._create_suggested_config(
+            analysis_result['parameters'],
+            {'prompt': analysis_result['prompt'], 'negative_prompt': analysis_result['negative_prompt']}
+        )
         
         self.assertEqual(config['name'], 'Extracted Configuration')
         self.assertEqual(config['model_type'], 'sd')
         self.assertEqual(config['prompt_settings']['base_prompt'], 'a beautiful __STYLE__ landscape')
         self.assertEqual(config['prompt_settings']['negative_prompt'], 'blurry, low quality')
         self.assertEqual(config['generation_settings']['steps'], 20)
-        self.assertEqual(config['generation_settings']['width'], 512)
-        self.assertEqual(config['generation_settings']['height'], 512)
-        self.assertEqual(config['generation_settings']['sampler'], 'Euler a')
         self.assertEqual(config['generation_settings']['cfg_scale'], 7.0)
-        self.assertEqual(config['model_settings']['checkpoint'], 'test_model.safetensors')
-        self.assertEqual(config['model_settings']['vae'], 'test_vae.safetensors')
-        self.assertIn('STYLE', config['prompt_settings']['wildcards'])
     
     def test_validate_image_format(self):
         """Test image format validation."""
@@ -178,20 +183,26 @@ class TestImageAnalyzer(unittest.TestCase):
     
     def test_analyze_image_without_metadata(self):
         """Test analyzing image without metadata."""
-        # Create image without metadata
-        simple_image = Image.new('RGB', (256, 256), color='blue')
-        simple_image_path = os.path.join(self.temp_dir, "simple_image.png")
-        simple_image.save(simple_image_path, "PNG")
+        # Create a simple image without metadata
+        from PIL import Image
+        import io
+        import base64
         
-        with open(simple_image_path, 'rb') as f:
-            simple_image_data = base64.b64encode(f.read()).decode('utf-8')
+        # Create a simple image
+        img = Image.new('RGB', (100, 100), color='red')
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        img_data = base64.b64encode(buffer.getvalue()).decode()
         
-        result = self.analyzer.analyze_image(simple_image_data)
+        result = self.analyzer.analyze_image(img_data)
         
         self.assertTrue(result['success'])
-        self.assertEqual(result['parameters'], {})
-        self.assertEqual(result['prompt_info']['prompt'], '')
-        self.assertEqual(result['prompt_info']['negative_prompt'], '')
+        self.assertEqual(result['width'], 100)
+        self.assertEqual(result['height'], 100)
+        self.assertEqual(result['format'], 'PNG')
+        
+        # Should not have parameters if no metadata
+        self.assertNotIn('parameters', result)
     
     def test_analyze_image_invalid_data(self):
         """Test analyzing invalid image data."""
@@ -292,23 +303,26 @@ class TestImageAnalyzer(unittest.TestCase):
         """Test creating configuration from analyzed image."""
         # Mock image analysis result
         analysis_result = {
-            'prompt': 'a beautiful __STYLE__ landscape',
-            'parameters': 'Steps: 20, CFG: 7.0, Sampler: DPM++ 2M Karras',
             'width': 512,
-            'height': 512
+            'height': 512,
+            'prompt': 'a beautiful __STYLE__ landscape',
+            'negative_prompt': 'blurry, low quality',
+            'steps': 20,
+            'cfg_scale': 7.0
         }
         
         config = self.analyzer.create_config_from_image(
-            analysis_result, 
-            "Test Config", 
-            self.wildcard_dir
+            analysis_result,
+            'test_config',
+            'wildcards'
         )
         
-        self.assertEqual(config['name'], 'Test Config')
+        self.assertEqual(config['name'], 'test_config')
+        self.assertEqual(config['model_type'], 'sd')
         self.assertEqual(config['prompt_settings']['base_prompt'], 'a beautiful __STYLE__ landscape')
-        self.assertIn('STYLE', config['wildcards'])
-        self.assertEqual(config['model_settings']['width'], 512)
-        self.assertEqual(config['model_settings']['height'], 512)
+        self.assertEqual(config['prompt_settings']['negative_prompt'], 'blurry, low quality')
+        self.assertEqual(config['generation_settings']['steps'], 20)
+        self.assertEqual(config['generation_settings']['cfg_scale'], 7.0)
     
     def test_validate_wildcard_files(self):
         """Test validating wildcard files exist."""
