@@ -13,7 +13,7 @@
     "seed": "random"
   },
   "prompt_settings": {
-    "base_prompt": "concept art of __SUBJECT__ in __SETTING__, __STYLE__, __MOOD__, __LIGHTING__, __ARTISTIC__, __COMPOSITION__",
+    "base_prompt": "concept art of __SUBJECT__ in __SETTING__, __ARTISTIC__, __MOOD__, __COMPOSITION__",
     "negative_prompt": "low quality, blurry, distorted, unfinished"
   },
   "output_settings": {

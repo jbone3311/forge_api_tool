@@ -13,7 +13,7 @@
     "seed": "random"
   },
   "prompt_settings": {
-    "base_prompt": "cyberpunk __SUBJECT__ in __SETTING__, __LIGHTING__, __WEATHER__, __STYLE__",
+    "base_prompt": "cyberpunk __SUBJECT__ in __SETTING__, __MOOD__, __WEATHER__, __ARTISTIC__",
     "negative_prompt": "low quality, blurry, distorted, boring"
   },
   "output_settings": {

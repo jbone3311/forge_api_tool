@@ -13,7 +13,7 @@
     "seed": "random"
   },
   "prompt_settings": {
-    "base_prompt": "a __STYLE__ portrait of a __SUBJECT__ __PERSON__, __EXPRESSION__, __POSE__, __LIGHTING__, __MEDIUM__",
+    "base_prompt": "a __ARTISTIC__ portrait of a __SUBJECT__ __PERSON__, __EXPRESSION__, __POSE__, __MOOD__, __MEDIUM__",
     "negative_prompt": "low quality, blurry, distorted, awkward pose"
   },
   "output_settings": {

@@ -1,0 +1,513 @@
+{
+  "basic": {
+    "status": "success",
+    "status_code": 200,
+    "url": "http://127.0.0.1:7860/",
+    "method": "GET",
+    "response": "<!doctype html>\n<html\n\tlang=\"en\"\n\tstyle=\"\n\t\tmargin: 0;\n\t\tpadding: 0;\n\t\tmin-height: 100%;\n\t\tdisplay: flex;\n\t\tflex-direction: column;\n\t\"\n>\n\t<head>\n\t\t<meta charset=\"utf-8\" />\n\t\t<meta\n\t\t\tname=\"viewport\"\n\t\t\tcontent=\"width=device-width, initial-scale=1, shrink-to-fit=no\"\n\t\t/>\n\n\t\t<style>\n\t\t\t:root {\n\t\t\t\t--bg: white;\n\t\t\t\t--col:   #1f2937;\n\t\t\t\t--bg-dark: #0b0f19;\n\t\t\t\t--col-dark: #f3f4f6;\n\t\t\t}\n\n\n\t\t\tbody {\n\t\t\t\tbackground: var(--bg);\n\t\t\t\tcolor: var(--col);\n\t\t\t\tfont-family: Arial, Helvetica, sans-serif;\n\t\t\t}\n",
+    "headers": {
+      "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+      "server": "uvicorn",
+      "content-length": "7706589",
+      "content-type": "text/html; charset=utf-8"
+    }
+  },
+  "sd_endpoints": [
+    "/sdapi/v1/sd-models",
+    "/sdapi/v1/samplers",
+    "/sdapi/v1/upscalers",
+    "/sdapi/v1/embeddings",
+    "/sdapi/v1/loras",
+    "/sdapi/v1/scripts",
+    "/sdapi/v1/options",
+    "/sdapi/v1/face-restorers",
+    "/sdapi/v1/hypernetworks",
+    "/sdapi/v1/sd-vae",
+    "/sdapi/v1/prompt-styles",
+    "/sdapi/v1/progress"
+  ],
+  "forge_endpoints": [
+    "/api/v1/models",
+    "/api/v1/samplers",
+    "/api/v1/loras",
+    "/api/v1/options",
+    "/api/models",
+    "/api/samplers",
+    "/api/loras",
+    "/api/options",
+    "/models",
+    "/samplers",
+    "/loras",
+    "/options"
+  ],
+  "controlnet_endpoints": [
+    "/controlnet/model_list",
+    "/controlnet/module_list",
+    "/sdapi/v1/controlnet/model_list",
+    "/sdapi/v1/controlnet/module_list",
+    "/api/v1/controlnet/models",
+    "/api/v1/controlnet/modules"
+  ],
+  "generation_endpoints": [
+    "/sdapi/v1/txt2img",
+    "/api/v1/generate",
+    "/api/generate",
+    "/generate"
+  ],
+  "results": {
+    "sd": {
+      "/sdapi/v1/sd-models": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/sd-models",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/samplers": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/samplers",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/upscalers": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/upscalers",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/embeddings": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/embeddings",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/loras": {
+        "status": "success",
+        "status_code": 200,
+        "url": "http://127.0.0.1:7860/sdapi/v1/loras",
+        "method": "GET",
+        "response": "[{\"name\":\"AnalogRedmondV2-Analog-AnalogRedmAF\",\"alias\":\"AnalogRedmondV2-Analog-AnalogRedmAF\",\"path\":\"C:\\\\Users\\\\jiml\\\\Dropbox\\\\AllModels\\\\models\\\\Lora\\\\AnalogRedmondV2-Analog-AnalogRedmAF.safetensors\",\"metadata\":{\"modelspec.architecture\":\"stable-diffusion-xl-v1-base/lora\",\"ss_base_model_version\":\"sdxl_base_v1-0\",\"modelspec.title\":\"analogConfig2\",\"modelspec.sai_model_spec\":\"1.0.0\",\"modelspec.date\":\"2023-10-07T05:26:48\",\"sshs_legacy_hash\":\"a6f95699\",\"modelspec.resolution\":\"1024x1024\",\"ss_v2\":\"Fals",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "904995",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/scripts": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/scripts",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/options": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/options",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/face-restorers": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/face-restorers",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/hypernetworks": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/hypernetworks",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/sd-vae": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/sd-vae",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/prompt-styles": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/prompt-styles",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/progress": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/progress",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      }
+    },
+    "forge": {
+      "/api/v1/models": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/api/v1/models",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/api/v1/samplers": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/api/v1/samplers",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/api/v1/loras": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/api/v1/loras",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/api/v1/options": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/api/v1/options",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/api/models": {
+        "status": "error",
+        "status_code": 405,
+        "url": "http://127.0.0.1:7860/api/models",
+        "method": "GET",
+        "response": "{\"detail\":\"Method Not Allowed\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "allow": "POST",
+          "content-length": "31",
+          "content-type": "application/json"
+        }
+      },
+      "/api/samplers": {
+        "status": "error",
+        "status_code": 405,
+        "url": "http://127.0.0.1:7860/api/samplers",
+        "method": "GET",
+        "response": "{\"detail\":\"Method Not Allowed\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "allow": "POST",
+          "content-length": "31",
+          "content-type": "application/json"
+        }
+      },
+      "/api/loras": {
+        "status": "error",
+        "status_code": 405,
+        "url": "http://127.0.0.1:7860/api/loras",
+        "method": "GET",
+        "response": "{\"detail\":\"Method Not Allowed\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "allow": "POST",
+          "content-length": "31",
+          "content-type": "application/json"
+        }
+      },
+      "/api/options": {
+        "status": "error",
+        "status_code": 405,
+        "url": "http://127.0.0.1:7860/api/options",
+        "method": "GET",
+        "response": "{\"detail\":\"Method Not Allowed\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "allow": "POST",
+          "content-length": "31",
+          "content-type": "application/json"
+        }
+      },
+      "/models": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/models",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/samplers": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/samplers",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/loras": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/loras",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/options": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/options",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      }
+    },
+    "controlnet": {
+      "/controlnet/model_list": {
+        "status": "success",
+        "status_code": 200,
+        "url": "http://127.0.0.1:7860/controlnet/model_list",
+        "method": "GET",
+        "response": "{\"model_list\":[\"None\",\"color_finetune [88a3df5a]\",\"control_v11p_sd15_scribble [61dd9fb9]\"]}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "91",
+          "content-type": "application/json"
+        }
+      },
+      "/controlnet/module_list": {
+        "status": "success",
+        "status_code": 200,
+        "url": "http://127.0.0.1:7860/controlnet/module_list",
+        "method": "GET",
+        "response": "{\"module_list\":[\"None\",\"softedge_pidinet\",\"shuffle\",\"seg_ofade20k\",\"scribble_pidinet\",\"reference_only\",\"openpose_full\",\"normalbae\",\"mlsd\",\"lineart_standard (from white bg & black line)\",\"depth_midas\",\"depth_marigold\",\"canny\",\"invert (from white bg & black line)\",\"InsightFace+CLIP-H (IPAdapter)\",\"CLIP-ViT-bigG (IPAdapter)\",\"CLIP-ViT-H (IPAdapter)\",\"InsightFace (InstantID)\",\"CLIP-G (Revision)\",\"CLIP-G (Revision ignore prompt)\",\"tile_resample\",\"tile_colorfix+sharp\",\"tile_colorfix\",\"threshold\",\"t2ia",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "1258",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/controlnet/model_list": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/controlnet/model_list",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/sdapi/v1/controlnet/module_list": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/controlnet/module_list",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/api/v1/controlnet/models": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/api/v1/controlnet/models",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/api/v1/controlnet/modules": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/api/v1/controlnet/modules",
+        "method": "GET",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      }
+    },
+    "generation": {
+      "/sdapi/v1/txt2img": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/sdapi/v1/txt2img",
+        "method": "POST",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/api/v1/generate": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/api/v1/generate",
+        "method": "POST",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      },
+      "/api/generate": {
+        "status": "error",
+        "status_code": 422,
+        "url": "http://127.0.0.1:7860/api/generate",
+        "method": "POST",
+        "response": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"data\"],\"msg\":\"Field required\",\"input\":{\"prompt\":\"a beautiful landscape\",\"negative_prompt\":\"blurry, low quality\",\"steps\":20,\"width\":512,\"height\":512,\"sampler_name\":\"Euler a\",\"cfg_scale\":7.0,\"seed\":-1},\"url\":\"https://errors.pydantic.dev/2.8/v/missing\"}]}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "296",
+          "content-type": "application/json"
+        }
+      },
+      "/generate": {
+        "status": "error",
+        "status_code": 404,
+        "url": "http://127.0.0.1:7860/generate",
+        "method": "POST",
+        "response": "{\"detail\":\"Not Found\"}",
+        "headers": {
+          "date": "Tue, 24 Jun 2025 17:00:56 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        }
+      }
+    }
+  }
+}

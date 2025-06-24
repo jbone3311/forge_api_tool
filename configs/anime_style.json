@@ -13,7 +13,7 @@
     "seed": "random"
   },
   "prompt_settings": {
-    "base_prompt": "anime style __ANIMAL__ in __LOCATION__, __STYLE__, vibrant colors, detailed",
+    "base_prompt": "anime style __SUBJECT__ in __SETTING__, __ARTISTIC__, vibrant colors, detailed",
     "negative_prompt": "realistic, photorealistic, blurry, low quality, distorted"
   },
   "output_settings": {

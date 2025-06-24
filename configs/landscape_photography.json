@@ -23,7 +23,7 @@
     "seed": "random"
   },
   "prompt_settings": {
-    "base_prompt": "a stunning __STYLE__ photograph of __LOCATION__, __LIGHTING__, __WEATHER__, __COMPOSITION__, __CAMERA__",
+    "base_prompt": "a stunning __ARTISTIC__ photograph of __SETTING__, __MOOD__, __WEATHER__, __COMPOSITION__, __CAMERA__",
     "negative_prompt": "blurry, low quality, distorted, ugly, bad anatomy, watermark, signature, text"
   },
   "output_settings": {

@@ -23,7 +23,7 @@
     "seed": "random"
   },
   "prompt_settings": {
-    "base_prompt": "a photo of a __ANIMAL__ in __LOCATION__, __STYLE__, cinematic lighting",
+    "base_prompt": "a photo of a __SUBJECT__ in __SETTING__, __ARTISTIC__, cinematic lighting",
     "negative_prompt": "low quality, blurry, distorted, ugly, bad anatomy"
   },
   "output_settings": {
