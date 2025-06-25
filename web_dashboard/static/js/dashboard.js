@@ -81,6 +81,35 @@ function setupEventListeners() {
             closeAllModals();
         }
     });
+    
+    // Seed input validation
+    const seedInput = document.getElementById('seed-input');
+    if (seedInput) {
+        seedInput.addEventListener('input', function(e) {
+            const value = e.target.value;
+            if (value !== '' && value !== '-') {
+                const num = parseInt(value);
+                if (isNaN(num)) {
+                    e.target.setCustomValidity('Please enter a valid number');
+                } else {
+                    e.target.setCustomValidity('');
+                }
+            } else {
+                e.target.setCustomValidity('');
+            }
+        });
+        
+        // Add tooltip for seed input
+        seedInput.addEventListener('focus', function() {
+            if (this.value === '') {
+                this.placeholder = 'Leave empty for random seed';
+            }
+        });
+        
+        seedInput.addEventListener('blur', function() {
+            this.placeholder = 'Random';
+        });
+    }
 }
 
 // Update system status
@@ -370,7 +399,7 @@ function updateTemplate() {
 // Generation Functions
 function generateImage() {
     const prompt = document.getElementById('prompt-input').value;
-    const seed = document.getElementById('seed-input').value;
+    const seedInput = document.getElementById('seed-input').value;
     const configName = document.getElementById('config-select').value;
     
     if (!prompt || !configName) {
@@ -380,10 +409,19 @@ function generateImage() {
     
     console.log('Generating image with config:', configName, 'prompt:', prompt);
     
+    // Handle seed properly - empty string or invalid input becomes null (random seed)
+    let seed = null;
+    if (seedInput.trim() !== '') {
+        const seedNum = parseInt(seedInput);
+        if (!isNaN(seedNum)) {
+            seed = seedNum;
+        }
+    }
+    
     const data = {
         config_name: configName,
         prompt: prompt,
-        seed: seed || null
+        seed: seed
     };
     
     fetch('/api/generate', {
@@ -414,11 +452,21 @@ function generateSingle(configName) {
         return;
     }
     
-    const seed = document.getElementById('seed-input').value;
+    const seedInput = document.getElementById('seed-input').value;
+    
+    // Handle seed properly - empty string or invalid input becomes null (random seed)
+    let seed = null;
+    if (seedInput.trim() !== '') {
+        const seedNum = parseInt(seedInput);
+        if (!isNaN(seedNum)) {
+            seed = seedNum;
+        }
+    }
+    
     const data = {
         config_name: configName,
         prompt: prompt,
-        seed: seed || null
+        seed: seed
     };
     
     fetch('/api/generate', {

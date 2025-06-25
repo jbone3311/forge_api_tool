@@ -388,12 +388,21 @@ def generate_image():
         data = request.get_json()
         config_name = data.get('config_name')
         prompt = data.get('prompt', '')
-        seed = data.get('seed')
+        seed_input = data.get('seed')
         
         if not config_name:
             return jsonify({'error': 'Config name is required'}), 400
         if not prompt:
             return jsonify({'error': 'Prompt is required'}), 400
+        
+        # Handle seed properly - convert string to int or None
+        seed = None
+        if seed_input is not None and seed_input != '':
+            try:
+                seed = int(seed_input)
+            except (ValueError, TypeError):
+                # Invalid seed value, use random seed
+                seed = None
         
         config = config_handler.get_config(config_name)
         if not config:
@@ -412,6 +421,7 @@ def generate_image():
             "config_name": config_name,
             "prompt_length": len(resolved_prompt),
             "seed": seed,
+            "seed_input": seed_input,
             "user_provided_prompt": True,
             "wildcards_resolved": ('__' in prompt)
         })
@@ -436,7 +446,8 @@ def generate_image():
                 'image_data': image_data,
                 'output_path': output_path,
                 'metadata': metadata,
-                'prompt_used': resolved_prompt
+                'prompt_used': resolved_prompt,
+                'seed_used': seed
             })
         else:
             logger.log_image_generation(config_name, resolved_prompt, seed or 0, False)
