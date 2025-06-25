@@ -5,6 +5,7 @@ from typing import Dict, List, Any, Optional, Callable
 from datetime import datetime
 from enum import Enum
 import threading
+import uuid
 
 
 class JobStatus(Enum):
@@ -38,7 +39,7 @@ class Job:
         
     def _generate_id(self) -> str:
         """Generate a unique job ID."""
-        return f"job_{int(time.time() * 1000)}"
+        return str(uuid.uuid4())
     
     def start(self):
         """Mark job as started."""
@@ -302,4 +303,8 @@ class JobQueue:
         """Set a progress callback for a specific job."""
         job = self.get_job(job_id)
         if job:
-            job.progress_callback = callback 
+            job.progress_callback = callback
+
+
+# Create a global instance for easy importing
+job_queue = JobQueue() 

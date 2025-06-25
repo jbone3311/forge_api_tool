@@ -1,31 +1,75 @@
 {
   "name": "Portrait Art",
-  "description": "Portrait art with various styles, subjects, and expressions",
+  "description": "Portrait art template optimized for people and faces with face restoration enabled",
   "model_type": "sd",
-  "model_settings": {},
+  "model_settings": {
+    "checkpoint": "sd-v1-5.safetensors",
+    "vae": "vae-ft-mse-840000-ema-pruned.safetensors",
+    "text_encoder": "openai/clip-vit-large-patch14"
+  },
   "generation_settings": {
+    "steps": 25,
     "sampler": "DPM++ 2M Karras",
-    "steps": 22,
     "width": 512,
-    "height": 704,
+    "height": 768,
     "batch_size": 1,
-    "num_batches": 10,
-    "seed": "random"
+    "batch_count": 1,
+    "cfg_scale": 7.5,
+    "seed": -1,
+    "subseed": -1,
+    "subseed_strength": 0.0,
+    "seed_resize_from_h": -1,
+    "seed_resize_from_w": -1,
+    "denoising_strength": 0.75,
+    "restore_faces": true,
+    "tiling": false,
+    "enable_hr": false,
+    "hr_scale": 2.0,
+    "hr_upscaler": "Latent",
+    "hr_second_pass_steps": 20,
+    "hr_resize_x": 0,
+    "hr_resize_y": 0,
+    "hr_sampler_name": "DPM++ 2M Karras",
+    "hr_prompt": "",
+    "hr_negative_prompt": "",
+    "hr_denoising_strength": 0.7
   },
   "prompt_settings": {
-    "base_prompt": "a __ARTISTIC__ portrait of a __SUBJECT__ __PERSON__, __EXPRESSION__, __POSE__, __MOOD__, __MEDIUM__",
-    "negative_prompt": "low quality, blurry, distorted, awkward pose"
+    "base_prompt": "a beautiful portrait of __PERSON__ in __STYLE__, __LIGHTING__, __COMPOSITION__, __MEDIUM__, detailed face, perfect anatomy, professional photography",
+    "negative_prompt": "low quality, blurry, pixelated, distorted, ugly, deformed, bad anatomy, watermark, signature, text, logo, oversaturated, overexposed, underexposed, extra limbs, missing limbs, floating limbs, disconnected limbs, malformed hands, blur, out of focus, long neck, long body, mutated hands and fingers, out of frame, blender, doll, cropped, low-res, close-up, poorly-drawn face, out of frame, double, two heads, blurred, ugly, disfigured, too many limbs, deformed, repetitive, black and white, grainy, extra limbs, bad anatomy, high contrast, overexposed, underexposed, extra limbs, bad anatomy, high contrast, overexposed, underexposed",
+    "prompt_styles": [],
+    "sampler_name": "DPM++ 2M Karras"
   },
   "output_settings": {
-    "dir": "./outputs/portrait_art/{timestamp}/",
-    "format": "png",
+    "output_dir": "outputs/portrait_art",
+    "filename_pattern": "{prompt}_{seed}_{timestamp}",
+    "save_images": true,
+    "save_grid": false,
+    "save_info": true,
     "save_metadata": true,
-    "save_prompts": true
+    "grid_format": "png",
+    "grid_extended_filename": false,
+    "grid_only_if_multiple": true,
+    "grid_prevent_empty_spots": false,
+    "n_rows": -1,
+    "enable_pnginfo": true,
+    "pnginfo": "",
+    "jpeg_quality": 95,
+    "webp_lossless": false,
+    "webp_quality": 95,
+    "webp_method": 4,
+    "webp_effort": 6
   },
-  "wildcards": {},
-  "wildcard_settings": {},
-  "alwayson_scripts": {},
-  "forge_api": {
+  "script_settings": {
+    "script_name": null,
+    "script_args": []
+  },
+  "alwayson_scripts": {
+    "controlnet": {
+      "args": []
+    }
+  },
+  "api_settings": {
     "base_url": "http://127.0.0.1:7860",
     "timeout": 300,
     "retry_attempts": 3

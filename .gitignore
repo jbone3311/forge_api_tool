@@ -51,6 +51,17 @@ queue.json
 wildcard_usage.json
 database.db
 
+# Test results and generated files
+*_test_results.json
+*_results.json
+comprehensive_test_results.json
+direct_forge_test_results.json
+forge_endpoint_test_results.json
+
+# Cache files
+cache/
+logs/
+
 # Flask
 instance/
 .webassets-cache

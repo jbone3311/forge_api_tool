@@ -21,6 +21,7 @@ class ForgeAPILogger:
         
         # Initialize session
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.session_start_time = datetime.now()
         self.session_log = self.log_dir / f"session_{self.session_id}.log"
         
     def _setup_loggers(self):
@@ -186,18 +187,145 @@ class ForgeAPILogger:
             self.app_logger.error(message)
     
     def get_session_summary(self) -> Dict[str, Any]:
-        """Get a summary of the current session."""
-        return {
-            'session_id': self.session_id,
-            'start_time': datetime.now().isoformat(),
-            'log_files': {
-                'app': str(self.log_dir / 'app.log'),
-                'jobs': str(self.log_dir / 'jobs.log'),
-                'api': str(self.log_dir / 'api.log'),
-                'errors': str(self.log_dir / 'errors.log'),
-                'performance': str(self.log_dir / 'performance.log')
+        """Get a comprehensive summary of the current session."""
+        try:
+            # Parse log files to get statistics
+            log_stats = self._parse_log_files()
+            
+            return {
+                'session_id': self.session_id,
+                'session_start': self.session_start_time.isoformat() if hasattr(self, 'session_start_time') else datetime.now().isoformat(),
+                'total_events': log_stats.get('total_events', 0),
+                'successful_events': log_stats.get('successful_events', 0),
+                'warning_events': log_stats.get('warning_events', 0),
+                'error_events': log_stats.get('error_events', 0),
+                'recent_events': log_stats.get('recent_events', []),
+                'log_files': {
+                    'app': str(self.log_dir / 'app.log'),
+                    'jobs': str(self.log_dir / 'jobs.log'),
+                    'api': str(self.log_dir / 'api.log'),
+                    'errors': str(self.log_dir / 'errors.log'),
+                    'performance': str(self.log_dir / 'performance.log')
+                }
             }
+        except Exception as e:
+            # Fallback to basic summary if parsing fails
+            return {
+                'session_id': self.session_id,
+                'session_start': datetime.now().isoformat(),
+                'total_events': 0,
+                'successful_events': 0,
+                'warning_events': 0,
+                'error_events': 0,
+                'recent_events': [],
+                'error': f'Failed to parse logs: {str(e)}'
+            }
+    
+    def _parse_log_files(self) -> Dict[str, Any]:
+        """Parse log files to extract statistics."""
+        stats = {
+            'total_events': 0,
+            'successful_events': 0,
+            'warning_events': 0,
+            'error_events': 0,
+            'recent_events': []
         }
+        
+        # Track recent events across all log files
+        all_events = []
+        
+        # Parse each log file
+        for log_file in self.log_dir.glob('*.log'):
+            try:
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        # Parse log line
+                        event = self._parse_log_line(line, log_file.name)
+                        if event:
+                            all_events.append(event)
+                            
+                            # Count by level
+                            stats['total_events'] += 1
+                            if event['level'] == 'ERROR':
+                                stats['error_events'] += 1
+                            elif event['level'] == 'WARNING':
+                                stats['warning_events'] += 1
+                            else:
+                                stats['successful_events'] += 1
+            except Exception as e:
+                # Skip files that can't be read
+                continue
+        
+        # Sort events by timestamp and get recent ones
+        all_events.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        stats['recent_events'] = all_events[:20]  # Last 20 events
+        
+        return stats
+    
+    def _parse_log_line(self, line: str, log_file: str) -> Optional[Dict[str, Any]]:
+        """Parse a single log line to extract event information."""
+        try:
+            # Skip empty lines
+            if not line.strip():
+                return None
+            
+            # Try to parse timestamp and level
+            parts = line.split(' - ', 2)
+            if len(parts) < 2:
+                return None
+            
+            timestamp_str = parts[0].strip()
+            level_part = parts[1].strip()
+            
+            # Extract level
+            level = 'INFO'
+            if 'ERROR' in level_part:
+                level = 'ERROR'
+            elif 'WARNING' in level_part:
+                level = 'WARNING'
+            elif 'DEBUG' in level_part:
+                level = 'DEBUG'
+            
+            # Extract event type and message
+            event_type = 'LOG'
+            message = level_part
+            
+            if len(parts) > 2:
+                message = parts[2].strip()
+                
+                # Try to extract event type from common patterns
+                if 'APP_EVENT:' in message:
+                    event_type = 'APP_EVENT'
+                elif 'JOB_' in message:
+                    event_type = 'JOB'
+                elif 'API_' in message:
+                    event_type = 'API'
+                elif 'PERF:' in message:
+                    event_type = 'PERFORMANCE'
+                elif 'CONFIG_' in message:
+                    event_type = 'CONFIG'
+                elif 'QUEUE_' in message:
+                    event_type = 'QUEUE'
+                elif 'IMAGE_GENERATION:' in message:
+                    event_type = 'IMAGE_GENERATION'
+            
+            # Parse timestamp
+            try:
+                timestamp = datetime.fromisoformat(timestamp_str.replace(' ', 'T'))
+            except:
+                timestamp = datetime.now()
+            
+            return {
+                'timestamp': timestamp.isoformat(),
+                'level': level,
+                'event_type': event_type,
+                'message': message[:100] + '...' if len(message) > 100 else message,
+                'log_file': log_file
+            }
+            
+        except Exception:
+            # Return None if parsing fails
+            return None
     
     def cleanup_old_logs(self, days_to_keep: int = 30):
         """Clean up old log files."""

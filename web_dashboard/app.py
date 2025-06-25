@@ -1,819 +1,596 @@
-from flask import Flask, render_template, request, jsonify, send_file
-from flask_socketio import SocketIO, emit
+#!/usr/bin/env python3
+"""
+Forge API Tool Web Dashboard
+
+A Flask-based web interface for managing Forge API configurations,
+generating images, and monitoring the system.
+"""
+
 import os
-import sys
 import json
 import time
+import threading
+import webbrowser
 from datetime import datetime
-import base64
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_socketio import SocketIO, emit
+import sys
 
-# Add the core directory to the path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-core_path = os.path.join(project_root, 'core')
-sys.path.insert(0, core_path)
+# Add the parent directory to the path to import core modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config_handler import ConfigHandler
-from wildcard_manager import WildcardManagerFactory
-from prompt_builder import PromptBuilder
-from forge_api import ForgeAPIClient
-from batch_runner import BatchRunner
-from image_analyzer import ImageAnalyzer
-from output_manager import OutputManager
-from logger import logger
+from core.config_handler import config_handler
+from core.forge_api import forge_api_client
+from core.output_manager import output_manager
+from core.centralized_logger import centralized_logger
+from core.job_queue import job_queue
+from core.batch_runner import batch_runner
+from core.prompt_builder import PromptBuilder
+from core.wildcard_manager import WildcardManagerFactory
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'forge-api-tool-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Initialize core components
-config_handler = ConfigHandler()
-wildcard_factory = WildcardManagerFactory()
-prompt_builder = PromptBuilder(wildcard_factory)
-forge_client = ForgeAPIClient()
-batch_runner = BatchRunner()
-batch_runner.set_forge_client(forge_client)
-image_analyzer = ImageAnalyzer()
-output_manager = OutputManager()
+# Initialize components
+logger = centralized_logger
 
-# Global variables for tracking
-current_job = None
-processing_active = False
-
+# Global state for tracking current generation
+current_generation = {
+    'active': False,
+    'current_image': 0,
+    'total_images': 0,
+    'config_name': '',
+    'start_time': None,
+    'progress': 0.0
+}
 
 @app.route('/')
 def dashboard():
     """Main dashboard page."""
-    configs = config_handler.list_configs()
-    config_summaries = []
-    
-    for config_name in configs:
+    try:
+        # Debug: Log the current working directory and config handler path
+        logger.info(f"Dashboard accessed - Current working directory: {os.getcwd()}")
+        logger.info(f"Config handler config_dir: {config_handler.config_dir}")
+        logger.info(f"Config directory exists: {os.path.exists(config_handler.config_dir)}")
+        
+        # Get configurations - ensure we're using the correct path
+        configs = config_handler.get_all_configs()
+        logger.info(f"Loaded {len(configs)} configurations")
+        
+        # Debug: Log each config that was loaded
+        for config_name, config in configs.items():
+            logger.info(f"Config loaded: {config_name} - {config.get('name', 'N/A')} ({config.get('model_type', 'N/A')})")
+        
+        # Fallback: If no configs loaded, try direct loading
+        if not configs:
+            logger.warning("No configs loaded via config handler, trying direct loading...")
+            configs = load_templates_directly()
+            logger.info(f"Direct loading found {len(configs)} configurations")
+        
+        # Get output statistics
+        output_stats = output_manager.get_output_statistics()
+        
+        # Get queue status - use get_queue_stats instead of get_status
         try:
-            config = config_handler.load_config(config_name)
-            summary = config_handler.get_config_summary(config)
-            config_summaries.append(summary)
+            queue_status = job_queue.get_queue_stats()
         except Exception as e:
-            config_summaries.append({
-                'name': config_name,
-                'error': str(e)
-            })
+            logger.warning(f"Failed to get queue stats: {e}")
+            queue_status = {
+                'total_jobs': 0,
+                'pending_jobs': 0,
+                'running_jobs': 0,
+                'completed_jobs': 0,
+                'failed_jobs': 0,
+                'total_images': 0,
+                'completed_images': 0,
+                'failed_images': 0,
+                'current_job': None
+            }
+        
+        # Get API connection status
+        api_status = get_api_status()
+        
+        logger.log_app_event("dashboard_accessed", {
+            "config_count": len(configs),
+            "output_count": output_stats.get('total_outputs', 0),
+            "queue_size": queue_status.get('total_jobs', 0),
+            "api_connected": api_status.get('connected', False)
+        })
+        
+        if not configs:
+            logger.warning("No configuration templates found for dashboard display.")
+            # Log the config directory path for debugging
+            config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'configs')
+            logger.warning(f"Config directory path: {config_dir}")
+            logger.warning(f"Config directory exists: {os.path.exists(config_dir)}")
+            if os.path.exists(config_dir):
+                files = os.listdir(config_dir)
+                logger.warning(f"Files in config directory: {files}")
+        
+        return render_template('dashboard.html', 
+                             configs=configs, 
+                             output_stats=output_stats,
+                             queue_status=queue_status,
+                             api_status=api_status)
+    except Exception as e:
+        logger.log_error(f"Failed to load dashboard: {e}")
+        import traceback
+        logger.log_error(f"Dashboard error traceback: {traceback.format_exc()}")
+        return render_template('dashboard.html', 
+                             configs={}, 
+                             output_stats={},
+                             queue_status={'total_jobs': 0, 'pending_jobs': 0, 'running_jobs': 0, 'completed_jobs': 0, 'failed_jobs': 0, 'total_images': 0, 'completed_images': 0, 'failed_images': 0, 'current_job': None},
+                             api_status={'connected': False, 'error': str(e)},
+                             error=str(e))
+
+def load_templates_directly():
+    """Fallback method to load templates directly without config handler."""
+    configs = {}
+    try:
+        config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'configs')
+        if not os.path.exists(config_dir):
+            logger.warning(f"Config directory does not exist: {config_dir}")
+            return configs
+        
+        for filename in os.listdir(config_dir):
+            if filename.endswith('.json'):
+                config_name = filename[:-5]  # Remove .json extension
+                config_path = os.path.join(config_dir, filename)
+                
+                try:
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        config = json.load(f)
+                    
+                    # Basic validation
+                    if 'name' in config and 'model_type' in config:
+                        configs[config_name] = config
+                        logger.info(f"Directly loaded config: {config_name}")
+                    else:
+                        logger.warning(f"Config {config_name} missing required fields")
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to load config {config_name}: {e}")
+                    
+    except Exception as e:
+        logger.error(f"Error in direct template loading: {e}")
     
-    return render_template('dashboard.html', configs=config_summaries)
+    return configs
 
-
-@app.route('/api/configs')
-def list_configs():
-    """Get list of all configurations."""
-    configs = config_handler.list_configs()
-    summaries = []
-    for name in configs:
-        try:
-            config = config_handler.load_config(name)
-            summary = config_handler.get_config_summary(config)
-            summary['missing_wildcards'] = config.get('missing_wildcards', [])
-            summary['missing_wildcard_files'] = config.get('missing_wildcard_files', [])
-            summary['error'] = False
-        except Exception as e:
-            summary = {'name': name, 'error': True, 'error_message': str(e)}
-        summaries.append(summary)
-    return jsonify(summaries)
-
-
-@app.route('/api/config/<config_name>')
-def get_config(config_name):
-    """Get a specific configuration."""
+# API Status Endpoints
+@app.route('/api/status')
+def get_system_status():
+    """Get comprehensive system status."""
     try:
-        config = config_handler.load_config(config_name)
-        return jsonify(config)
+        # Get API connection status
+        api_status = get_api_status()
+        
+        # Get queue status
+        queue_status = job_queue.get_status()
+        
+        # Get current generation status
+        generation_status = get_generation_status()
+        
+        # Get output statistics
+        output_stats = output_manager.get_output_statistics()
+        
+        status = {
+            'api': api_status,
+            'queue': queue_status,
+            'generation': generation_status,
+            'outputs': output_stats,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        return jsonify(status)
     except Exception as e:
+        logger.log_error(f"Failed to get system status: {e}")
         return jsonify({'error': str(e)}), 400
 
-
-@app.route('/api/config/<config_name>/summary')
-def get_config_summary(config_name):
-    """Get summary of a configuration."""
-    try:
-        config = config_handler.load_config(config_name)
-        summary = config_handler.get_config_summary(config)
-        return jsonify(summary)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/config/<config_name>/preview')
-def preview_config(config_name):
-    """Preview prompts for a configuration."""
-    count = request.args.get('count', 5, type=int)
-    try:
-        preview = batch_runner.preview_job(config_name, count)
-        return jsonify(preview)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/config/<config_name>/wildcard-usage')
-def get_wildcard_usage(config_name):
-    """Get wildcard usage statistics for a configuration."""
-    try:
-        usage = batch_runner.get_wildcard_usage(config_name)
-        return jsonify(usage)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/config/<config_name>/reset-wildcards', methods=['POST'])
-def reset_wildcards(config_name):
-    """Reset wildcard usage for a configuration."""
-    try:
-        batch_runner.reset_wildcards(config_name)
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/config/<config_name>/export-prompts')
-def export_prompts(config_name):
-    """Export prompt list for a configuration."""
-    count = request.args.get('count', 10, type=int)
-    try:
-        prompts = batch_runner.export_prompt_list(config_name, count)
-        return jsonify(prompts)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/queue/status')
-def get_queue_status():
-    """Get current queue status."""
-    status = batch_runner.get_queue_status()
-    return jsonify(status)
-
-
-@app.route('/api/queue/job/<job_id>')
-def get_job_details(job_id):
-    """Get details of a specific job."""
-    job = batch_runner.get_job_details(job_id)
-    if job:
-        return jsonify(job)
-    else:
-        return jsonify({'error': 'Job not found'}), 404
-
-
-@app.route('/api/queue/add', methods=['POST'])
-def add_job():
-    """Add a job to the queue."""
-    data = request.get_json()
-    config_name = data.get('config_name')
-    batch_size = data.get('batch_size')
-    num_batches = data.get('num_batches')
-    
-    if not config_name:
-        return jsonify({'error': 'config_name is required'}), 400
-    
-    try:
-        job = batch_runner.add_job(config_name, batch_size, num_batches)
-        return jsonify(job.to_dict())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/queue/remove/<job_id>', methods=['DELETE'])
-def remove_job(job_id):
-    """Remove a job from the queue."""
-    try:
-        success = batch_runner.job_queue.remove_job(job_id)
-        if success:
-            return jsonify({'success': True})
-        else:
-            return jsonify({'error': 'Job not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/queue/start', methods=['POST'])
-def start_processing():
-    """Start processing the queue."""
-    global processing_active
-    
-    if processing_active:
-        return jsonify({'error': 'Processing already active'}), 400
-    
-    try:
-        batch_runner.start_processing()
-        processing_active = True
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/queue/stop', methods=['POST'])
-def stop_processing():
-    """Stop processing the queue."""
-    global processing_active
-    
-    try:
-        batch_runner.stop_processing()
-        processing_active = False
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/queue/cancel', methods=['POST'])
-def cancel_current_job():
-    """Cancel the currently running job."""
-    try:
-        batch_runner.cancel_current_job()
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/queue/clear-completed', methods=['POST'])
-def clear_completed_jobs():
-    """Clear completed jobs from the queue."""
-    try:
-        batch_runner.clear_completed_jobs()
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/queue/clear-all', methods=['POST'])
-def clear_all_jobs():
-    """Clear all jobs from the queue."""
-    try:
-        batch_runner.clear_all_jobs()
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/forge/status')
-def get_forge_status():
+@app.route('/api/status/api')
+def get_api_status():
     """Get Forge API connection status."""
     try:
         # Test connection to Forge API
-        models = forge_client.get_models()
-        samplers = forge_client.get_samplers()
+        connected = forge_api_client.test_connection()
         
-        return jsonify({
-            'connected': True,
-            'models': models if models else [],
-            'samplers': samplers if samplers else [],
-            'server_url': forge_client.server_url,
-            'last_check': datetime.now().isoformat()
-        })
+        if connected:
+            # Get additional API info
+            try:
+                progress = forge_api_client.get_progress()
+                options = forge_api_client.get_options()
+                
+                status = {
+                    'connected': True,
+                    'server_url': forge_api_client.base_url,
+                    'progress': progress,
+                    'options_count': len(options) if options else 0,
+                    'last_check': datetime.now().isoformat()
+                }
+            except Exception as e:
+                status = {
+                    'connected': True,
+                    'server_url': forge_api_client.base_url,
+                    'error': f'Failed to get API details: {str(e)}',
+                    'last_check': datetime.now().isoformat()
+                }
+        else:
+            status = {
+                'connected': False,
+                'server_url': forge_api_client.base_url,
+                'error': 'Cannot connect to Forge API',
+                'last_check': datetime.now().isoformat()
+            }
+        
+        return status
     except Exception as e:
-        return jsonify({
+        logger.log_error(f"Failed to check API status: {e}")
+        return {
             'connected': False,
+            'server_url': forge_api_client.base_url,
             'error': str(e),
-            'server_url': forge_client.server_url,
             'last_check': datetime.now().isoformat()
-        })
+        }
 
+@app.route('/api/status/generation')
+def get_generation_status():
+    """Get current generation status."""
+    global current_generation
+    
+    try:
+        # Get Forge progress if available
+        forge_progress = {}
+        try:
+            forge_progress = forge_api_client.get_progress()
+        except:
+            pass
+        
+        status = {
+            'active': current_generation['active'],
+            'current_image': current_generation['current_image'],
+            'total_images': current_generation['total_images'],
+            'config_name': current_generation['config_name'],
+            'progress': current_generation['progress'],
+            'forge_progress': forge_progress,
+            'start_time': current_generation['start_time'],
+            'elapsed_time': None
+        }
+        
+        # Calculate elapsed time
+        if current_generation['start_time']:
+            elapsed = datetime.now() - current_generation['start_time']
+            status['elapsed_time'] = elapsed.total_seconds()
+        
+        return status
+    except Exception as e:
+        logger.log_error(f"Failed to get generation status: {e}")
+        return {
+            'active': False,
+            'error': str(e)
+        }
 
-@app.route('/api/forge/connect', methods=['POST'])
-def connect_forge():
-    """Connect to Forge API."""
+def update_generation_progress(current: int, total: int, config_name: str = ''):
+    """Update the current generation progress."""
+    global current_generation
+    
+    current_generation['current_image'] = current
+    current_generation['total_images'] = total
+    current_generation['config_name'] = config_name
+    current_generation['progress'] = (current / total * 100) if total > 0 else 0
+    
+    if current == 1 and total > 0:
+        current_generation['active'] = True
+        current_generation['start_time'] = datetime.now()
+    
+    if current >= total:
+        current_generation['active'] = False
+    
+    # Emit progress update via WebSocket
+    socketio.emit('generation_progress', {
+        'current': current,
+        'total': total,
+        'progress': current_generation['progress'],
+        'config_name': config_name,
+        'active': current_generation['active']
+    })
+
+@app.route('/api/configs')
+def get_configs():
+    """Get all configurations."""
+    try:
+        configs = config_handler.get_all_configs()
+        logger.log_app_event("configs_retrieved", {"count": len(configs)})
+        return jsonify(configs)
+    except Exception as e:
+        logger.log_error(f"Failed to get configs: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/configs/<config_name>')
+def get_config(config_name):
+    """Get a specific configuration."""
+    try:
+        config = config_handler.get_config(config_name)
+        if config:
+            logger.log_config_operation("retrieved", config_name, True)
+            return jsonify(config)
+        else:
+            logger.log_config_operation("retrieved", config_name, False, {"error": "Config not found"})
+            return jsonify({'error': 'Configuration not found'}), 404
+    except Exception as e:
+        logger.log_config_operation("retrieved", config_name, False, {"error": str(e)})
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/configs', methods=['POST'])
+def create_config():
+    """Create a new configuration."""
     try:
         data = request.get_json()
-        server_url = data.get('server_url', 'http://127.0.0.1:7860/')
+        config_name = data.get('name')
+        config_data = data.get('config')
         
-        # Update the Forge client with new server URL
-        forge_client.server_url = server_url.rstrip('/')
+        if not config_name or not config_data:
+            return jsonify({'error': 'Name and config data are required'}), 400
         
-        # Test the connection
-        models = forge_client.get_models()
-        samplers = forge_client.get_samplers()
+        success = config_handler.save_config(config_name, config_data)
         
-        logger.info(f"Successfully connected to Forge API at {server_url}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Connected to Forge API at {server_url}',
-            'models': models if models else [],
-            'samplers': samplers if samplers else [],
-            'server_url': forge_client.server_url
-        })
+        if success:
+            logger.log_config_operation("created", config_name, True)
+            return jsonify({'success': True, 'message': f'Configuration {config_name} created successfully'})
+        else:
+            logger.log_config_operation("created", config_name, False, {"error": "Failed to save"})
+            return jsonify({'error': 'Failed to create configuration'}), 400
     except Exception as e:
-        logger.error(f"Failed to connect to Forge API: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'server_url': forge_client.server_url
-        }), 400
-
-
-@app.route('/api/forge/disconnect', methods=['POST'])
-def disconnect_forge():
-    """Disconnect from Forge API."""
-    try:
-        # Reset the Forge client
-        forge_client.server_url = 'http://127.0.0.1:7860/'
-        
-        logger.info("Disconnected from Forge API")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Disconnected from Forge API'
-        })
-    except Exception as e:
-        logger.error(f"Error disconnecting from Forge API: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
-
-
-@app.route('/api/shutdown', methods=['POST'])
-def shutdown_application():
-    """Shutdown the application gracefully."""
-    try:
-        # Stop any active processing
-        global processing_active
-        if processing_active:
-            batch_runner.stop_processing()
-            processing_active = False
-        
-        # Save any pending data
-        logger.info("Shutting down Forge API Tool...")
-        
-        # Schedule shutdown after response is sent
-        def delayed_shutdown():
-            time.sleep(1)  # Give time for response to be sent
-            os._exit(0)
-        
-        import threading
-        shutdown_thread = threading.Thread(target=delayed_shutdown)
-        shutdown_thread.daemon = True
-        shutdown_thread.start()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Application shutting down...'
-        })
-    except Exception as e:
-        logger.error(f"Error during shutdown: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
-
-
-@app.route('/api/forge/validate-config/<config_name>')
-def validate_forge_config(config_name):
-    """Validate a configuration against Forge API."""
-    try:
-        config = config_handler.load_config(config_name)
-        is_valid, errors = forge_client.validate_config(config)
-        
-        return jsonify({
-            'valid': is_valid,
-            'errors': errors
-        })
-    except Exception as e:
+        logger.log_config_operation("created", config_name, False, {"error": str(e)})
         return jsonify({'error': str(e)}), 400
 
-
-@app.route('/api/wildcards')
-def get_wildcards():
-    """Get list of available wildcard files."""
-    wildcard_dir = "wildcards"
-    wildcards = []
-    
-    if os.path.exists(wildcard_dir):
-        for file in os.listdir(wildcard_dir):
-            if file.endswith('.txt'):
-                file_path = os.path.join(wildcard_dir, file)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        lines = f.readlines()
-                        wildcards.append({
-                            'name': file.replace('.txt', ''),
-                            'path': file_path,
-                            'count': len([line.strip() for line in lines if line.strip()])
-                        })
-                except Exception as e:
-                    wildcards.append({
-                        'name': file.replace('.txt', ''),
-                        'path': file_path,
-                        'error': str(e)
-                    })
-    
-    return jsonify(wildcards)
-
-
-@app.route('/api/wildcards/<wildcard_name>/items')
-def get_wildcard_items(wildcard_name):
-    """Get items from a wildcard file."""
-    wildcard_path = os.path.join("wildcards", f"{wildcard_name}.txt")
-    
-    if not os.path.exists(wildcard_path):
-        return jsonify({'error': 'Wildcard file not found'}), 404
-    
-    try:
-        with open(wildcard_path, 'r', encoding='utf-8') as f:
-            items = [line.strip() for line in f.readlines() if line.strip()]
-        return jsonify(items)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/wildcards/usage')
-def get_wildcard_usage_stats():
-    """Get overall wildcard usage statistics."""
-    try:
-        stats = wildcard_factory.get_all_usage_stats()
-        return jsonify(stats)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-
-# Progress callback for batch runner
-def progress_callback(progress_data):
-    """Callback for progress updates from batch runner."""
-    socketio.emit('progress_update', progress_data)
-
-
-# Set up progress callback
-batch_runner.set_progress_callback(progress_callback)
-
-
-@socketio.on('connect')
-def handle_connect():
-    """Handle client connection."""
-    print('Client connected')
-    emit('status', {'message': 'Connected to Forge API Tool'})
-
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    """Handle client disconnection."""
-    print('Client disconnected')
-
-
-@socketio.on('get_queue_status')
-def handle_get_queue_status():
-    """Handle queue status request."""
-    status = batch_runner.get_queue_status()
-    emit('queue_status', status)
-
-
-# Image Analysis Endpoints
-@app.route('/api/analyze-image', methods=['POST'])
-def analyze_image():
-    """Analyze an uploaded image to extract settings."""
-    try:
-        if 'image' not in request.files:
-            return jsonify({'error': 'No image file provided'}), 400
-        
-        file = request.files['image']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        if not image_analyzer.validate_image_format(file.filename):
-            return jsonify({'error': 'Unsupported image format'}), 400
-        
-        # Read image data
-        image_data = file.read()
-        image_base64 = base64.b64encode(image_data).decode('utf-8')
-        
-        # Analyze image
-        result = image_analyzer.analyze_image(image_base64)
-        
-        logger.log_app_event('image_analysis', {
-            'filename': file.filename,
-            'success': result.get('success', False)
-        })
-        
-        return jsonify(result)
-        
-    except Exception as e:
-        logger.log_error(f"Image analysis failed: {e}")
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/supported-formats')
-def get_supported_formats():
-    """Get supported image formats for analysis."""
-    return jsonify(image_analyzer.get_supported_formats())
-
-
-# Configuration Management Endpoints
-@app.route('/api/config/upload', methods=['POST'])
-def upload_config():
-    """Upload a new configuration file."""
-    try:
-        if 'config' not in request.files:
-            return jsonify({'error': 'No config file provided'}), 400
-        
-        file = request.files['config']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        if not file.filename.endswith('.json'):
-            return jsonify({'error': 'Only JSON files are supported'}), 400
-        
-        # Read and validate config
-        config_data = json.load(file)
-        config_name = config_data.get('name', file.filename.replace('.json', ''))
-        
-        # Save config
-        config_handler.save_config(config_name, config_data)
-        
-        logger.log_config_operation('upload', config_name, True)
-        
-        return jsonify({
-            'success': True,
-            'config_name': config_name,
-            'message': 'Configuration uploaded successfully'
-        })
-        
-    except Exception as e:
-        logger.log_config_operation('upload', 'unknown', False, {'error': str(e)})
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/config/create', methods=['POST'])
-def create_config():
-    """Create a new configuration from scratch."""
-    try:
-        config_data = request.get_json()
-        if not config_data:
-            return jsonify({'error': 'No configuration data provided'}), 400
-        
-        config_name = config_data.get('name')
-        if not config_name:
-            return jsonify({'error': 'Configuration name is required'}), 400
-        
-        # Check if config already exists
-        if config_handler.config_exists(config_name):
-            return jsonify({'error': f'Configuration "{config_name}" already exists'}), 400
-        
-        # Save config
-        config_handler.save_config(config_name, config_data)
-        
-        logger.log_config_operation('create', config_name, True)
-        
-        return jsonify({
-            'success': True,
-            'config_name': config_name,
-            'message': 'Configuration created successfully'
-        })
-        
-    except Exception as e:
-        logger.log_config_operation('create', 'unknown', False, {'error': str(e)})
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/config/templates')
-def get_config_templates():
-    """Get available configuration templates."""
-    templates = [
-        {
-            'name': 'Quick Start',
-            'description': 'Simple configuration for basic image generation',
-            'template': {
-                'name': 'Quick Start',
-                'description': 'A simple configuration to get started quickly',
-                'model_type': 'sd',
-                'prompt_settings': {
-                    'base_prompt': 'a beautiful __STYLE__ __SUBJECT__',
-                    'negative_prompt': 'blurry, low quality, distorted, ugly, bad anatomy'
-                },
-                'wildcards': {
-                    'STYLE': 'wildcards/style.txt',
-                    'SUBJECT': 'wildcards/subject.txt'
-                },
-                'generation_settings': {
-                    'steps': 20,
-                    'width': 512,
-                    'height': 512,
-                    'batch_size': 1,
-                    'sampler': 'Euler a',
-                    'cfg_scale': 7.0,
-                    'seed': 'random'
-                },
-                'model_settings': {
-                    'checkpoint': '',
-                    'vae': '',
-                    'text_encoder': '',
-                    'gpu_weight': 1.0,
-                    'swap_method': 'weight',
-                    'swap_location': 'cpu'
-                },
-                'output_settings': {
-                    'output_dir': 'outputs/quick_start',
-                    'filename_pattern': '{prompt_hash}_{seed}_{timestamp}',
-                    'save_metadata': True,
-                    'save_prompt_list': True
-                },
-                'wildcard_settings': {
-                    'randomization_mode': 'smart_cycle',
-                    'cycle_length': 10,
-                    'shuffle_on_reset': True
-                },
-                'alwayson_scripts': {}
-            }
-        },
-        {
-            'name': 'Anime Style',
-            'description': 'Configuration for anime and manga style artwork',
-            'template': {
-                'name': 'Anime Style',
-                'description': 'Generate anime and manga style artwork',
-                'model_type': 'sd',
-                'prompt_settings': {
-                    'base_prompt': 'anime style __CHARACTER__ __ACTION__ __SETTING__, __ART_STYLE__',
-                    'negative_prompt': 'blurry, low quality, distorted, ugly, bad anatomy, realistic'
-                },
-                'wildcards': {
-                    'CHARACTER': 'wildcards/people_types.txt',
-                    'ACTION': 'wildcards/portrait_poses.txt',
-                    'SETTING': 'wildcards/locations.txt',
-                    'ART_STYLE': 'wildcards/style.txt'
-                },
-                'generation_settings': {
-                    'steps': 25,
-                    'width': 512,
-                    'height': 768,
-                    'batch_size': 1,
-                    'sampler': 'DPM++ 2M Karras',
-                    'cfg_scale': 8.0,
-                    'seed': 'random'
-                },
-                'model_settings': {
-                    'checkpoint': '',
-                    'vae': '',
-                    'text_encoder': '',
-                    'gpu_weight': 1.0,
-                    'swap_method': 'weight',
-                    'swap_location': 'cpu'
-                },
-                'output_settings': {
-                    'output_dir': 'outputs/anime_style',
-                    'filename_pattern': '{prompt_hash}_{seed}_{timestamp}',
-                    'save_metadata': True,
-                    'save_prompt_list': True
-                },
-                'wildcard_settings': {
-                    'randomization_mode': 'smart_cycle',
-                    'cycle_length': 15,
-                    'shuffle_on_reset': True
-                },
-                'alwayson_scripts': {}
-            }
-        },
-        {
-            'name': 'Landscape Photography',
-            'description': 'Configuration for landscape photography',
-            'template': {
-                'name': 'Landscape Photography',
-                'description': 'High-quality landscape photography',
-                'model_type': 'sd',
-                'prompt_settings': {
-                    'base_prompt': 'a stunning __STYLE__ photograph of __LOCATION__, __LIGHTING__, __WEATHER__',
-                    'negative_prompt': 'blurry, low quality, distorted, ugly, bad anatomy, watermark'
-                },
-                'wildcards': {
-                    'STYLE': 'wildcards/landscape_styles.txt',
-                    'LOCATION': 'wildcards/landscape_locations.txt',
-                    'LIGHTING': 'wildcards/lighting_conditions.txt',
-                    'WEATHER': 'wildcards/weather_conditions.txt'
-                },
-                'generation_settings': {
-                    'steps': 30,
-                    'width': 1024,
-                    'height': 768,
-                    'batch_size': 1,
-                    'sampler': 'DPM++ 2M Karras',
-                    'cfg_scale': 7.0,
-                    'seed': 'random'
-                },
-                'model_settings': {
-                    'checkpoint': '',
-                    'vae': '',
-                    'text_encoder': '',
-                    'gpu_weight': 1.0,
-                    'swap_method': 'weight',
-                    'swap_location': 'cpu'
-                },
-                'output_settings': {
-                    'output_dir': 'outputs/landscape_photography',
-                    'filename_pattern': '{prompt_hash}_{seed}_{timestamp}',
-                    'save_metadata': True,
-                    'save_prompt_list': True
-                },
-                'wildcard_settings': {
-                    'randomization_mode': 'smart_cycle',
-                    'cycle_length': 20,
-                    'shuffle_on_reset': True
-                },
-                'alwayson_scripts': {}
-            }
-        }
-    ]
-    
-    return jsonify(templates)
-
-
-@app.route('/api/config/<config_name>', methods=['PUT'])
+@app.route('/api/configs/<config_name>', methods=['PUT'])
 def update_config(config_name):
-    """Update an existing configuration."""
+    """Update a configuration."""
     try:
-        config_data = request.get_json()
+        data = request.get_json()
+        config_data = data.get('config')
+        
         if not config_data:
-            return jsonify({'error': 'No configuration data provided'}), 400
+            return jsonify({'error': 'Config data is required'}), 400
         
-        # Validate and save config
-        config_handler.save_config(config_name, config_data)
+        success = config_handler.save_config(config_name, config_data)
         
-        logger.log_config_operation('update', config_name, True)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Configuration updated successfully'
-        })
-        
+        if success:
+            logger.log_config_operation("updated", config_name, True)
+            return jsonify({'success': True, 'message': f'Configuration {config_name} updated successfully'})
+        else:
+            logger.log_config_operation("updated", config_name, False, {"error": "Failed to save"})
+            return jsonify({'error': 'Failed to update configuration'}), 400
     except Exception as e:
-        logger.log_config_operation('update', config_name, False, {'error': str(e)})
+        logger.log_config_operation("updated", config_name, False, {"error": str(e)})
         return jsonify({'error': str(e)}), 400
 
-
-@app.route('/api/config/<config_name>', methods=['DELETE'])
+@app.route('/api/configs/<config_name>', methods=['DELETE'])
 def delete_config(config_name):
     """Delete a configuration."""
     try:
-        config_handler.delete_config(config_name)
+        success = config_handler.delete_config(config_name)
         
-        logger.log_config_operation('delete', config_name, True)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Configuration deleted successfully'
-        })
-        
+        if success:
+            logger.log_config_operation("deleted", config_name, True)
+            return jsonify({'success': True, 'message': f'Configuration {config_name} deleted successfully'})
+        else:
+            logger.log_config_operation("deleted", config_name, False, {"error": "Failed to delete"})
+            return jsonify({'error': 'Failed to delete configuration'}), 400
     except Exception as e:
-        logger.log_config_operation('delete', config_name, False, {'error': str(e)})
+        logger.log_config_operation("deleted", config_name, False, {"error": str(e)})
         return jsonify({'error': str(e)}), 400
 
-
-# Output Management Endpoints
-@app.route('/api/outputs/summary')
-def get_output_summary():
-    """Get output summary."""
+@app.route('/api/generate', methods=['POST'])
+def generate_image():
+    """Generate a single image."""
     try:
-        config_name = request.args.get('config_name')
-        summary = output_manager.get_output_summary(config_name)
-        return jsonify(summary)
-    except Exception as e:
-        logger.log_error(f"Failed to get output summary: {e}")
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/outputs/search')
-def search_outputs():
-    """Search for images by prompt content."""
-    try:
-        query = request.args.get('query', '')
-        config_name = request.args.get('config_name')
-        
-        if not query:
-            return jsonify({'error': 'Search query is required'}), 400
-        
-        results = output_manager.search_images(query, config_name)
-        return jsonify(results)
-    except Exception as e:
-        logger.log_error(f"Failed to search outputs: {e}")
-        return jsonify({'error': str(e)}), 400
-
-
-@app.route('/api/outputs/cleanup', methods=['POST'])
-def cleanup_outputs():
-    """Clean up old output files."""
-    try:
-        data = request.get_json() or {}
-        days_to_keep = data.get('days_to_keep', 30)
+        data = request.get_json()
         config_name = data.get('config_name')
+        prompt = data.get('prompt', '')
+        seed = data.get('seed')
         
-        cleaned_files = output_manager.cleanup_old_files(days_to_keep, config_name)
+        if not config_name:
+            return jsonify({'error': 'Config name is required'}), 400
+        if not prompt:
+            return jsonify({'error': 'Prompt is required'}), 400
         
-        logger.log_app_event('output_cleanup', {
-            'days_to_keep': days_to_keep,
-            'config_name': config_name,
-            'files_cleaned': len(cleaned_files)
+        config = config_handler.get_config(config_name)
+        if not config:
+            return jsonify({'error': 'Configuration not found'}), 404
+        
+        # If the prompt contains wildcards, resolve them
+        if '__' in prompt:
+            wildcard_factory = WildcardManagerFactory()
+            prompt_builder = PromptBuilder(wildcard_factory)
+            # Use the prompt as a template, but allow fallback to config template if empty
+            resolved_prompt = prompt_builder.build_prompt({**config, 'prompt_settings': {**config['prompt_settings'], 'base_prompt': prompt}})
+        else:
+            resolved_prompt = prompt
+        
+        logger.log_app_event("image_generation_requested", {
+            "config_name": config_name,
+            "prompt_length": len(resolved_prompt),
+            "seed": seed,
+            "user_provided_prompt": True,
+            "wildcards_resolved": ('__' in prompt)
+        })
+        
+        # Update generation progress
+        update_generation_progress(1, 1, config_name)
+        
+        # Generate image with the resolved prompt
+        success, image_data, metadata = forge_api_client.generate_image(config, resolved_prompt, seed)
+        
+        if success:
+            # Save image
+            output_path = output_manager.save_image(image_data, config_name, resolved_prompt, seed or 0)
+            
+            logger.log_image_generation(config_name, resolved_prompt, seed or 0, True, output_path)
+            
+            # Update progress to complete
+            update_generation_progress(1, 1, config_name)
+            
+            return jsonify({
+                'success': True,
+                'image_data': image_data,
+                'output_path': output_path,
+                'metadata': metadata,
+                'prompt_used': resolved_prompt
+            })
+        else:
+            logger.log_image_generation(config_name, resolved_prompt, seed or 0, False)
+            return jsonify({'error': 'Failed to generate image'}), 400
+    except Exception as e:
+        logger.log_error(f"Failed to generate image: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/batch', methods=['POST'])
+def start_batch():
+    """Start a batch generation job."""
+    try:
+        data = request.get_json()
+        config_name = data.get('config_name')
+        batch_size = data.get('batch_size', 1)
+        num_batches = data.get('num_batches', 1)
+        
+        if not config_name:
+            return jsonify({'error': 'Config name is required'}), 400
+        
+        config = config_handler.get_config(config_name)
+        if not config:
+            return jsonify({'error': 'Configuration not found'}), 404
+        
+        # Calculate total images
+        total_images = batch_size * num_batches
+        
+        # Update generation progress
+        update_generation_progress(0, total_images, config_name)
+        
+        # Add job to queue
+        job_id = job_queue.add_job(config, batch_size, num_batches)
+        
+        logger.log_queue_operation("job_added", job_id, {
+            "config_name": config_name,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "total_images": total_images
         })
         
         return jsonify({
             'success': True,
-            'files_cleaned': len(cleaned_files),
-            'cleaned_files': cleaned_files
+            'job_id': job_id,
+            'message': f'Batch job {job_id} added to queue',
+            'total_images': total_images
         })
     except Exception as e:
-        logger.log_error(f"Failed to cleanup outputs: {e}")
+        logger.log_error(f"Failed to start batch: {e}")
         return jsonify({'error': str(e)}), 400
 
+@app.route('/api/batch/preview', methods=['POST'])
+def preview_batch():
+    """Preview batch prompts without generating images."""
+    try:
+        data = request.get_json()
+        config_name = data.get('config_name')
+        batch_size = data.get('batch_size', 1)
+        num_batches = data.get('num_batches', 1)
+        prompt = data.get('prompt', '')  # User must provide a completed prompt
+        
+        if not config_name:
+            return jsonify({'error': 'Config name is required'}), 400
+        
+        if not prompt:
+            return jsonify({'error': 'Prompt is required - please provide a completed prompt with all wildcards substituted'}), 400
+        
+        config = config_handler.get_config(config_name)
+        if not config:
+            return jsonify({'error': 'Configuration not found'}), 404
+        
+        # Generate the same prompt for all images in the batch
+        total_prompts = batch_size * num_batches
+        prompts = [prompt] * total_prompts
+        
+        logger.log_app_event("batch_preview_generated", {
+            "config_name": config_name,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "prompt_count": len(prompts),
+            "user_provided_prompt": True
+        })
+        
+        return jsonify({
+            'success': True,
+            'prompts': prompts
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to preview batch: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/queue/status')
+def get_queue_status():
+    """Get queue status."""
+    try:
+        status = job_queue.get_status()
+        return jsonify(status)
+    except Exception as e:
+        logger.log_error(f"Failed to get queue status: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/queue/clear', methods=['POST'])
+def clear_queue():
+    """Clear the job queue."""
+    try:
+        cleared_count = job_queue.clear_queue()
+        
+        logger.log_queue_operation("cleared", None, {"cleared_count": cleared_count})
+        
+        return jsonify({
+            'success': True,
+            'message': f'Queue cleared. {cleared_count} jobs removed.'
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to clear queue: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/outputs')
+def get_outputs():
+    """Get all outputs."""
+    try:
+        outputs = output_manager.get_all_outputs()
+        return jsonify(outputs)
+    except Exception as e:
+        logger.log_error(f"Failed to get outputs: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/outputs/<config_name>')
+def get_config_outputs(config_name):
+    """Get outputs for a specific configuration."""
+    try:
+        outputs = output_manager.get_outputs_for_config(config_name)
+        return jsonify(outputs)
+    except Exception as e:
+        logger.log_error(f"Failed to get outputs for config {config_name}: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/outputs/delete/<config_name>', methods=['DELETE'])
+def delete_config_outputs(config_name):
+    """Delete all outputs for a configuration."""
+    try:
+        deleted_count = output_manager.delete_config_outputs(config_name)
+        
+        logger.log_app_event("config_outputs_deleted", {
+            "config_name": config_name,
+            "deleted_count": deleted_count
+        })
+        
+        return jsonify({
+            'success': True,
+            'message': f'Deleted {deleted_count} outputs for {config_name}'
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to delete outputs for config {config_name}: {e}")
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/api/outputs/export/<config_name>', methods=['POST'])
 def export_outputs(config_name):
@@ -837,17 +614,16 @@ def export_outputs(config_name):
         logger.log_error(f"Failed to export outputs: {e}")
         return jsonify({'error': str(e)}), 400
 
-
 # Logging Endpoints
 @app.route('/api/logs/summary')
 def get_logs_summary():
     """Get logging summary."""
     try:
         summary = logger.get_session_summary()
-        return jsonify(summary)
+        # For live status, just return recent_events
+        return jsonify({'recent_events': summary.get('recent_events', [])})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-
 
 @app.route('/api/logs/cleanup', methods=['POST'])
 def cleanup_logs():
@@ -856,55 +632,199 @@ def cleanup_logs():
         data = request.get_json() or {}
         days_to_keep = data.get('days_to_keep', 30)
         
-        logger.cleanup_old_logs(days_to_keep)
+        cleaned_files = logger.cleanup_old_logs(days_to_keep)
+        
+        logger.log_app_event("logs_cleaned", {
+            "days_to_keep": days_to_keep,
+            "cleaned_files": len(cleaned_files)
+        })
         
         return jsonify({
             'success': True,
-            'message': f'Logs older than {days_to_keep} days cleaned up'
+            'message': f'Logs older than {days_to_keep} days cleaned up',
+            'cleaned_files': cleaned_files
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-
-@app.route('/api/config/<config_name>/missing_wildcards', methods=['GET'])
-def get_missing_wildcards(config_name):
-    """Get missing wildcards and files for a config."""
+@app.route('/api/logs/structure')
+def get_logs_structure():
+    """Get log directory structure information."""
     try:
-        missing = config_handler.get_missing_wildcards(config_name)
-        return jsonify(missing)
+        structure = logger.get_log_directory_structure()
+        return jsonify(structure)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+# Static file serving
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """Serve static files."""
+    return send_from_directory('static', filename)
 
-@app.route('/api/config/<config_name>/create_missing_wildcards', methods=['POST'])
-def create_missing_wildcards(config_name):
-    """Create missing wildcard files for a config."""
+# WebSocket events
+@socketio.on('connect')
+def handle_connect():
+    """Handle client connection."""
+    logger.log_app_event("websocket_connected", {"client_id": request.sid})
+    emit('status', {'message': 'Connected to Forge API Tool'})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection."""
+    logger.log_app_event("websocket_disconnected", {"client_id": request.sid})
+
+@socketio.on('request_status')
+def handle_status_request():
+    """Handle status request."""
     try:
-        created = config_handler.create_missing_wildcard_files(config_name)
-        return jsonify({'created': created, 'success': True})
+        # Get comprehensive status
+        api_status = get_api_status()
+        queue_status = job_queue.get_status()
+        generation_status = get_generation_status()
+        output_stats = output_manager.get_output_statistics()
+        
+        emit('status_update', {
+            'api': api_status,
+            'queue': queue_status,
+            'generation': generation_status,
+            'outputs': output_stats,
+            'timestamp': datetime.now().isoformat()
+        })
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.log_error(f"Failed to send status update: {e}")
+        emit('error', {'message': str(e)})
 
+def start_background_processor():
+    """Start the background job processor."""
+    def processor():
+        while True:
+            try:
+                # Process jobs in queue
+                job_queue.process_next_job()
+                time.sleep(1)  # Check every second
+            except Exception as e:
+                logger.log_error(f"Background processor error: {e}")
+                time.sleep(5)  # Wait longer on error
+    
+    thread = threading.Thread(target=processor, daemon=True)
+    thread.start()
+    logger.log_app_event("background_processor_started")
 
-# Error handling
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({'error': 'Endpoint not found'}), 404
+# API Connection Management
+@app.route('/api/connect', methods=['POST'])
+def connect_api():
+    """Connect to the Forge API."""
+    try:
+        # Test connection
+        connected = forge_api_client.test_connection()
+        
+        if connected:
+            logger.log_app_event("api_connected", {
+                "server_url": forge_api_client.base_url,
+                "status": "success"
+            })
+            return jsonify({
+                'success': True,
+                'message': 'Successfully connected to Forge API'
+            })
+        else:
+            logger.log_app_event("api_connection_failed", {
+                "server_url": forge_api_client.base_url,
+                "status": "failed"
+            })
+            return jsonify({
+                'success': False,
+                'message': 'Failed to connect to Forge API'
+            }), 400
+    except Exception as e:
+        logger.log_error(f"API connection error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Connection error: {str(e)}'
+        }), 400
 
+@app.route('/api/disconnect', methods=['POST'])
+def disconnect_api():
+    """Disconnect from the Forge API."""
+    try:
+        # Log disconnection
+        logger.log_app_event("api_disconnected", {
+            "server_url": forge_api_client.base_url
+        })
+        
+        return jsonify({
+            'success': True,
+            'message': 'API disconnected'
+        })
+    except Exception as e:
+        logger.log_error(f"API disconnection error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Disconnection error: {str(e)}'
+        }), 400
 
-@app.errorhandler(500)
-def internal_error(error):
-    logger.log_error(f"Internal server error: {error}")
-    return jsonify({'error': 'Internal server error'}), 500
-
-
-@app.errorhandler(Exception)
-def handle_exception(e):
-    logger.log_error(f"Unhandled exception: {e}")
-    return jsonify({'error': 'An unexpected error occurred'}), 500
-
+# Generation Control
+@app.route('/api/generation/stop', methods=['POST'])
+def stop_generation():
+    """Stop the current generation."""
+    global current_generation
+    
+    try:
+        # Stop current generation
+        if current_generation['active']:
+            current_generation['active'] = False
+            current_generation['current_image'] = 0
+            current_generation['total_images'] = 0
+            current_generation['progress'] = 0.0
+            current_generation['config_name'] = ''
+            current_generation['start_time'] = None
+            
+            # Clear the job queue
+            cleared_count = job_queue.clear_queue()
+            
+            logger.log_app_event("generation_stopped", {
+                "cleared_jobs": cleared_count
+            })
+            
+            return jsonify({
+                'success': True,
+                'message': f'Generation stopped. {cleared_count} jobs cleared from queue.'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'No active generation to stop'
+            }), 400
+    except Exception as e:
+        logger.log_error(f"Failed to stop generation: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to stop generation: {str(e)}'
+        }), 400
 
 if __name__ == '__main__':
-    print("Starting Forge API Tool Dashboard...")
-    print("Access the dashboard at: http://localhost:5000")
+    # Start background processor
+    start_background_processor()
+    
+    # Log startup
+    logger.log_app_event("web_dashboard_started", {
+        "port": 5000,
+        "debug": True
+    })
+    
+    # Launch browser after a short delay
+    def launch_browser():
+        time.sleep(1.5)  # Wait for server to start
+        try:
+            webbrowser.open('http://localhost:5000')
+            logger.log_app_event("browser_launched", {"url": "http://localhost:5000"})
+        except Exception as e:
+            logger.log_error(f"Failed to launch browser: {e}")
+    
+    # Start browser launch in a separate thread
+    browser_thread = threading.Thread(target=launch_browser, daemon=True)
+    browser_thread.start()
+    
+    # Start the Flask app
     socketio.run(app, host='0.0.0.0', port=5000, debug=True) 

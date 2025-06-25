@@ -1,0 +1,119 @@
+# Consolidated Animals - Combined from all animal files
+# Removes duplicates and organizes by category
+
+# Domestic Animals
+cat
+dog
+bird
+fish
+rabbit
+fox
+deer
+elephant
+giraffe
+panda bears
+swan
+wolf
+bear
+sheep
+snake
+cow
+mosquito
+fly
+horse
+monsters
+teddy bear
+bug
+mouse-girl
+
+# Wild Animals (from existing animals.txt)
+Alligator
+Ant
+Antelope
+Armadillo
+Badger
+Bat
+Beaver
+Bison
+Boar
+Bobcat
+Bull
+Camel
+Chameleon
+Cheetah
+Chicken
+Chihuahua
+Chimpanzee
+Chinchilla
+Chipmunk
+Komodo Dragon
+Coyote
+Crocodile
+Crow
+Dinosaur
+Dolphin
+Donkey
+Duck
+Eagle
+Eel
+Elk
+Emu
+Falcon
+Ferret
+Flamingo
+Flying Squirrel
+Goose
+Guinea pig
+Hawk
+Hedgehog
+Hippopotamus
+Hummingbird
+Hyena
+Jackal
+Jaguar
+Jellyfish
+Kangaroo
+King Cobra
+Koala bear
+Leopard
+Lion
+Lizard
+Magpie
+Marten
+Meerkat
+Mole
+Monkey
+Moose
+Mouse
+Octopus
+Okapi
+Orangutan
+Ostrich
+Otter
+Owl
+Panda
+Pangolin
+Panther
+Penguin
+Pig
+Porcupine
+Possum
+Puma
+Quokka
+Raccoon
+Raven
+Reindeer
+Rhinoceros
+Seal
+Shark
+Snail
+Sparrow
+Spider
+Squirrel
+Swallow
+Tiger
+Walrus
+Whale
+Wombat
+Yak
+Zebra 

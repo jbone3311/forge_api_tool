@@ -1,0 +1,24 @@
+cat
+dog
+bird
+dragon
+fish
+rabbit
+fox
+deer
+elephant
+giraffe
+panda bears
+swan
+wolf
+bear
+sheep
+snake
+cow
+mosquito
+fly
+horse
+monsters
+teddy bear
+bug
+mouse-girl

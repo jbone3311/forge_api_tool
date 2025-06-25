@@ -1,0 +1,72 @@
+{
+  "name": "SD Default",
+  "model_type": "sd",
+  "model_settings": {
+    "checkpoint": "sd-v1-5.safetensors",
+    "vae": "vae-ft-mse-840000-ema-pruned.safetensors",
+    "text_encoder": "openai/clip-vit-large-patch14"
+  },
+  "generation_settings": {
+    "steps": 20,
+    "sampler": "Euler a",
+    "width": 512,
+    "height": 512,
+    "batch_size": 1,
+    "batch_count": 1,
+    "cfg_scale": 7.0,
+    "seed": -1,
+    "subseed": -1,
+    "subseed_strength": 0.0,
+    "seed_resize_from_h": -1,
+    "seed_resize_from_w": -1,
+    "denoising_strength": 0.75,
+    "restore_faces": false,
+    "tiling": false,
+    "enable_hr": false,
+    "hr_scale": 2.0,
+    "hr_upscaler": "Latent",
+    "hr_second_pass_steps": 20,
+    "hr_resize_x": 0,
+    "hr_resize_y": 0,
+    "hr_sampler_name": "Euler a",
+    "hr_prompt": "",
+    "hr_negative_prompt": "",
+    "hr_denoising_strength": 0.7
+  },
+  "prompt_settings": {
+    "base_prompt": "a stunning __SUBJECT__ in __STYLE__, __LIGHTING__, __COMPOSITION__, __MEDIUM__, __MOOD__, __WEATHER__, __SETTING__, high quality, detailed, masterpiece, professional photography, award winning",
+    "negative_prompt": "low quality, blurry, pixelated, distorted, ugly, deformed, bad anatomy, watermark, signature, text, logo, oversaturated, overexposed, underexposed, poorly drawn, amateur, low resolution",
+    "prompt_styles": [],
+    "sampler_name": "Euler a"
+  },
+  "output_settings": {
+    "output_dir": "outputs/sd_default",
+    "filename_pattern": "{prompt}_{seed}_{timestamp}",
+    "save_images": true,
+    "save_grid": false,
+    "save_info": true,
+    "save_metadata": true,
+    "grid_format": "png",
+    "grid_extended_filename": false,
+    "grid_only_if_multiple": true,
+    "grid_prevent_empty_spots": false,
+    "n_rows": -1,
+    "enable_pnginfo": true,
+    "pnginfo": "",
+    "jpeg_quality": 80,
+    "webp_lossless": false,
+    "webp_quality": 80,
+    "webp_method": 4,
+    "webp_effort": 6
+  },
+  "script_settings": {
+    "script_name": null,
+    "script_args": []
+  },
+  "alwayson_scripts": {
+    "controlnet": {
+      "args": []
+    }
+  },
+  "description": "Default SD template with comprehensive settings for high-quality image generation"
+} 

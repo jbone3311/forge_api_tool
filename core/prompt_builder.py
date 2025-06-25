@@ -1,7 +1,8 @@
 import re
 import os
+import random
 from typing import Dict, List, Any, Tuple
-from wildcard_manager import WildcardManagerFactory
+from .wildcard_manager import WildcardManagerFactory
 
 
 class PromptBuilder:

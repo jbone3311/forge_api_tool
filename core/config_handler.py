@@ -3,15 +3,26 @@ import os
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import re
+from core.centralized_logger import centralized_logger
 
 
 class ConfigHandler:
     """Handles loading, validation, and management of JSON configuration files."""
     
     def __init__(self, config_dir: str = "configs"):
-        self.config_dir = config_dir
-        self.template_path = os.path.join(config_dir, "template.json")
-        os.makedirs(config_dir, exist_ok=True)
+        # Use absolute path to ensure it works from web dashboard
+        if not os.path.isabs(config_dir):
+            # Get the directory where this file is located
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # Go up one level to the project root
+            project_root = os.path.dirname(current_dir)
+            # Set config directory relative to project root
+            self.config_dir = os.path.join(project_root, config_dir)
+        else:
+            self.config_dir = config_dir
+            
+        self.template_path = os.path.join(self.config_dir, "template.json")
+        os.makedirs(self.config_dir, exist_ok=True)
         
     def load_config(self, config_name: str) -> Dict[str, Any]:
         """Load a configuration file by name."""
@@ -25,10 +36,19 @@ class ConfigHandler:
             config = self._set_defaults(config)
             # Validate configuration (structure only)
             self._validate_config(config, config_name)
-            # Check for missing wildcards
-            wildcards_info = self.validate_wildcards(config)
-            config['missing_wildcards'] = wildcards_info['missing']
-            config['missing_wildcard_files'] = wildcards_info['missing_files']
+            # Check for missing wildcards (but don't fail if there are issues)
+            try:
+                wildcards_info = self.validate_wildcards(config)
+                config['missing_wildcards'] = wildcards_info['missing']
+                config['missing_wildcard_files'] = wildcards_info['missing_files']
+            except Exception as e:
+                # If wildcard validation fails, just set empty lists and continue
+                config['missing_wildcards'] = []
+                config['missing_wildcard_files'] = []
+                try:
+                    centralized_logger.warning(f"Wildcard validation failed for {config_name}: {e}")
+                except:
+                    pass
             return config
         except Exception as e:
             raise ValueError(f"Error loading config '{config_name}': {e}")
@@ -85,107 +105,126 @@ class ConfigHandler:
         """Set default values for missing configuration options."""
         model_type = config.get('model_type', 'sd')
         
-        # Model-specific defaults
-        if model_type == 'sd':
-            defaults = {
-                'model_settings': {
+        # Only apply defaults if sections are missing
+        if 'model_settings' not in config:
+            if model_type == 'sd':
+                config['model_settings'] = {
                     'checkpoint': 'sd-v1-5.safetensors',
+                    'vae': 'vae-ft-mse-840000-ema-pruned.safetensors',
+                    'text_encoder': 'openai/clip-vit-large-patch14'
+                }
+            elif model_type == 'sdxl':
+                config['model_settings'] = {
+                    'checkpoint': 'sd_xl_base_1.0.safetensors',
+                    'vae': 'sdxl_vae.safetensors',
+                    'text_encoder': 'openai/clip-vit-large-patch14',
+                    'text_encoder_2': 'laion/CLIP-ViT-bigG-14-laion2B-39B-b160k'
+                }
+            elif model_type == 'xl':
+                config['model_settings'] = {
+                    'checkpoint': 'sd_xl_base_1.0.safetensors',
+                    'vae': 'sdxl_vae.safetensors',
+                    'text_encoder': 'openai/clip-vit-large-patch14',
+                    'text_encoder_2': 'laion/CLIP-ViT-bigG-14-laion2B-39B-b160k'
+                }
+            elif model_type == 'flux':
+                config['model_settings'] = {
+                    'checkpoint': 'flux1-dev-bnb-nf4-v2.safetensors',
                     'vae': '',
-                    'text_encoder': '',
-                    'gpu_weight': None,
-                    'swap_method': 'queue',
-                    'swap_location': 'cpu'
-                },
-                'generation_settings': {
-                    'sampler': 'Euler a',
-                    'scheduler': 'Simple',
+                    'text_encoder': 't5xxl_fp16.safetensors'
+                }
+        
+        if 'generation_settings' not in config:
+            if model_type in ['sd', 'sdxl', 'xl']:
+                config['generation_settings'] = {
                     'steps': 20,
-                    'cfg_scale': 7.0,
-                    'distilled_cfg_scale': None,
+                    'sampler': 'Euler a',
                     'width': 512,
                     'height': 512,
                     'batch_size': 1,
-                    'num_batches': 10,
-                    'seed': 'random'
-                }
-            }
-        elif model_type == 'xl':
-            defaults = {
-                'model_settings': {
-                    'checkpoint': 'sd_xl_base_1.0.safetensors',
-                    'vae': 'sdxl_vae.safetensors',
-                    'text_encoder': '',
-                    'gpu_weight': None,
-                    'swap_method': 'queue',
-                    'swap_location': 'cpu'
-                },
-                'generation_settings': {
-                    'sampler': 'DPM++ 2M Karras',
-                    'scheduler': 'Simple',
-                    'steps': 25,
+                    'batch_count': 1,
                     'cfg_scale': 7.0,
-                    'distilled_cfg_scale': None,
+                    'seed': -1,
+                    'subseed': -1,
+                    'subseed_strength': 0.0,
+                    'seed_resize_from_h': -1,
+                    'seed_resize_from_w': -1,
+                    'denoising_strength': 0.75,
+                    'restore_faces': False,
+                    'tiling': False,
+                    'enable_hr': False,
+                    'hr_scale': 2.0,
+                    'hr_upscaler': 'Latent',
+                    'hr_second_pass_steps': 20,
+                    'hr_resize_x': 0,
+                    'hr_resize_y': 0,
+                    'hr_sampler_name': 'Euler a',
+                    'hr_prompt': '',
+                    'hr_negative_prompt': '',
+                    'hr_denoising_strength': 0.7
+                }
+            elif model_type == 'flux':
+                config['generation_settings'] = {
+                    'steps': 20,
+                    'sampler': 'Euler',
                     'width': 1024,
                     'height': 1024,
                     'batch_size': 1,
-                    'num_batches': 10,
-                    'seed': 'random'
-                }
-            }
-        elif model_type == 'flux':
-            defaults = {
-                'model_settings': {
-                    'checkpoint': 'flux1-dev-bnb-nf4-v2.safetensors',
-                    'vae': '',
-                    'text_encoder': 't5xxl_fp16.safetensors',
-                    'gpu_weight': None,
-                    'swap_method': 'queue',
-                    'swap_location': 'cpu'
-                },
-                'generation_settings': {
-                    'sampler': 'Euler',
-                    'scheduler': 'Simple',
-                    'steps': 20,
+                    'batch_count': 1,
                     'cfg_scale': None,
                     'distilled_cfg_scale': 3.5,
-                    'width': 1024,
-                    'height': 1024,
-                    'batch_size': 1,
-                    'num_batches': 10,
-                    'seed': 'random'
+                    'seed': -1
+                }
+        
+        if 'prompt_settings' not in config:
+            config['prompt_settings'] = {
+                'base_prompt': 'a beautiful __SUBJECT__ in __STYLE__, __LIGHTING__, __COMPOSITION__, __MEDIUM__, high quality, detailed',
+                'negative_prompt': 'low quality, blurry, pixelated, distorted, ugly, deformed, bad anatomy, watermark, signature, text, logo, oversaturated, overexposed, underexposed',
+                'prompt_styles': [],
+                'sampler_name': 'Euler a'
+            }
+        
+        if 'output_settings' not in config:
+            config['output_settings'] = {
+                'output_dir': f"outputs/{config.get('name', 'default').lower().replace(' ', '_')}",
+                'filename_pattern': '{prompt}_{seed}_{timestamp}',
+                'save_images': True,
+                'save_grid': False,
+                'save_info': True,
+                'save_metadata': True,
+                'grid_format': 'png',
+                'grid_extended_filename': False,
+                'grid_only_if_multiple': True,
+                'grid_prevent_empty_spots': False,
+                'n_rows': -1,
+                'enable_pnginfo': True,
+                'pnginfo': '',
+                'jpeg_quality': 80,
+                'webp_lossless': False,
+                'webp_quality': 80,
+                'webp_method': 4,
+                'webp_effort': 6
+            }
+        
+        if 'script_settings' not in config:
+            config['script_settings'] = {
+                'script_name': None,
+                'script_args': []
+            }
+        
+        if 'alwayson_scripts' not in config:
+            config['alwayson_scripts'] = {
+                'controlnet': {
+                    'args': []
                 }
             }
-        else:
-            raise ValueError(f"Unknown model type: {model_type}")
         
-        # Merge defaults with config
-        config = self._merge_dicts(defaults, config)
-        
-        # General defaults
-        general_defaults = {
-            'prompt_settings': {
-                'base_prompt': 'a photo of a __ANIMAL__ in __LOCATION__, __STYLE__, cinematic lighting',
-                'negative_prompt': 'low quality, blurry, distorted, ugly, bad anatomy'
-            },
-            'wildcards': {},
-            'output_settings': {
-                'dir': f"./outputs/{config.get('name', 'default')}/{{timestamp}}/",
-                'format': 'png',
-                'save_metadata': True,
-                'save_prompts': True
-            },
-            'controlnet': [],
-            'alwayson_scripts': {
-                'Lora': []
-            },
-            'forge_api': {
+        if 'api_settings' not in config:
+            config['api_settings'] = {
                 'base_url': 'http://127.0.0.1:7860',
                 'timeout': 300,
                 'retry_attempts': 3
             }
-        }
-        
-        config = self._merge_dicts(general_defaults, config)
         
         return config
     
@@ -203,27 +242,42 @@ class ConfigHandler:
     
     def _validate_config(self, config: Dict[str, Any], config_name: str = "<unknown>"):
         """Validate configuration structure and values."""
-        required_fields = ['name', 'model_type', 'model_settings', 'generation_settings', 
-                          'prompt_settings', 'output_settings']
+        # Basic required fields
+        required_fields = ['name', 'model_type']
         
         for field in required_fields:
             if field not in config:
                 raise ValueError(f"Config '{config_name}': Missing required field: {field}")
         
         # Validate model type
-        if config['model_type'] not in ['sd', 'xl', 'flux']:
+        if config['model_type'] not in ['sd', 'sdxl', 'xl', 'flux']:
             raise ValueError(f"Config '{config_name}': Invalid model type: {config['model_type']}")
         
-        # Validate generation settings
+        # Check for generation settings (required for image generation)
+        if 'generation_settings' not in config:
+            raise ValueError(f"Config '{config_name}': Missing generation_settings")
+        
         gen_settings = config['generation_settings']
-        if gen_settings['steps'] < 1 or gen_settings['steps'] > 100:
-            raise ValueError(f"Config '{config_name}': Steps must be between 1 and 100 (got {gen_settings['steps']})")
         
-        if gen_settings['width'] < 64 or gen_settings['height'] < 64:
-            raise ValueError(f"Config '{config_name}': Width and height must be at least 64 (got {gen_settings['width']}x{gen_settings['height']})")
+        # Validate generation settings if present
+        if 'steps' in gen_settings:
+            if gen_settings['steps'] < 1 or gen_settings['steps'] > 100:
+                raise ValueError(f"Config '{config_name}': Steps must be between 1 and 100 (got {gen_settings['steps']})")
         
-        if gen_settings['width'] > 2048 or gen_settings['height'] > 2048:
-            raise ValueError(f"Config '{config_name}': Width and height must be at most 2048 (got {gen_settings['width']}x{gen_settings['height']})")
+        if 'width' in gen_settings and 'height' in gen_settings:
+            if gen_settings['width'] < 64 or gen_settings['height'] < 64:
+                raise ValueError(f"Config '{config_name}': Width and height must be at least 64 (got {gen_settings['width']}x{gen_settings['height']})")
+            
+            if gen_settings['width'] > 2048 or gen_settings['height'] > 2048:
+                raise ValueError(f"Config '{config_name}': Width and height must be at most 2048 (got {gen_settings['width']}x{gen_settings['height']})")
+        
+        # Check for prompt settings (required for generation)
+        if 'prompt_settings' not in config:
+            raise ValueError(f"Config '{config_name}': Missing prompt_settings")
+        
+        prompt_settings = config['prompt_settings']
+        if 'base_prompt' not in prompt_settings:
+            raise ValueError(f"Config '{config_name}': Missing base_prompt in prompt_settings")
     
     def extract_wildcards_from_template(self, template: str) -> List[str]:
         """Extract wildcard names from prompt template using Automatic1111 format."""
@@ -306,4 +360,63 @@ class ConfigHandler:
             with open(path, 'w', encoding='utf-8') as f:
                 for i in range(1, default_items+1):
                     f.write(f"{wildcard.lower()}_{i}\n")
-        return missing['missing_wildcard_files'] 
+        return missing['missing_wildcard_files']
+
+    def get_all_configs(self) -> Dict[str, Any]:
+        """Get all configurations as a dictionary."""
+        configs = {}
+        config_dir = self.config_dir
+        
+        # Try to log if logger is available, but don't fail if it's not
+        try:
+            centralized_logger.info(f"Loading all configs from {config_dir}")
+        except:
+            pass  # Logger not available, continue without logging
+        
+        if not os.path.exists(config_dir):
+            try:
+                centralized_logger.warning(f"Config directory {config_dir} does not exist.")
+            except:
+                pass
+            return configs
+            
+        for fname in os.listdir(config_dir):
+            if fname.endswith('.json'):
+                config_name = os.path.splitext(fname)[0]
+                try:
+                    config = self.load_config(config_name)
+                    configs[config_name] = config
+                    try:
+                        centralized_logger.info(f"Successfully loaded config: {config_name}")
+                    except:
+                        pass
+                except Exception as e:
+                    try:
+                        centralized_logger.log_error(f"Failed to load config {config_name}: {e}")
+                    except:
+                        pass
+                    # Continue loading other configs even if one fails
+                    try:
+                        print(f"Warning: Failed to load config {config_name}: {e}")
+                    except:
+                        pass
+                    
+        if not configs:
+            try:
+                centralized_logger.warning(f"No configuration templates found in {config_dir}.")
+            except:
+                pass
+            try:
+                print(f"Warning: No configuration templates found in {config_dir}.")
+            except:
+                pass
+            
+        return configs
+
+    def get_config(self, config_name: str) -> Dict[str, Any]:
+        """Get a specific configuration."""
+        return self.load_config(config_name)
+
+
+# Create a global instance for easy importing
+config_handler = ConfigHandler() 

@@ -1,0 +1,42 @@
+# Consolidated Moods and Emotions - Combined from all mood files
+# Removes duplicates and organizes by category
+
+# Basic Emotions
+sad
+happy
+angry
+pouty
+smiling
+peaceful
+serene
+ethereal
+whimsical
+magical
+gloomy
+beautiful
+dim
+melancholy
+
+# Atmospheric Moods
+ethereal
+surreal
+whimsical
+serene
+peaceful
+magical
+lively
+hauntingly beautiful art
+dark illustration
+dreamy illustration
+whimsical art
+melancholy pastel art
+mysterious atmosphere
+serene illustration
+dim atmosphere
+beautiful depiction
+illustrative art
+
+# Time and Seasons
+nighttime
+daytime
+winter 

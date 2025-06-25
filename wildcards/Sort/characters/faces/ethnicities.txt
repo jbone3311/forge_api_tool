@@ -1,0 +1,50 @@
+Caucasian
+African American
+Hispanic
+Latina
+Asian
+South Asian
+East Asian
+Southeast Asian
+Native American
+Middle Eastern
+Pacific Islander
+Multiracial
+Caribbean
+European
+African
+Indian
+Filipina
+Indigenous
+Latino
+Mixed Heritage
+West Indian
+Arab
+Chinese
+Japanese
+Korean
+Polynesian
+Mediterranean
+Brazilian
+Colombian
+Mexican
+Puerto Rican
+Dominican
+Cuban
+Venezuelan
+Thai
+Vietnamese
+Malaysian
+Indonesian
+Native Hawaiian
+Eskimo
+Sami
+Aboriginal Australian
+Fijian
+Maori
+Samoan
+Tongan
+Bangladeshi
+Pakistani
+Sri Lankan
+Nepalese

@@ -1,0 +1,62 @@
+natural sunlight
+golden hour
+blue hour
+twilight
+dawn
+dusk
+midday sun
+overcast
+cloudy
+stormy
+moonlight
+starlight
+firelight
+candlelight
+torchlight
+lantern light
+streetlight
+neon light
+fluorescent light
+incandescent light
+LED light
+spotlight
+floodlight
+backlight
+side lighting
+front lighting
+top lighting
+bottom lighting
+rim lighting
+key light
+fill light
+hair light
+kicker light
+ambient light
+diffused light
+harsh light
+soft light
+dramatic lighting
+moody lighting
+romantic lighting
+mysterious lighting
+eerie lighting
+warm lighting
+cool lighting
+neutral lighting
+high key lighting
+low key lighting
+chiaroscuro
+tenebrism
+sfumato
+atmospheric lighting
+volumetric lighting
+god rays
+lens flares
+reflections
+shadows
+highlights
+midtones
+contrast
+exposure
+brightness
+intensity 

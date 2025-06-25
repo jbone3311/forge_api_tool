@@ -1,89 +1,84 @@
 import os
 import time
-import threading
-from typing import Dict, Any, List, Optional, Callable
-from datetime import datetime
 import random
+import threading
+from datetime import datetime
+from typing import Dict, Any, List, Optional, Callable
 
-from config_handler import ConfigHandler
-from wildcard_manager import WildcardManagerFactory
-from prompt_builder import PromptBuilder
-from forge_api import ForgeAPIClient
-from job_queue import JobQueue, Job
+from .config_handler import config_handler
+from .forge_api import forge_api_client
+from .prompt_builder import PromptBuilder
+from .wildcard_manager import WildcardManagerFactory
+from .job_queue import JobQueue, Job
 
 
 class BatchRunner:
-    """Orchestrates batch image generation using the job queue."""
+    """Manages batch image generation jobs."""
     
     def __init__(self, config_dir: str = "configs", output_dir: str = "outputs"):
         self.config_dir = config_dir
         self.output_dir = output_dir
-        self.config_handler = ConfigHandler(config_dir)
+        self.config_handler = config_handler
+        self.forge_client = None
         self.wildcard_factory = WildcardManagerFactory()
         self.prompt_builder = PromptBuilder(self.wildcard_factory)
         self.job_queue = JobQueue()
-        self.forge_client = None
-        self.running = False
-        self.worker_thread = None
-        self.progress_callback = None
         
-        # Ensure output directory exists
-        os.makedirs(output_dir, exist_ok=True)
+        self.running = False
+        self.progress_callback = None
+        self.processing_thread = None
     
-    def set_forge_client(self, forge_client: ForgeAPIClient):
+    def set_forge_client(self, forge_client):
         """Set the Forge API client."""
         self.forge_client = forge_client
     
     def set_progress_callback(self, callback: Callable[[Dict[str, Any]], None]):
-        """Set a callback for progress updates."""
+        """Set the progress callback function."""
         self.progress_callback = callback
     
     def add_job(self, config_name: str, batch_size: int = None, num_batches: int = None) -> Job:
-        """Add a job to the queue."""
+        """Add a new job to the queue."""
         return self.job_queue.add_job(config_name, batch_size, num_batches)
     
     def start_processing(self):
         """Start processing jobs in the queue."""
-        if self.running:
-            return
-        
-        self.running = True
-        self.worker_thread = threading.Thread(target=self._process_queue, daemon=True)
-        self.worker_thread.start()
+        if not self.running:
+            self.running = True
+            self.processing_thread = threading.Thread(target=self._process_queue, daemon=True)
+            self.processing_thread.start()
     
     def stop_processing(self):
         """Stop processing jobs."""
         self.running = False
-        if self.worker_thread:
-            self.worker_thread.join()
+        if self.processing_thread:
+            self.processing_thread.join()
     
     def cancel_current_job(self):
         """Cancel the currently running job."""
         self.job_queue.cancel_current_job()
     
     def get_queue_status(self) -> Dict[str, Any]:
-        """Get the current status of the job queue."""
-        return self.job_queue.get_queue_stats()
+        """Get the current queue status."""
+        return self.job_queue.get_status()
     
     def get_job_details(self, job_id: str) -> Optional[Dict[str, Any]]:
-        """Get details of a specific job."""
+        """Get details for a specific job."""
         job = self.job_queue.get_job(job_id)
         if job:
             return job.to_dict()
         return None
     
     def _process_queue(self):
-        """Main processing loop for the job queue."""
+        """Process jobs in the queue."""
         while self.running:
             try:
-                # Get next job
-                job = self.job_queue.start_next_job()
-                if not job:
-                    time.sleep(1)  # No jobs to process
-                    continue
+                # Start next job if none is running
+                if not self.job_queue.get_running_job():
+                    job = self.job_queue.start_next_job()
+                    if job:
+                        self._process_job(job)
                 
-                # Process the job
-                self._process_job(job)
+                time.sleep(1)  # Check every second
                 
             except Exception as e:
                 print(f"Error in queue processing: {e}")
@@ -284,4 +279,8 @@ class BatchRunner:
     
     def clear_all_jobs(self):
         """Clear all jobs from the queue."""
-        self.job_queue.clear_all_jobs() 
+        self.job_queue.clear_all_jobs()
+
+
+# Create a global instance for easy importing
+batch_runner = BatchRunner() 

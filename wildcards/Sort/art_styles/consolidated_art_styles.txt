@@ -1,0 +1,153 @@
+# Consolidated Art Styles - Combined from all art style files
+# Removes duplicates and organizes by category
+
+# Art Movements (Historical)
+Abstract Expressionism
+Art Deco
+Art Nouveau
+Baroque
+Bauhaus
+Cubism
+Dadaism
+Expressionism
+Fauvism
+Futurism
+Gothic
+Impressionism
+Minimalism
+Neo-Expressionism
+Neoclassicism
+Op Art
+Pop Art
+Post-Impressionism
+Renaissance
+Rococo
+Romanticism
+Surrealism
+Symbolism
+Victorian
+Abstract Art
+Conceptual Art
+Constructivism
+De Stijl
+Environmental Art
+Folk Art
+Graffiti/Street Art
+Land Art
+Mannerism
+Medieval
+Modernism
+Naïve Art
+Outsider Art
+Photorealism
+Pointillism
+Pre-Raphaelite
+Realism
+Suprematism
+Ukiyo-e
+Vorticism
+shin hanga
+pop surrealism
+neo-dada
+dada
+purism
+art brut
+exquisite corpse
+illustrative art
+post-modernism
+
+# Art Techniques and Mediums
+Acrylic Marbling Art
+Acrylic Pour
+Acrylic Painting
+Alcohol Ink
+Autochrome
+Cyanotype
+Encaustic
+Etched Metal
+Etched Stone
+Ferrofluid
+Gouache Painting
+Gouache
+Gold Leaf
+Liquid Ink
+Marbling
+Oil on Canvas
+Watercolor
+Charcoal Drawing
+Digital Painting
+Engraving
+Graffiti Art
+Impasto
+Manga Style
+Mosaic
+Origami
+Pixel Art
+Pointillism
+Poster Art
+Stencil Art
+Street Art
+Sumi-e (Japanese Ink Painting)
+Tattoo Art Style
+Woodcut
+Zentangle®
+Chalk Art
+Concept Art
+Decoupage
+Embroidery Art
+Felt Art
+Glassblowing
+Holography
+Ice Sculpting
+Kinetic Art
+Macrame
+Neon Art
+Papercutting
+Quilling
+Sand Art
+Sgraffito
+Silhouette Art
+Tape Art
+Terracotta
+Thermal Art
+Vexel Art
+VR Painting
+Wire Sculpture
+
+# Digital and Modern Styles
+CryEngine
+Doodle
+Fineartamerica
+Lego Model
+Lineart
+Linocut
+Low Poly
+Patchwork
+Pattachitra
+Petroglyph
+Risograph
+Scrapbooking
+Sketch
+album cover art
+pastel
+pencil sketch
+
+# Specific Art Styles
+matte painting
+conceptual art
+purism
+dada
+neo-dada
+pop surrealism
+sōsaku hanga
+shin hanga
+ukiyo-e
+art brut
+exquisite corpse
+dark fantasy illustration
+fairytale artwork
+fantasy art
+magic realism
+psychedelic art
+gothic art
+digital art 
