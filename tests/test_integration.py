@@ -3,19 +3,25 @@ import tempfile
 import os
 import json
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
 from PIL import Image
 import io
 import base64
 import shutil
 
-# Add core to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'core'))
+# Add the project root to the path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.insert(0, project_root)
 
-from config_handler import ConfigHandler
-from wildcard_manager import WildcardManagerFactory
-from prompt_builder import PromptBuilder
-from output_manager import OutputManager
+from core.forge_api import ForgeAPIClient
+from core.config_handler import ConfigHandler
+from core.wildcard_manager import WildcardManagerFactory
+from core.prompt_builder import PromptBuilder
+from core.batch_runner import BatchRunner
+from core.output_manager import OutputManager
 from image_analyzer import ImageAnalyzer
 
 

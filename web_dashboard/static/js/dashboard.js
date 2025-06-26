@@ -56,6 +56,17 @@ function initializeStatusUpdates() {
 function loadInitialData() {
     loadOutputs();
     updateQueueStatus();
+    
+    // Auto-load the first available template
+    setTimeout(() => {
+        const configSelect = document.getElementById('config-select');
+        if (configSelect && configSelect.options.length > 1) { // More than just the placeholder
+            const firstConfig = configSelect.options[1].value; // Skip the placeholder option
+            if (firstConfig) {
+                selectTemplate(firstConfig);
+            }
+        }
+    }, 500); // Small delay to ensure DOM is ready
 }
 
 // Setup event listeners
@@ -67,6 +78,17 @@ function setupEventListeners() {
             selectTemplate(configName);
         }
     });
+    
+    // Config select dropdown change
+    const configSelect = document.getElementById('config-select');
+    if (configSelect) {
+        configSelect.addEventListener('change', function(e) {
+            const selectedConfig = e.target.value;
+            if (selectedConfig) {
+                selectTemplate(selectedConfig);
+            }
+        });
+    }
     
     // Modal close on backdrop click
     document.addEventListener('click', function(e) {
@@ -265,6 +287,29 @@ function updateOutputStats(outputData) {
 function selectTemplate(configName) {
     const configSelect = document.getElementById('config-select');
     if (configSelect) configSelect.value = configName;
+    
+    // Fetch the template's base prompt and populate the prompt input
+    fetch(`/api/configs/${configName}`)
+        .then(response => response.json())
+        .then(data => {
+            const promptInput = document.getElementById('prompt-input');
+            if (promptInput && data.prompt_settings && data.prompt_settings.base_prompt) {
+                promptInput.value = data.prompt_settings.base_prompt;
+                console.log('Populated prompt with template base prompt:', data.prompt_settings.base_prompt);
+                
+                // Show helpful notification
+                const hasWildcards = data.prompt_settings.base_prompt.includes('__');
+                if (hasWildcards) {
+                    updateNotification(`Template "${configName}" loaded with wildcards. Edit the prompt to customize or generate as-is.`, 'info');
+                } else {
+                    updateNotification(`Template "${configName}" loaded. You can edit the prompt or generate as-is.`, 'info');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Failed to fetch template details:', error);
+            updateNotification(`Failed to load template "${configName}" details`, 'error');
+        });
 }
 
 function refreshTemplates() {
@@ -533,8 +578,8 @@ function previewBatch() {
     const numBatches = document.getElementById('num-batches').value;
     const prompt = document.getElementById('prompt-input').value;
     
-    if (!prompt || !configName) {
-        updateNotification('Please enter a prompt and select a template', 'warning');
+    if (!configName) {
+        updateNotification('Please select a template', 'warning');
         return;
     }
     
@@ -542,10 +587,14 @@ function previewBatch() {
     
     const data = {
         config_name: configName,
-        prompt: prompt,
         batch_size: parseInt(batchSize) || 4,
         num_batches: parseInt(numBatches) || 1
     };
+    
+    // Only include prompt if user provided one
+    if (prompt && prompt.trim()) {
+        data.prompt = prompt;
+    }
     
     fetch('/api/batch/preview', {
         method: 'POST',
@@ -556,7 +605,7 @@ function previewBatch() {
     .then(data => {
         if (data.success) {
             currentBatchPreview = data.prompts;
-            showBatchPreview(data.prompts);
+            showBatchPreview(data.prompts, data);
         } else {
             updateNotification('Failed to preview batch', 'error');
         }
@@ -567,13 +616,23 @@ function previewBatch() {
     });
 }
 
-function showBatchPreview(prompts) {
+function showBatchPreview(prompts, previewData) {
     const modal = document.getElementById('batch-preview-modal');
     const content = document.getElementById('batch-preview-content');
     
     if (!modal || !content) return;
     
-    let html = '<div class="batch-preview-grid">';
+    // Add preview information header
+    let html = '<div class="preview-info">';
+    if (previewData.template_used) {
+        html += '<div class="preview-notice"><i class="fas fa-info-circle"></i> Using template\'s base prompt</div>';
+    }
+    if (previewData.wildcards_resolved) {
+        html += '<div class="preview-notice"><i class="fas fa-magic"></i> Wildcards automatically resolved</div>';
+    }
+    html += '</div>';
+    
+    html += '<div class="batch-preview-grid">';
     prompts.forEach((prompt, index) => {
         html += `
             <div class="preview-item">

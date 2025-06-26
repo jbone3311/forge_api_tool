@@ -4,23 +4,25 @@ Direct Forge API Test
 Tests the Forge API client directly against the Forge server.
 """
 
-import sys
 import os
+import sys
 import time
 import json
+import requests
 from datetime import datetime
+from pathlib import Path
 
-# Add the core directory to the path
+# Add the project root to the path
 current_dir = os.path.dirname(os.path.abspath(__file__))
-core_path = os.path.join(current_dir, 'core')
-sys.path.insert(0, core_path)
+project_root = os.path.dirname(current_dir)
+sys.path.insert(0, project_root)
 
-from forge_api import ForgeAPIClient
-from config_handler import ConfigHandler
-from wildcard_manager import WildcardManagerFactory
-from prompt_builder import PromptBuilder
-from batch_runner import BatchRunner
-from logger import logger
+from core.forge_api import ForgeAPIClient
+from core.config_handler import ConfigHandler
+from core.wildcard_manager import WildcardManagerFactory
+from core.prompt_builder import PromptBuilder
+from core.batch_runner import BatchRunner
+from core.logger import logger
 
 class DirectForgeAPITester:
     def __init__(self, forge_url: str = "http://127.0.0.1:7860"):
@@ -238,8 +240,6 @@ class DirectForgeAPITester:
     def test_forge_endpoints(self):
         """Test various Forge API endpoints."""
         try:
-            import requests
-            
             endpoints_to_test = [
                 "/sdapi/v1/loras",
                 "/controlnet/model_list",

@@ -179,7 +179,7 @@ def test_job_queue():
         from core.job_queue import job_queue
         
         # Test getting queue status
-        status = job_queue.get_status()
+        status = job_queue.get_queue_stats()
         results['get_status'] = f"✓ PASS: Queue size: {status.get('queue_size', 0)}"
         print(f"✓ get_status: Queue size: {status.get('queue_size', 0)}")
         

@@ -7,11 +7,17 @@ from pathlib import Path
 import sys
 from PIL import Image
 import io
+import time
+from datetime import datetime
 
-# Add core to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'core'))
+# Add the project root to the path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.insert(0, project_root)
 
-from output_manager import OutputManager
+from core.output_manager import OutputManager
+from core.config_handler import ConfigHandler
+from core.wildcard_manager import WildcardManagerFactory
 
 
 class TestOutputManager(unittest.TestCase):

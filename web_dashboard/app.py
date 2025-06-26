@@ -166,7 +166,7 @@ def get_system_status():
         api_status = get_api_status()
         
         # Get queue status
-        queue_status = job_queue.get_status()
+        queue_status = job_queue.get_queue_stats()
         
         # Get current generation status
         generation_status = get_generation_status()
@@ -464,6 +464,8 @@ def start_batch():
         config_name = data.get('config_name')
         batch_size = data.get('batch_size', 1)
         num_batches = data.get('num_batches', 1)
+        prompts = data.get('prompts', [])  # Optional: pre-generated prompts from preview
+        user_prompt = data.get('prompt', '')  # Optional: user-provided prompt
         
         if not config_name:
             return jsonify({'error': 'Config name is required'}), 400
@@ -475,24 +477,63 @@ def start_batch():
         # Calculate total images
         total_images = batch_size * num_batches
         
+        # If prompts were provided from preview, use them
+        if prompts:
+            # Use pre-generated prompts from preview
+            resolved_prompts = prompts
+            user_provided = False
+            wildcards_resolved = True
+        elif user_prompt:
+            # Use user-provided prompt (may contain wildcards)
+            if '__' in user_prompt:
+                # Resolve wildcards
+                wildcard_factory = WildcardManagerFactory()
+                prompt_builder = PromptBuilder(wildcard_factory)
+                temp_config = {**config, 'prompt_settings': {**config['prompt_settings'], 'base_prompt': user_prompt}}
+                resolved_prompts = prompt_builder.preview_prompts(temp_config, total_images)
+                wildcards_resolved = True
+            else:
+                # No wildcards, repeat the same prompt
+                resolved_prompts = [user_prompt] * total_images
+                wildcards_resolved = False
+            user_provided = True
+        else:
+            # Use template's base prompt
+            template_prompt = config['prompt_settings']['base_prompt']
+            if '__' in template_prompt:
+                # Resolve wildcards
+                wildcard_factory = WildcardManagerFactory()
+                prompt_builder = PromptBuilder(wildcard_factory)
+                resolved_prompts = prompt_builder.preview_prompts(config, total_images)
+                wildcards_resolved = True
+            else:
+                # No wildcards, repeat the same prompt
+                resolved_prompts = [template_prompt] * total_images
+                wildcards_resolved = False
+            user_provided = False
+        
         # Update generation progress
         update_generation_progress(0, total_images, config_name)
         
-        # Add job to queue
-        job_id = job_queue.add_job(config, batch_size, num_batches)
+        # Add job to queue with resolved prompts
+        job_id = job_queue.add_job_with_prompts(config, resolved_prompts)
         
         logger.log_queue_operation("job_added", job_id, {
             "config_name": config_name,
             "batch_size": batch_size,
             "num_batches": num_batches,
-            "total_images": total_images
+            "total_images": total_images,
+            "user_provided_prompt": user_provided,
+            "wildcards_resolved": wildcards_resolved,
+            "prompts_provided": len(prompts) > 0
         })
         
         return jsonify({
             'success': True,
             'job_id': job_id,
             'message': f'Batch job {job_id} added to queue',
-            'total_images': total_images
+            'total_images': total_images,
+            'wildcards_resolved': wildcards_resolved
         })
     except Exception as e:
         logger.log_error(f"Failed to start batch: {e}")
@@ -506,33 +547,60 @@ def preview_batch():
         config_name = data.get('config_name')
         batch_size = data.get('batch_size', 1)
         num_batches = data.get('num_batches', 1)
-        prompt = data.get('prompt', '')  # User must provide a completed prompt
+        user_prompt = data.get('prompt', '')  # Optional user-provided prompt
         
         if not config_name:
             return jsonify({'error': 'Config name is required'}), 400
-        
-        if not prompt:
-            return jsonify({'error': 'Prompt is required - please provide a completed prompt with all wildcards substituted'}), 400
         
         config = config_handler.get_config(config_name)
         if not config:
             return jsonify({'error': 'Configuration not found'}), 404
         
-        # Generate the same prompt for all images in the batch
+        # Calculate total prompts needed
         total_prompts = batch_size * num_batches
-        prompts = [prompt] * total_prompts
+        
+        # If user provided a prompt, use it; otherwise use template's base prompt
+        if user_prompt:
+            # Use user-provided prompt (may contain wildcards)
+            template_prompt = user_prompt
+            user_provided = True
+        else:
+            # Use template's base prompt
+            template_prompt = config['prompt_settings']['base_prompt']
+            user_provided = False
+        
+        # Check if the prompt contains wildcards
+        if '__' in template_prompt:
+            # Resolve wildcards using PromptBuilder
+            wildcard_factory = WildcardManagerFactory()
+            prompt_builder = PromptBuilder(wildcard_factory)
+            
+            # Create a temporary config with the template prompt
+            temp_config = {**config, 'prompt_settings': {**config['prompt_settings'], 'base_prompt': template_prompt}}
+            
+            # Generate varied prompts with wildcard resolution
+            prompts = prompt_builder.preview_prompts(temp_config, total_prompts)
+            wildcards_resolved = True
+        else:
+            # No wildcards, just repeat the same prompt
+            prompts = [template_prompt] * total_prompts
+            wildcards_resolved = False
         
         logger.log_app_event("batch_preview_generated", {
             "config_name": config_name,
             "batch_size": batch_size,
             "num_batches": num_batches,
             "prompt_count": len(prompts),
-            "user_provided_prompt": True
+            "user_provided_prompt": user_provided,
+            "wildcards_resolved": wildcards_resolved,
+            "template_used": not user_provided
         })
         
         return jsonify({
             'success': True,
-            'prompts': prompts
+            'prompts': prompts,
+            'wildcards_resolved': wildcards_resolved,
+            'template_used': not user_provided
         })
     except Exception as e:
         logger.log_error(f"Failed to preview batch: {e}")
@@ -542,7 +610,7 @@ def preview_batch():
 def get_queue_status():
     """Get queue status."""
     try:
-        status = job_queue.get_status()
+        status = job_queue.get_queue_stats()
         return jsonify(status)
     except Exception as e:
         logger.log_error(f"Failed to get queue status: {e}")
@@ -691,7 +759,7 @@ def handle_status_request():
     try:
         # Get comprehensive status
         api_status = get_api_status()
-        queue_status = job_queue.get_status()
+        queue_status = job_queue.get_queue_stats()
         generation_status = get_generation_status()
         output_stats = output_manager.get_output_statistics()
         

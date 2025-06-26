@@ -59,7 +59,7 @@ class BatchRunner:
     
     def get_queue_status(self) -> Dict[str, Any]:
         """Get the current queue status."""
-        return self.job_queue.get_status()
+        return self.job_queue.get_queue_stats()
     
     def get_job_details(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get details for a specific job."""
@@ -104,47 +104,39 @@ class BatchRunner:
                 if not is_valid:
                     raise ValueError(f"Configuration validation failed: {', '.join(errors)}")
             
-            # Calculate total images
-            batch_size = config['generation_settings']['batch_size']
-            num_batches = config['generation_settings']['num_batches']
-            total_images = batch_size * num_batches
-            
-            job.total_images = total_images
-            self.job_queue.save_queue()
-            
-            # Create output directory
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_dir = os.path.join(
-                self.output_dir,
-                config['name'],
-                timestamp
-            )
-            os.makedirs(output_dir, exist_ok=True)
-            
-            # Process each batch
-            for batch_num in range(num_batches):
-                if not self.running or job.status.value == "cancelled":
-                    break
+            # Check if we have pre-generated prompts
+            if hasattr(job, 'prompts') and job.prompts:
+                # Use pre-generated prompts
+                all_prompts = job.prompts
+                total_images = len(all_prompts)
+                job.total_images = total_images
+                self.job_queue.save_queue()
                 
-                # Generate prompts for this batch
-                prompts = self.prompt_builder.build_prompt_batch(config, batch_size)
+                # Create output directory
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_dir = os.path.join(
+                    self.output_dir,
+                    config['name'],
+                    timestamp
+                )
+                os.makedirs(output_dir, exist_ok=True)
                 
-                # Generate seeds if needed
-                seeds = self._generate_seeds(config, batch_size)
+                # Generate seeds for all images
+                seeds = self._generate_seeds(config, total_images)
                 
-                # Generate images
-                if self.forge_client:
-                    results = self.forge_client.generate_batch(config, prompts, seeds)
-                else:
-                    # Mock results for testing
-                    results = [(True, "mock_image_data", {}) for _ in prompts]
-                
-                # Save images and update progress
-                for i, (success, image_data, info) in enumerate(results):
+                # Process all images with pre-generated prompts
+                for i, prompt in enumerate(all_prompts):
                     if not self.running or job.status.value == "cancelled":
                         break
                     
-                    current_image = batch_num * batch_size + i + 1
+                    current_image = i + 1
+                    
+                    # Generate single image
+                    if self.forge_client:
+                        success, image_data, info = self.forge_client.generate_image(config, prompt, seeds[i] if seeds else None)
+                    else:
+                        # Mock result for testing
+                        success, image_data, info = True, "mock_image_data", {}
                     
                     if success and image_data:
                         # Save image
@@ -166,11 +158,10 @@ class BatchRunner:
                             prompt_filename = f"prompt_{current_image:04d}.txt"
                             prompt_path = os.path.join(output_dir, prompt_filename)
                             with open(prompt_path, 'w', encoding='utf-8') as f:
-                                f.write(f"Prompt: {prompts[i]}\n")
+                                f.write(f"Prompt: {prompt}\n")
                                 f.write(f"Seed: {seeds[i] if seeds else 'random'}\n")
                                 f.write(f"Config: {job.config_name}\n")
-                                f.write(f"Batch: {batch_num + 1}/{num_batches}\n")
-                                f.write(f"Image: {i + 1}/{batch_size}\n")
+                                f.write(f"Image: {current_image}/{total_images}\n")
                     else:
                         # Handle failed generation
                         error_msg = info.get('error', 'Unknown error')
@@ -179,7 +170,7 @@ class BatchRunner:
                     
                     # Update progress
                     self.job_queue.update_current_job_progress(
-                        batch_num + 1, current_image, total_images
+                        1, current_image, total_images
                     )
                     
                     # Call progress callback
@@ -187,7 +178,7 @@ class BatchRunner:
                         progress_data = {
                             'job_id': job.id,
                             'config_name': job.config_name,
-                            'current_batch': batch_num + 1,
+                            'current_batch': 1,
                             'current_image': current_image,
                             'total_images': total_images,
                             'progress_percent': (current_image / total_images) * 100,
@@ -195,8 +186,101 @@ class BatchRunner:
                         }
                         self.progress_callback(progress_data)
                 
-                # Small delay between batches
-                time.sleep(0.5)
+            else:
+                # Use normal batch processing with prompt generation
+                # Calculate total images
+                batch_size = config['generation_settings']['batch_size']
+                num_batches = config['generation_settings']['num_batches']
+                total_images = batch_size * num_batches
+                
+                job.total_images = total_images
+                self.job_queue.save_queue()
+                
+                # Create output directory
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_dir = os.path.join(
+                    self.output_dir,
+                    config['name'],
+                    timestamp
+                )
+                os.makedirs(output_dir, exist_ok=True)
+                
+                # Process each batch
+                for batch_num in range(num_batches):
+                    if not self.running or job.status.value == "cancelled":
+                        break
+                    
+                    # Generate prompts for this batch
+                    prompts = self.prompt_builder.build_prompt_batch(config, batch_size)
+                    
+                    # Generate seeds if needed
+                    seeds = self._generate_seeds(config, batch_size)
+                    
+                    # Generate images
+                    if self.forge_client:
+                        results = self.forge_client.generate_batch(config, prompts, seeds)
+                    else:
+                        # Mock results for testing
+                        results = [(True, "mock_image_data", {}) for _ in prompts]
+                    
+                    # Save images and update progress
+                    for i, (success, image_data, info) in enumerate(results):
+                        if not self.running or job.status.value == "cancelled":
+                            break
+                        
+                        current_image = batch_num * batch_size + i + 1
+                        
+                        if success and image_data:
+                            # Save image
+                            image_filename = f"image_{current_image:04d}.png"
+                            image_path = os.path.join(output_dir, image_filename)
+                            
+                            if self.forge_client:
+                                self.forge_client.save_image(image_data, image_path, info)
+                            else:
+                                # Mock save for testing
+                                with open(image_path, 'w') as f:
+                                    f.write("mock_image")
+                            
+                            # Add to job outputs
+                            self.job_queue.add_current_job_output(image_path)
+                            
+                            # Save prompt info
+                            if config['output_settings'].get('save_prompts', True):
+                                prompt_filename = f"prompt_{current_image:04d}.txt"
+                                prompt_path = os.path.join(output_dir, prompt_filename)
+                                with open(prompt_path, 'w', encoding='utf-8') as f:
+                                    f.write(f"Prompt: {prompts[i]}\n")
+                                    f.write(f"Seed: {seeds[i] if seeds else 'random'}\n")
+                                    f.write(f"Config: {job.config_name}\n")
+                                    f.write(f"Batch: {batch_num + 1}/{num_batches}\n")
+                                    f.write(f"Image: {i + 1}/{batch_size}\n")
+                        else:
+                            # Handle failed generation
+                            error_msg = info.get('error', 'Unknown error')
+                            self.job_queue.add_current_job_error(f"Image {current_image}: {error_msg}")
+                            job.failed_images += 1
+                        
+                        # Update progress
+                        self.job_queue.update_current_job_progress(
+                            batch_num + 1, current_image, total_images
+                        )
+                        
+                        # Call progress callback
+                        if self.progress_callback:
+                            progress_data = {
+                                'job_id': job.id,
+                                'config_name': job.config_name,
+                                'current_batch': batch_num + 1,
+                                'current_image': current_image,
+                                'total_images': total_images,
+                                'progress_percent': (current_image / total_images) * 100,
+                                'status': 'running'
+                            }
+                            self.progress_callback(progress_data)
+                    
+                    # Small delay between batches
+                    time.sleep(0.5)
             
             # Mark job as completed
             self.job_queue.complete_current_job()
@@ -206,7 +290,7 @@ class BatchRunner:
                 progress_data = {
                     'job_id': job.id,
                     'config_name': job.config_name,
-                    'current_batch': num_batches,
+                    'current_batch': 1 if hasattr(job, 'prompts') and job.prompts else num_batches,
                     'current_image': total_images,
                     'total_images': total_images,
                     'progress_percent': 100.0,

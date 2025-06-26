@@ -36,6 +36,7 @@ class Job:
         self.errors = []
         self.output_files = []
         self.progress_callback = None
+        self.prompts = []  # Store pre-generated prompts
         
     def _generate_id(self) -> str:
         """Generate a unique job ID."""
@@ -97,7 +98,8 @@ class Job:
             'completed_images': self.completed_images,
             'failed_images': self.failed_images,
             'errors': self.errors,
-            'output_files': self.output_files
+            'output_files': self.output_files,
+            'prompts': self.prompts
         }
     
     @classmethod
@@ -116,6 +118,7 @@ class Job:
         job.failed_images = data.get('failed_images', 0)
         job.errors = data.get('errors', [])
         job.output_files = data.get('output_files', [])
+        job.prompts = data.get('prompts', [])
         return job
 
 
@@ -134,6 +137,20 @@ class JobQueue:
         """Add a new job to the queue."""
         with self.lock:
             job = Job(config_name, batch_size, num_batches)
+            self.jobs.append(job)
+            self.save_queue()
+            return job
+    
+    def add_job_with_prompts(self, config: Dict[str, Any], prompts: List[str]) -> Job:
+        """Add a new job to the queue with pre-generated prompts."""
+        with self.lock:
+            config_name = config.get('name', 'unknown')
+            batch_size = len(prompts)
+            num_batches = 1
+            
+            job = Job(config_name, batch_size, num_batches)
+            job.prompts = prompts  # Store the pre-generated prompts
+            job.total_images = len(prompts)
             self.jobs.append(job)
             self.save_queue()
             return job

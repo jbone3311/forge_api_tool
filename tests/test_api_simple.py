@@ -3,16 +3,20 @@
 Simple API test script that tests the core functionality directly
 """
 
-import sys
 import os
-
-# Add the core directory to the path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-core_path = os.path.join(current_dir, 'core')
-sys.path.insert(0, core_path)
-
-from forge_api import ForgeAPIClient
+import sys
+import time
 import json
+from datetime import datetime
+
+# Add the project root to the path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.insert(0, project_root)
+
+from core.forge_api import ForgeAPIClient
+from core.config_handler import ConfigHandler
+from core.wildcard_manager import WildcardManagerFactory
 
 def test_forge_client():
     """Test the Forge API client directly."""
@@ -78,8 +82,6 @@ def test_config_loading():
     print("=" * 40)
     
     try:
-        from config_handler import ConfigHandler
-        
         handler = ConfigHandler()
         configs = handler.list_configs()
         
