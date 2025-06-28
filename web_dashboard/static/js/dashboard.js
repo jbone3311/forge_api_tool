@@ -7,11 +7,12 @@ let currentBatchPreview = null;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard initialized');
+    console.log('Dashboard initializing...');
     initializeSocket();
     initializeStatusUpdates();
     loadInitialData();
     setupEventListeners();
+    loadCurrentAPIState();
 });
 
 // Socket.IO initialization
@@ -705,21 +706,6 @@ function clearQueue() {
 }
 
 // Output Management
-function loadOutputs() {
-    fetch('/api/outputs')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displayOutputs(data.outputs);
-            } else {
-                console.error('Failed to load outputs:', data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Failed to load outputs:', error);
-        });
-}
-
 function displayOutputs(outputs) {
     const grid = document.getElementById('outputs-grid');
     if (!grid) return;
@@ -737,8 +723,8 @@ function displayOutputs(outputs) {
     
     let html = '';
     outputs.forEach(output => {
-        const imageUrl = `/outputs/images/${output.filename}`;
-        const metadataUrl = `/outputs/metadata/${output.filename.replace('.png', '.json')}`;
+        // Use the new date-based path structure
+        const imageUrl = `/outputs/${output.date}/${output.filename}`;
         
         html += `
             <div class="output-card">
@@ -749,15 +735,18 @@ function displayOutputs(outputs) {
                     <div class="output-name">${output.filename}</div>
                     <div class="output-config">${output.config_name}</div>
                     <div class="output-date">${formatDate(output.created_at)}</div>
+                    <div class="output-details">
+                        <small>Seed: ${output.seed} | Steps: ${output.steps} | ${output.width}x${output.height}</small>
+                    </div>
                 </div>
                 <div class="output-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="downloadImage('${output.filename}')" title="Download">
+                    <button class="btn btn-sm btn-secondary" onclick="downloadImage('${output.date}', '${output.filename}')" title="Download">
                         <i class="fas fa-download"></i>
                     </button>
-                    <button class="btn btn-sm btn-secondary" onclick="viewMetadata('${output.filename}')" title="View Metadata">
+                    <button class="btn btn-sm btn-secondary" onclick="viewMetadata('${output.date}', '${output.filename}')" title="View Metadata">
                         <i class="fas fa-info-circle"></i>
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteOutput('${output.filename}')" title="Delete">
+                    <button class="btn btn-sm btn-danger" onclick="deleteOutput('${output.date}', '${output.filename}')" title="Delete">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -768,9 +757,192 @@ function displayOutputs(outputs) {
     grid.innerHTML = html;
 }
 
-function refreshOutputs() {
-    console.log('Refreshing outputs...');
-    loadOutputs();
+function loadOutputs(date = null, config = null) {
+    let url = '/api/outputs';
+    const params = new URLSearchParams();
+    
+    if (date) {
+        params.append('date', date);
+    }
+    if (config) {
+        params.append('config', config);
+    }
+    
+    if (params.toString()) {
+        url += '?' + params.toString();
+    }
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayOutputs(data.outputs);
+                updateOutputStats(data.outputs.length);
+            } else {
+                console.error('Failed to load outputs:', data.error);
+                updateNotification('Failed to load outputs', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading outputs:', error);
+            updateNotification('Error loading outputs', 'error');
+        });
+}
+
+function loadOutputDates() {
+    fetch('/api/outputs/dates')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateDateSelector(data.dates);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading output dates:', error);
+        });
+}
+
+function updateDateSelector(dates) {
+    const dateSelect = document.getElementById('output-date-select');
+    if (!dateSelect) return;
+    
+    // Clear existing options
+    dateSelect.innerHTML = '<option value="">Today</option>';
+    
+    // Add date options
+    dates.forEach(date => {
+        const option = document.createElement('option');
+        option.value = date;
+        option.textContent = formatDate(date);
+        dateSelect.appendChild(option);
+    });
+}
+
+function downloadImage(date, filename) {
+    const imageUrl = `/outputs/${date}/${filename}`;
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function viewMetadata(date, filename) {
+    console.log('Viewing metadata for:', date, filename);
+    fetch(`/api/outputs/metadata/${date}/${filename}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMetadataModal(data.metadata);
+            } else {
+                updateNotification('Failed to load metadata', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Failed to load metadata:', error);
+            updateNotification('Failed to load metadata', 'error');
+        });
+}
+
+function showMetadataModal(metadata) {
+    // Create a simple modal to display metadata
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    `;
+    
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+    `;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+    `;
+    closeBtn.onclick = () => document.body.removeChild(modal);
+    
+    const title = document.createElement('h3');
+    title.textContent = 'Image Metadata';
+    title.style.marginBottom = '1rem';
+    
+    const metadataText = document.createElement('pre');
+    metadataText.textContent = JSON.stringify(metadata, null, 2);
+    metadataText.style.cssText = `
+        background: #f5f5f5;
+        padding: 1rem;
+        border-radius: 4px;
+        font-size: 12px;
+        overflow-x: auto;
+    `;
+    
+    content.appendChild(closeBtn);
+    content.appendChild(title);
+    content.appendChild(metadataText);
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    
+    // Close on background click
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    };
+}
+
+function deleteOutput(date, filename) {
+    if (!confirm('Are you sure you want to delete this image?')) {
+        return;
+    }
+    
+    fetch(`/api/outputs/delete`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            date: date,
+            filename: filename
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateNotification('Image deleted successfully', 'success');
+            loadOutputs(); // Reload outputs
+        } else {
+            updateNotification('Failed to delete image', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting output:', error);
+        updateNotification('Error deleting image', 'error');
+    });
 }
 
 function exportOutputs() {
@@ -1001,47 +1173,202 @@ function stopGeneration() {
         });
 }
 
-// Output actions
-function downloadImage(filename) {
-    console.log('Downloading image:', filename);
-    const link = document.createElement('a');
-    link.href = `/outputs/images/${filename}`;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+// RunDiffusion API Configuration Functions
+function toggleRunDiffusion() {
+    const toggle = document.getElementById('rundiffusion-toggle');
+    const config = document.getElementById('rundiffusion-config');
+    
+    if (toggle.checked) {
+        config.style.display = 'block';
+        // Load saved configuration if available
+        loadRunDiffusionConfig();
+    } else {
+        config.style.display = 'none';
+        // Switch back to local API
+        switchToLocalAPI();
+    }
 }
 
-function viewMetadata(filename) {
-    console.log('Viewing metadata for:', filename);
-    const metadataFile = filename.replace('.png', '.json');
-    fetch(`/outputs/metadata/${metadataFile}`)
+function loadRunDiffusionConfig() {
+    fetch('/api/rundiffusion/config')
         .then(response => response.json())
         .then(data => {
-            alert(JSON.stringify(data, null, 2));
+            if (data.success && data.config) {
+                document.getElementById('rundiffusion-url').value = data.config.url || 'https://your-instance.rundiffusion.com';
+                document.getElementById('rundiffusion-username').value = data.config.username || 'rduser';
+                document.getElementById('rundiffusion-password').value = data.config.password || 'rdpass';
+                updateNotification('RunDiffusion configuration loaded', 'success');
+            }
         })
         .catch(error => {
-            console.error('Failed to load metadata:', error);
-            updateNotification('Failed to load metadata', 'error');
+            console.error('Failed to load RunDiffusion config:', error);
+            // Use default values if loading fails
         });
 }
 
-function deleteOutput(filename) {
-    console.log('Deleting output:', filename);
-    if (confirm(`Are you sure you want to delete "${filename}"?`)) {
-        fetch(`/api/outputs/delete/${filename}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateNotification('Output deleted successfully', 'success');
-                    loadOutputs();
-                } else {
-                    updateNotification('Failed to delete output', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Failed to delete output:', error);
-                updateNotification('Failed to delete output', 'error');
-            });
+function saveRunDiffusionConfig() {
+    const config = {
+        url: document.getElementById('rundiffusion-url').value.trim(),
+        username: document.getElementById('rundiffusion-username').value.trim(),
+        password: document.getElementById('rundiffusion-password').value.trim()
+    };
+    
+    // Validate configuration
+    if (!config.url || config.url === 'https://your-instance.rundiffusion.com') {
+        updateNotification('Please enter a valid RunDiffusion server URL', 'error');
+        return;
     }
+    
+    if (!config.username || !config.password) {
+        updateNotification('Please enter both username and password', 'error');
+        return;
+    }
+    
+    fetch('/api/rundiffusion/config', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(config)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateNotification('Switched to RunDiffusion API successfully', 'success');
+            // Test connection after saving
+            testRunDiffusionConnection();
+            // Update system status
+            updateSystemStatus();
+        } else {
+            updateNotification('Failed to switch to RunDiffusion: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error switching to RunDiffusion:', error);
+        updateNotification('Failed to switch to RunDiffusion', 'error');
+    });
+}
+
+function testRunDiffusionConnection() {
+    const url = document.getElementById('rundiffusion-url').value.trim();
+    const username = document.getElementById('rundiffusion-username').value.trim();
+    const password = document.getElementById('rundiffusion-password').value.trim();
+    
+    if (!url || !username || !password) {
+        updateNotification('Please fill in all RunDiffusion configuration fields', 'error');
+        return;
+    }
+    
+    // Show testing status
+    const configDiv = document.getElementById('rundiffusion-config');
+    let statusDiv = configDiv.querySelector('.api-status');
+    if (!statusDiv) {
+        statusDiv = document.createElement('div');
+        statusDiv.className = 'api-status testing';
+        configDiv.appendChild(statusDiv);
+    }
+    statusDiv.className = 'api-status testing';
+    statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing connection...';
+    
+    fetch('/api/rundiffusion/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url, username, password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.className = 'api-status connected';
+            statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Connection successful!';
+            updateNotification('RunDiffusion connection test successful', 'success');
+        } else {
+            statusDiv.className = 'api-status disconnected';
+            statusDiv.innerHTML = '<i class="fas fa-times-circle"></i> Connection failed: ' + data.error;
+            updateNotification('RunDiffusion connection test failed: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error testing RunDiffusion connection:', error);
+        statusDiv.className = 'api-status disconnected';
+        statusDiv.innerHTML = '<i class="fas fa-times-circle"></i> Connection failed: Network error';
+        updateNotification('RunDiffusion connection test failed', 'error');
+    });
+}
+
+function switchToLocalAPI() {
+    fetch('/api/rundiffusion/disable', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateNotification('Switched to local API', 'success');
+            // Remove status indicator if it exists
+            const configDiv = document.getElementById('rundiffusion-config');
+            const statusDiv = configDiv.querySelector('.api-status');
+            if (statusDiv) {
+                statusDiv.remove();
+            }
+            // Update system status
+            updateSystemStatus();
+        } else {
+            updateNotification('Failed to switch to local API: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error switching to local API:', error);
+        updateNotification('Failed to switch to local API', 'error');
+    });
+}
+
+function loadCurrentAPIState() {
+    fetch('/api/status/current-api')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const toggle = document.getElementById('rundiffusion-toggle');
+                const config = document.getElementById('rundiffusion-config');
+                
+                if (data.api_info.type === 'rundiffusion') {
+                    // Enable RunDiffusion
+                    toggle.checked = true;
+                    config.style.display = 'block';
+                    
+                    // Load the configuration
+                    if (data.api_info.url) {
+                        document.getElementById('rundiffusion-url').value = data.api_info.url;
+                    }
+                    if (data.api_info.username) {
+                        document.getElementById('rundiffusion-username').value = data.api_info.username;
+                    }
+                    
+                    // Show connection status
+                    let statusDiv = config.querySelector('.api-status');
+                    if (!statusDiv) {
+                        statusDiv = document.createElement('div');
+                        statusDiv.className = 'api-status';
+                        config.appendChild(statusDiv);
+                    }
+                    
+                    if (data.connected) {
+                        statusDiv.className = 'api-status connected';
+                        statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Connected to RunDiffusion';
+                    } else {
+                        statusDiv.className = 'api-status disconnected';
+                        statusDiv.innerHTML = '<i class="fas fa-times-circle"></i> RunDiffusion not connected';
+                    }
+                } else {
+                    // Use local API
+                    toggle.checked = false;
+                    config.style.display = 'none';
+                }
+                
+                console.log('Current API state loaded:', data.api_info);
+            }
+        })
+        .catch(error => {
+            console.error('Failed to load current API state:', error);
+        });
 } 

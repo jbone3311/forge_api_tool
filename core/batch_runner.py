@@ -28,32 +28,32 @@ class BatchRunner:
         self.progress_callback = None
         self.processing_thread = None
     
-    def set_forge_client(self, forge_client):
+    def set_forge_client(self, forge_client: 'ForgeAPIClient') -> None:
         """Set the Forge API client."""
         self.forge_client = forge_client
     
-    def set_progress_callback(self, callback: Callable[[Dict[str, Any]], None]):
+    def set_progress_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
         """Set the progress callback function."""
         self.progress_callback = callback
     
-    def add_job(self, config_name: str, batch_size: int = None, num_batches: int = None) -> Job:
+    def add_job(self, config_name: str, batch_size: Optional[int] = None, num_batches: Optional[int] = None) -> 'Job':
         """Add a new job to the queue."""
         return self.job_queue.add_job(config_name, batch_size, num_batches)
     
-    def start_processing(self):
+    def start_processing(self) -> None:
         """Start processing jobs in the queue."""
         if not self.running:
             self.running = True
             self.processing_thread = threading.Thread(target=self._process_queue, daemon=True)
             self.processing_thread.start()
     
-    def stop_processing(self):
+    def stop_processing(self) -> None:
         """Stop processing jobs."""
         self.running = False
         if self.processing_thread:
             self.processing_thread.join()
     
-    def cancel_current_job(self):
+    def cancel_current_job(self) -> None:
         """Cancel the currently running job."""
         self.job_queue.cancel_current_job()
     
@@ -68,7 +68,7 @@ class BatchRunner:
             return job.to_dict()
         return None
     
-    def _process_queue(self):
+    def _process_queue(self) -> None:
         """Process jobs in the queue."""
         while self.running:
             try:
@@ -86,7 +86,7 @@ class BatchRunner:
                     self.job_queue.fail_current_job(str(e))
                 time.sleep(1)
     
-    def _process_job(self, job: Job):
+    def _process_job(self, job: Job) -> None:
         """Process a single job."""
         try:
             # Load configuration
@@ -139,12 +139,34 @@ class BatchRunner:
                         success, image_data, info = True, "mock_image_data", {}
                     
                     if success and image_data:
-                        # Save image
+                        # Save image with embedded metadata
                         image_filename = f"image_{current_image:04d}.png"
                         image_path = os.path.join(output_dir, image_filename)
                         
                         if self.forge_client:
-                            self.forge_client.save_image(image_data, image_path, info)
+                            # Prepare metadata for embedding
+                            metadata = {
+                                'prompt': prompt,
+                                'negative_prompt': config['prompt_settings'].get('negative_prompt', ''),
+                                'seed': seeds[i] if seeds else 'random',
+                                'steps': config['generation_settings'].get('steps', 20),
+                                'sampler_name': config['generation_settings'].get('sampler', 'Euler a'),
+                                'cfg_scale': config['generation_settings'].get('cfg_scale', 7.0),
+                                'width': config['generation_settings'].get('width', 512),
+                                'height': config['generation_settings'].get('height', 512),
+                                'model_name': config['model_settings'].get('checkpoint', ''),
+                                'vae_name': config['model_settings'].get('vae', ''),
+                                'config_name': job.config_name,
+                                'generation_time': datetime.now().isoformat(),
+                                'software': 'Forge API Tool',
+                                'version': '1.0.0',
+                                'batch_number': 1,
+                                'image_number': current_image,
+                                'total_images': total_images
+                            }
+                            
+                            # Save image with embedded metadata
+                            self.forge_client.save_image(image_data, image_path, metadata)
                         else:
                             # Mock save for testing
                             with open(image_path, 'w') as f:
@@ -153,7 +175,7 @@ class BatchRunner:
                         # Add to job outputs
                         self.job_queue.add_current_job_output(image_path)
                         
-                        # Save prompt info
+                        # Save prompt info (optional, since metadata is embedded)
                         if config['output_settings'].get('save_prompts', True):
                             prompt_filename = f"prompt_{current_image:04d}.txt"
                             prompt_path = os.path.join(output_dir, prompt_filename)
@@ -231,12 +253,34 @@ class BatchRunner:
                         current_image = batch_num * batch_size + i + 1
                         
                         if success and image_data:
-                            # Save image
+                            # Save image with embedded metadata
                             image_filename = f"image_{current_image:04d}.png"
                             image_path = os.path.join(output_dir, image_filename)
                             
                             if self.forge_client:
-                                self.forge_client.save_image(image_data, image_path, info)
+                                # Prepare metadata for embedding
+                                metadata = {
+                                    'prompt': prompts[i],
+                                    'negative_prompt': config['prompt_settings'].get('negative_prompt', ''),
+                                    'seed': seeds[i] if seeds else 'random',
+                                    'steps': config['generation_settings'].get('steps', 20),
+                                    'sampler_name': config['generation_settings'].get('sampler', 'Euler a'),
+                                    'cfg_scale': config['generation_settings'].get('cfg_scale', 7.0),
+                                    'width': config['generation_settings'].get('width', 512),
+                                    'height': config['generation_settings'].get('height', 512),
+                                    'model_name': config['model_settings'].get('checkpoint', ''),
+                                    'vae_name': config['model_settings'].get('vae', ''),
+                                    'config_name': job.config_name,
+                                    'generation_time': datetime.now().isoformat(),
+                                    'software': 'Forge API Tool',
+                                    'version': '1.0.0',
+                                    'batch_number': batch_num + 1,
+                                    'image_number': current_image,
+                                    'total_images': total_images
+                                }
+                                
+                                # Save image with embedded metadata
+                                self.forge_client.save_image(image_data, image_path, metadata)
                             else:
                                 # Mock save for testing
                                 with open(image_path, 'w') as f:
@@ -245,7 +289,7 @@ class BatchRunner:
                             # Add to job outputs
                             self.job_queue.add_current_job_output(image_path)
                             
-                            # Save prompt info
+                            # Save prompt info (optional, since metadata is embedded)
                             if config['output_settings'].get('save_prompts', True):
                                 prompt_filename = f"prompt_{current_image:04d}.txt"
                                 prompt_path = os.path.join(output_dir, prompt_filename)
@@ -340,7 +384,7 @@ class BatchRunner:
         except Exception as e:
             return {'error': str(e)}
     
-    def reset_wildcards(self, config_name: str):
+    def reset_wildcards(self, config_name: str) -> None:
         """Reset wildcard usage for a config."""
         try:
             config = self.config_handler.load_config(config_name)
@@ -357,11 +401,11 @@ class BatchRunner:
             print(f"Error exporting prompt list: {e}")
             return []
     
-    def clear_completed_jobs(self):
+    def clear_completed_jobs(self) -> None:
         """Clear completed jobs from the queue."""
         self.job_queue.clear_completed_jobs()
     
-    def clear_all_jobs(self):
+    def clear_all_jobs(self) -> None:
         """Clear all jobs from the queue."""
         self.job_queue.clear_all_jobs()
 

@@ -3,7 +3,7 @@ import os
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import re
-from core.centralized_logger import centralized_logger
+from core.centralized_logger import logger
 
 
 class ConfigHandler:
@@ -46,7 +46,7 @@ class ConfigHandler:
                 config['missing_wildcards'] = []
                 config['missing_wildcard_files'] = []
                 try:
-                    centralized_logger.warning(f"Wildcard validation failed for {config_name}: {e}")
+                    logger.warning(f"Wildcard validation failed for {config_name}: {e}")
                 except:
                     pass
             return config
@@ -369,13 +369,13 @@ class ConfigHandler:
         
         # Try to log if logger is available, but don't fail if it's not
         try:
-            centralized_logger.info(f"Loading all configs from {config_dir}")
+            logger.info(f"Loading all configs from {config_dir}")
         except:
             pass  # Logger not available, continue without logging
         
         if not os.path.exists(config_dir):
             try:
-                centralized_logger.warning(f"Config directory {config_dir} does not exist.")
+                logger.warning(f"Config directory {config_dir} does not exist.")
             except:
                 pass
             return configs
@@ -387,12 +387,12 @@ class ConfigHandler:
                     config = self.load_config(config_name)
                     configs[config_name] = config
                     try:
-                        centralized_logger.info(f"Successfully loaded config: {config_name}")
+                        logger.info(f"Successfully loaded config: {config_name}")
                     except:
                         pass
                 except Exception as e:
                     try:
-                        centralized_logger.log_error(f"Failed to load config {config_name}: {e}")
+                        logger.log_error(f"Failed to load config {config_name}: {e}")
                     except:
                         pass
                     # Continue loading other configs even if one fails
@@ -403,7 +403,7 @@ class ConfigHandler:
                     
         if not configs:
             try:
-                centralized_logger.warning(f"No configuration templates found in {config_dir}.")
+                logger.warning(f"No configuration templates found in {config_dir}.")
             except:
                 pass
             try:

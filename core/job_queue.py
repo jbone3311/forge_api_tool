@@ -259,6 +259,17 @@ class JobQueue:
             self.current_job = None
             self.save_queue()
     
+    def clear_queue(self):
+        """Clear all jobs from the queue (alias for clear_all_jobs)."""
+        with self.lock:
+            cleared_count = len(self.jobs)
+            if self.current_job:
+                self.current_job.cancel()
+            self.jobs = []
+            self.current_job = None
+            self.save_queue()
+            return cleared_count
+    
     def get_queue_stats(self) -> Dict[str, Any]:
         """Get statistics about the queue."""
         total_jobs = len(self.jobs)
@@ -321,6 +332,14 @@ class JobQueue:
         job = self.get_job(job_id)
         if job:
             job.progress_callback = callback
+    
+    def process_next_job(self) -> Optional[Job]:
+        """Process the next job in the queue (alias for start_next_job for compatibility)."""
+        return self.start_next_job()
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get queue status (alias for get_queue_stats for compatibility)."""
+        return self.get_queue_stats()
 
 
 # Create a global instance for easy importing

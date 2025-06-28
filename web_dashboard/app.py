@@ -12,28 +12,37 @@ import time
 import threading
 import webbrowser
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
 from flask_socketio import SocketIO, emit
 import sys
+import re
 
 # Add the parent directory to the path to import core modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.config_handler import config_handler
 from core.forge_api import forge_api_client
-from core.output_manager import output_manager
-from core.centralized_logger import centralized_logger
+from core.output_manager import OutputManager
+from core.centralized_logger import logger
 from core.job_queue import job_queue
 from core.batch_runner import batch_runner
 from core.prompt_builder import PromptBuilder
 from core.wildcard_manager import WildcardManagerFactory
+from core.exceptions import (
+    ForgeAPIError, ConnectionError, ConfigurationError, JobQueueError, 
+    WildcardError, APIError, ValidationError, FileOperationError, 
+    GenerationError, LoggingError
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'forge-api-tool-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize components
-logger = centralized_logger
+logger = logger
+
+# Initialize output manager with centralized structure
+output_manager = OutputManager(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs"))
 
 # Global state for tracking current generation
 current_generation = {
@@ -74,7 +83,7 @@ def dashboard():
         # Get queue status - use get_queue_stats instead of get_status
         try:
             queue_status = job_queue.get_queue_stats()
-        except Exception as e:
+        except JobQueueError as e:
             logger.warning(f"Failed to get queue stats: {e}")
             queue_status = {
                 'total_jobs': 0,
@@ -113,8 +122,24 @@ def dashboard():
                              output_stats=output_stats,
                              queue_status=queue_status,
                              api_status=api_status)
+    except ConfigurationError as e:
+        logger.log_error(f"Configuration error loading dashboard: {e}")
+        return render_template('dashboard.html', 
+                             configs={}, 
+                             output_stats={},
+                             queue_status={'total_jobs': 0, 'pending_jobs': 0, 'running_jobs': 0, 'completed_jobs': 0, 'failed_jobs': 0, 'total_images': 0, 'completed_images': 0, 'failed_images': 0, 'current_job': None},
+                             api_status={'connected': False, 'error': str(e)},
+                             error=f"Configuration error: {e}")
+    except FileOperationError as e:
+        logger.log_error(f"File operation error loading dashboard: {e}")
+        return render_template('dashboard.html', 
+                             configs={}, 
+                             output_stats={},
+                             queue_status={'total_jobs': 0, 'pending_jobs': 0, 'running_jobs': 0, 'completed_jobs': 0, 'failed_jobs': 0, 'total_images': 0, 'completed_images': 0, 'failed_images': 0, 'current_job': None},
+                             api_status={'connected': False, 'error': str(e)},
+                             error=f"File operation error: {e}")
     except Exception as e:
-        logger.log_error(f"Failed to load dashboard: {e}")
+        logger.log_error(f"Unexpected error loading dashboard: {e}")
         import traceback
         logger.log_error(f"Dashboard error traceback: {traceback.format_exc()}")
         return render_template('dashboard.html', 
@@ -122,7 +147,7 @@ def dashboard():
                              output_stats={},
                              queue_status={'total_jobs': 0, 'pending_jobs': 0, 'running_jobs': 0, 'completed_jobs': 0, 'failed_jobs': 0, 'total_images': 0, 'completed_images': 0, 'failed_images': 0, 'current_job': None},
                              api_status={'connected': False, 'error': str(e)},
-                             error=str(e))
+                             error=f"Unexpected error: {e}")
 
 def load_templates_directly():
     """Fallback method to load templates directly without config handler."""
@@ -131,7 +156,7 @@ def load_templates_directly():
         config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'configs')
         if not os.path.exists(config_dir):
             logger.warning(f"Config directory does not exist: {config_dir}")
-            return configs
+            raise FileOperationError(f"Config directory does not exist: {config_dir}", file_path=config_dir, operation="read")
         
         for filename in os.listdir(config_dir):
             if filename.endswith('.json'):
@@ -148,12 +173,24 @@ def load_templates_directly():
                         logger.info(f"Directly loaded config: {config_name}")
                     else:
                         logger.warning(f"Config {config_name} missing required fields")
+                        raise ValidationError(f"Config {config_name} missing required fields", field="name/model_type", value=config_name)
                         
+                except (IOError, OSError) as e:
+                    logger.warning(f"File error loading config {config_name}: {e}")
+                    raise FileOperationError(f"Failed to load config {config_name}: {e}", file_path=config_path, operation="read") from e
+                except json.JSONDecodeError as e:
+                    logger.warning(f"JSON error loading config {config_name}: {e}")
+                    raise ValidationError(f"Invalid JSON in config {config_name}: {e}", field="json", value=config_name) from e
                 except Exception as e:
-                    logger.warning(f"Failed to load config {config_name}: {e}")
+                    logger.warning(f"Unexpected error loading config {config_name}: {e}")
+                    raise ConfigurationError(f"Unexpected error loading config {config_name}: {e}", config_name=config_name) from e
                     
+    except FileOperationError:
+        # Re-raise file operation errors
+        raise
     except Exception as e:
-        logger.error(f"Error in direct template loading: {e}")
+        logger.error(f"Unexpected error in direct template loading: {e}")
+        raise ConfigurationError(f"Unexpected error in direct template loading: {e}") from e
     
     return configs
 
@@ -183,9 +220,18 @@ def get_system_status():
         }
         
         return jsonify(status)
+    except (ConnectionError, APIError) as e:
+        logger.log_error(f"API error getting system status: {e}")
+        return jsonify({'error': f"API error: {e}"}), 400
+    except JobQueueError as e:
+        logger.log_error(f"Job queue error getting system status: {e}")
+        return jsonify({'error': f"Job queue error: {e}"}), 400
+    except FileOperationError as e:
+        logger.log_error(f"File operation error getting system status: {e}")
+        return jsonify({'error': f"File operation error: {e}"}), 400
     except Exception as e:
-        logger.log_error(f"Failed to get system status: {e}")
-        return jsonify({'error': str(e)}), 400
+        logger.log_error(f"Unexpected error getting system status: {e}")
+        return jsonify({'error': f"Unexpected error: {e}"}), 400
 
 @app.route('/api/status/api')
 def get_api_status():
@@ -388,73 +434,75 @@ def generate_image():
         data = request.get_json()
         config_name = data.get('config_name')
         prompt = data.get('prompt', '')
-        seed_input = data.get('seed')
+        seed = data.get('seed')
         
         if not config_name:
             return jsonify({'error': 'Config name is required'}), 400
-        if not prompt:
-            return jsonify({'error': 'Prompt is required'}), 400
-        
-        # Handle seed properly - convert string to int or None
-        seed = None
-        if seed_input is not None and seed_input != '':
-            try:
-                seed = int(seed_input)
-            except (ValueError, TypeError):
-                # Invalid seed value, use random seed
-                seed = None
         
         config = config_handler.get_config(config_name)
         if not config:
             return jsonify({'error': 'Configuration not found'}), 404
         
-        # If the prompt contains wildcards, resolve them
+        # Use user-provided prompt or template prompt
+        if not prompt:
+            prompt = config['prompt_settings']['base_prompt']
+        
+        # Resolve wildcards if present
         if '__' in prompt:
             wildcard_factory = WildcardManagerFactory()
             prompt_builder = PromptBuilder(wildcard_factory)
-            # Use the prompt as a template, but allow fallback to config template if empty
-            resolved_prompt = prompt_builder.build_prompt({**config, 'prompt_settings': {**config['prompt_settings'], 'base_prompt': prompt}})
-        else:
-            resolved_prompt = prompt
+            temp_config = {**config, 'prompt_settings': {**config['prompt_settings'], 'base_prompt': prompt}}
+            resolved_prompts = prompt_builder.preview_prompts(temp_config, 1)
+            prompt = resolved_prompts[0] if resolved_prompts else prompt
         
-        logger.log_app_event("image_generation_requested", {
-            "config_name": config_name,
-            "prompt_length": len(resolved_prompt),
-            "seed": seed,
-            "seed_input": seed_input,
-            "user_provided_prompt": True,
-            "wildcards_resolved": ('__' in prompt)
-        })
+        # Generate image
+        success, image_data, info = forge_api_client.generate_image(config, prompt, seed)
         
-        # Update generation progress
-        update_generation_progress(1, 1, config_name)
-        
-        # Generate image with the resolved prompt
-        success, image_data, metadata = forge_api_client.generate_image(config, resolved_prompt, seed)
-        
-        if success:
-            # Save image
-            output_path = output_manager.save_image(image_data, config_name, resolved_prompt, seed or 0)
+        if success and image_data:
+            # Save image with embedded metadata using the new output manager
+            filepath = output_manager.save_image(
+                image_data=image_data,
+                config_name=config_name,
+                prompt=prompt,
+                seed=info.get('seed', seed or -1) if isinstance(info, dict) else (seed or -1),
+                generation_settings=config['generation_settings'],
+                model_settings=config['model_settings']
+            )
             
-            logger.log_image_generation(config_name, resolved_prompt, seed or 0, True, output_path)
-            
-            # Update progress to complete
-            update_generation_progress(1, 1, config_name)
+            logger.log_app_event("image_generation", {
+                "config_name": config_name,
+                "prompt": prompt,
+                "seed": info.get('seed', seed or -1) if isinstance(info, dict) else (seed or -1),
+                "success": True,
+                "output_path": filepath,
+                "timestamp": datetime.now().isoformat()
+            })
             
             return jsonify({
                 'success': True,
-                'image_data': image_data,
-                'output_path': output_path,
-                'metadata': metadata,
-                'prompt_used': resolved_prompt,
-                'seed_used': seed
+                'message': 'Image generated successfully',
+                'filepath': filepath,
+                'info': info
             })
         else:
-            logger.log_image_generation(config_name, resolved_prompt, seed or 0, False)
-            return jsonify({'error': 'Failed to generate image'}), 400
+            error_msg = info.get('error', 'Unknown error') if isinstance(info, dict) and info else 'Generation failed'
+            logger.log_app_event("image_generation", {
+                "config_name": config_name,
+                "prompt": prompt,
+                "seed": seed,
+                "success": False,
+                "error": error_msg,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 400
+            
     except Exception as e:
-        logger.log_error(f"Failed to generate image: {e}")
-        return jsonify({'error': str(e)}), 400
+        logger.log_error(f"Error generating image: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/batch', methods=['POST'])
 def start_batch():
@@ -634,64 +682,151 @@ def clear_queue():
 
 @app.route('/api/outputs')
 def get_outputs():
-    """Get all outputs."""
+    """Get all outputs with the new date-based structure."""
     try:
-        outputs = output_manager.get_all_outputs()
-        return jsonify(outputs)
-    except Exception as e:
-        logger.log_error(f"Failed to get outputs: {e}")
-        return jsonify({'error': str(e)}), 400
-
-@app.route('/api/outputs/<config_name>')
-def get_config_outputs(config_name):
-    """Get outputs for a specific configuration."""
-    try:
-        outputs = output_manager.get_outputs_for_config(config_name)
-        return jsonify(outputs)
-    except Exception as e:
-        logger.log_error(f"Failed to get outputs for config {config_name}: {e}")
-        return jsonify({'error': str(e)}), 400
-
-@app.route('/api/outputs/delete/<config_name>', methods=['DELETE'])
-def delete_config_outputs(config_name):
-    """Delete all outputs for a configuration."""
-    try:
-        deleted_count = output_manager.delete_config_outputs(config_name)
+        # Get outputs for today by default
+        date = request.args.get('date', datetime.now().strftime("%Y-%m-%d"))
+        config_name = request.args.get('config')
         
-        logger.log_app_event("config_outputs_deleted", {
+        if config_name:
+            # Get outputs for specific config
+            outputs = output_manager.get_outputs_for_config(config_name)
+        else:
+            # Get outputs for specific date
+            outputs = output_manager.get_outputs_for_date(date)
+        
+        # Format outputs for frontend
+        formatted_outputs = []
+        for output in outputs:
+            formatted_output = {
+                'filename': output.get('filename', ''),
+                'filepath': output.get('filepath', ''),
+                'config_name': output.get('config_name', ''),
+                'prompt': output.get('prompt', ''),
+                'seed': output.get('seed', 0),
+                'created_at': output.get('generation_time', ''),
+                'date': output.get('date', ''),
+                'steps': output.get('steps', 20),
+                'sampler_name': output.get('sampler_name', ''),
+                'cfg_scale': output.get('cfg_scale', 7.0),
+                'width': output.get('width', 512),
+                'height': output.get('height', 512),
+                'model_name': output.get('model_name', ''),
+                'negative_prompt': output.get('negative_prompt', '')
+            }
+            formatted_outputs.append(formatted_output)
+        
+        logger.log_app_event("outputs_retrieved", {
+            "date": date,
             "config_name": config_name,
-            "deleted_count": deleted_count
+            "output_count": len(formatted_outputs)
         })
         
         return jsonify({
             'success': True,
-            'message': f'Deleted {deleted_count} outputs for {config_name}'
+            'outputs': formatted_outputs,
+            'date': date,
+            'config_name': config_name
         })
+        
     except Exception as e:
-        logger.log_error(f"Failed to delete outputs for config {config_name}: {e}")
-        return jsonify({'error': str(e)}), 400
+        logger.log_error(f"Error getting outputs: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/outputs/export/<config_name>', methods=['POST'])
-def export_outputs(config_name):
-    """Export outputs for a configuration."""
+@app.route('/api/outputs/statistics')
+def get_output_statistics():
+    """Get output statistics."""
     try:
-        data = request.get_json() or {}
-        export_path = data.get('export_path', f'exports/{config_name}_{datetime.now().strftime("%Y%m%d_%H%M%S")}')
+        stats = output_manager.get_output_statistics()
         
-        export_dir = output_manager.export_config_outputs(config_name, export_path)
-        
-        logger.log_app_event('output_export', {
-            'config_name': config_name,
-            'export_path': export_dir
-        })
+        logger.log_app_event("output_statistics_retrieved", stats)
         
         return jsonify({
             'success': True,
-            'export_path': export_dir
+            'statistics': stats
         })
+        
     except Exception as e:
-        logger.log_error(f"Failed to export outputs: {e}")
-        return jsonify({'error': str(e)}), 400
+        logger.log_error(f"Error getting output statistics: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/outputs/dates')
+def get_output_dates():
+    """Get all available output dates."""
+    try:
+        dates = []
+        if os.path.exists(output_manager.base_output_dir):
+            date_dirs = [d for d in os.listdir(output_manager.base_output_dir) 
+                        if os.path.isdir(os.path.join(output_manager.base_output_dir, d)) and 
+                        re.match(r'\d{4}-\d{2}-\d{2}', d)]
+            dates = sorted(date_dirs, reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'dates': dates
+        })
+        
+    except Exception as e:
+        logger.log_error(f"Error getting output dates: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/outputs/<date>/<filename>')
+def serve_output_image(date, filename):
+    """Serve output images from date-based folders."""
+    try:
+        # Validate date format
+        if not re.match(r'\d{4}-\d{2}-\d{2}', date):
+            return jsonify({'error': 'Invalid date format'}), 400
+        
+        # Validate filename
+        if not filename.endswith('.png'):
+            return jsonify({'error': 'Invalid file type'}), 400
+        
+        # Construct file path
+        file_path = os.path.join(output_manager.base_output_dir, date, filename)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Serve the image file
+        return send_file(file_path, mimetype='image/png')
+        
+    except Exception as e:
+        logger.log_error(f"Error serving output image: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/outputs/metadata/<date>/<filename>')
+def get_output_metadata(date, filename):
+    """Get metadata for a specific output image."""
+    try:
+        # Validate date format
+        if not re.match(r'\d{4}-\d{2}-\d{2}', date):
+            return jsonify({'error': 'Invalid date format'}), 400
+        
+        # Validate filename
+        if not filename.endswith('.png'):
+            return jsonify({'error': 'Invalid file type'}), 400
+        
+        # Construct file path
+        file_path = os.path.join(output_manager.base_output_dir, date, filename)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Extract metadata from image
+        metadata = output_manager.extract_metadata_from_image(file_path)
+        
+        if not metadata:
+            return jsonify({'error': 'No metadata found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'metadata': metadata
+        })
+        
+    except Exception as e:
+        logger.log_error(f"Error getting output metadata: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # Logging Endpoints
 @app.route('/api/logs/summary')
@@ -882,13 +1017,283 @@ def stop_generation():
             'message': f'Failed to stop generation: {str(e)}'
         }), 400
 
+@app.route('/api/outputs/directory/<config_name>')
+def get_output_directory(config_name):
+    """Get the output directory path for a specific config."""
+    try:
+        directory_path = output_manager.get_output_directory(config_name)
+        return jsonify({
+            'config_name': config_name,
+            'directory_path': directory_path,
+            'exists': os.path.exists(directory_path)
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to get output directory for {config_name}: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/outputs/directory/<config_name>/latest')
+def get_latest_output_directory(config_name):
+    """Get the most recent output directory for a specific config."""
+    try:
+        directory_path = output_manager.get_latest_output_directory(config_name)
+        return jsonify({
+            'config_name': config_name,
+            'directory_path': directory_path,
+            'exists': os.path.exists(directory_path)
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to get latest output directory for {config_name}: {e}")
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/outputs/open-folder/<config_name>')
+def open_output_folder(config_name):
+    """Open the output folder for a specific configuration."""
+    try:
+        logger.log_app_event("output_folder_opened", {"config_name": config_name})
+        
+        # Get the output directory for the configuration
+        output_dir = output_manager.get_output_directory(config_name)
+        
+        if not output_dir or not os.path.exists(output_dir):
+            # Create the directory if it doesn't exist
+            output_dir = output_manager.create_output_directory(config_name)
+            logger.info(f"Created output directory: {output_dir}")
+        
+        # Open the folder using the system's default file manager
+        if os.name == 'nt':  # Windows
+            os.startfile(output_dir)
+        elif os.name == 'posix':  # macOS and Linux
+            if sys.platform == 'darwin':  # macOS
+                os.system(f'open "{output_dir}"')
+            else:  # Linux
+                os.system(f'xdg-open "{output_dir}"')
+        
+        return jsonify({
+            'success': True,
+            'directory_path': output_dir,
+            'message': f'Opened output folder for {config_name}'
+        })
+        
+    except FileOperationError as e:
+        logger.log_error(f"File operation error opening folder: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'File operation error: {e}'
+        }), 500
+    except Exception as e:
+        logger.log_error(f"Unexpected error opening folder: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Unexpected error: {e}'
+        }), 500
+
+# RunDiffusion API Endpoints
+@app.route('/api/rundiffusion/config', methods=['GET'])
+def get_rundiffusion_config():
+    """Get the current RunDiffusion configuration."""
+    try:
+        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'rundiffusion_config.json')
+        
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            return jsonify({
+                'success': True,
+                'config': config
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'config': None
+            })
+            
+    except Exception as e:
+        logger.log_error(f"Error getting RunDiffusion config: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/rundiffusion/config', methods=['POST'])
+def save_rundiffusion_config():
+    """Save RunDiffusion configuration and switch to RunDiffusion API."""
+    try:
+        config = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['url', 'username', 'password']
+        for field in required_fields:
+            if not config.get(field):
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                })
+        
+        # Validate URL format
+        url = config['url'].strip()
+        if not url.startswith(('http://', 'https://')):
+            return jsonify({
+                'success': False,
+                'error': 'URL must start with http:// or https://'
+            }), 400
+        
+        # Switch to RunDiffusion API
+        from core.api_config import api_config
+        api_config.switch_to_rundiffusion(config)
+        
+        # Refresh the forge API client
+        forge_api_client.refresh_configuration()
+        
+        logger.log_app_event("switched_to_rundiffusion", {
+            "url": url,
+            "username": config['username']
+        })
+        
+        return jsonify({
+            'success': True,
+            'message': 'Switched to RunDiffusion API successfully'
+        })
+        
+    except Exception as e:
+        logger.log_error(f"Error switching to RunDiffusion: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/rundiffusion/test', methods=['POST'])
+def test_rundiffusion_connection():
+    """Test RunDiffusion API connection."""
+    try:
+        config = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['url', 'username', 'password']
+        for field in required_fields:
+            if not config.get(field):
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        # Test connection using requests
+        import requests
+        from requests.auth import HTTPBasicAuth
+        
+        url = config['url'].rstrip('/')
+        test_url = f"{url}/sdapi/v1/progress"
+        
+        try:
+            response = requests.get(
+                test_url,
+                auth=HTTPBasicAuth(config['username'], config['password']),
+                timeout=10,
+                verify=True
+            )
+            
+            if response.status_code == 200:
+                logger.log_app_event("rundiffusion_connection_successful", {"url": url})
+                return jsonify({
+                    'success': True,
+                    'message': 'Connection successful'
+                })
+            else:
+                error_msg = f'HTTP {response.status_code}: {response.text}'
+                logger.log_error(f"RunDiffusion connection failed: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
+                
+        except requests.exceptions.ConnectionError:
+            error_msg = 'Connection refused - server may not be running'
+            logger.log_error(f"RunDiffusion connection error: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 400
+        except requests.exceptions.Timeout:
+            error_msg = 'Connection timeout'
+            logger.log_error(f"RunDiffusion connection timeout: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 400
+        except requests.exceptions.RequestException as e:
+            error_msg = f'Request error: {str(e)}'
+            logger.log_error(f"RunDiffusion request error: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 400
+            
+    except Exception as e:
+        logger.log_error(f"Error testing RunDiffusion connection: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/rundiffusion/disable', methods=['POST'])
+def disable_rundiffusion():
+    """Disable RunDiffusion and switch back to local API."""
+    try:
+        # Switch to local API
+        from core.api_config import api_config
+        api_config.switch_to_local()
+        
+        # Refresh the forge API client
+        forge_api_client.refresh_configuration()
+        
+        logger.log_app_event("switched_to_local_api", {})
+        
+        return jsonify({
+            'success': True,
+            'message': 'Switched to local API'
+        })
+        
+    except Exception as e:
+        logger.log_error(f"Error switching to local API: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/status/current-api')
+def get_current_api_status():
+    """Get current API configuration and status."""
+    try:
+        from core.api_config import api_config
+        
+        api_info = api_config.get_current_api_info()
+        
+        # Test connection
+        try:
+            connected = forge_api_client.test_connection()
+        except:
+            connected = False
+        
+        return jsonify({
+            'success': True,
+            'api_info': api_info,
+            'connected': connected,
+            'base_url': api_config.base_url
+        })
+        
+    except Exception as e:
+        logger.log_error(f"Error getting current API status: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     # Start background processor
     start_background_processor()
     
     # Log startup
     logger.log_app_event("web_dashboard_started", {
-        "port": 5000,
+        "port": 4000,
         "debug": True
     })
     
@@ -896,8 +1301,8 @@ if __name__ == '__main__':
     def launch_browser():
         time.sleep(1.5)  # Wait for server to start
         try:
-            webbrowser.open('http://localhost:5000')
-            logger.log_app_event("browser_launched", {"url": "http://localhost:5000"})
+            webbrowser.open('http://localhost:4000')
+            logger.log_app_event("browser_launched", {"url": "http://localhost:4000"})
         except Exception as e:
             logger.log_error(f"Failed to launch browser: {e}")
     
@@ -906,4 +1311,4 @@ if __name__ == '__main__':
     browser_thread.start()
     
     # Start the Flask app
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True) 
+    socketio.run(app, host='0.0.0.0', port=4000, debug=True) 
