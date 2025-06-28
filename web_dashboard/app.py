@@ -356,12 +356,11 @@ def get_config(config_name):
     """Get a specific configuration."""
     try:
         config = config_handler.get_config(config_name)
-        if config:
-            logger.log_config_operation("retrieved", config_name, True)
-            return jsonify(config)
-        else:
-            logger.log_config_operation("retrieved", config_name, False, {"error": "Config not found"})
-            return jsonify({'error': 'Configuration not found'}), 404
+        logger.log_config_operation("retrieved", config_name, True)
+        return jsonify(config)
+    except FileNotFoundError:
+        logger.log_config_operation("retrieved", config_name, False, {"error": "Config not found"})
+        return jsonify({'error': 'Configuration not found'}), 404
     except Exception as e:
         logger.log_config_operation("retrieved", config_name, False, {"error": str(e)})
         return jsonify({'error': str(e)}), 400
@@ -377,13 +376,14 @@ def create_config():
         if not config_name or not config_data:
             return jsonify({'error': 'Name and config data are required'}), 400
         
-        success = config_handler.save_config(config_name, config_data)
+        # Create the config
+        success = config_handler.create_config(config_name, config_data)
         
         if success:
             logger.log_config_operation("created", config_name, True)
             return jsonify({'success': True, 'message': f'Configuration {config_name} created successfully'})
         else:
-            logger.log_config_operation("created", config_name, False, {"error": "Failed to save"})
+            logger.log_config_operation("created", config_name, False, {"error": "Failed to create"})
             return jsonify({'error': 'Failed to create configuration'}), 400
     except Exception as e:
         logger.log_config_operation("created", config_name, False, {"error": str(e)})
@@ -399,13 +399,14 @@ def update_config(config_name):
         if not config_data:
             return jsonify({'error': 'Config data is required'}), 400
         
-        success = config_handler.save_config(config_name, config_data)
+        # Update the config
+        success = config_handler.update_config(config_name, config_data)
         
         if success:
             logger.log_config_operation("updated", config_name, True)
             return jsonify({'success': True, 'message': f'Configuration {config_name} updated successfully'})
         else:
-            logger.log_config_operation("updated", config_name, False, {"error": "Failed to save"})
+            logger.log_config_operation("updated", config_name, False, {"error": "Failed to update"})
             return jsonify({'error': 'Failed to update configuration'}), 400
     except Exception as e:
         logger.log_config_operation("updated", config_name, False, {"error": str(e)})
@@ -439,8 +440,9 @@ def generate_image():
         if not config_name:
             return jsonify({'error': 'Config name is required'}), 400
         
-        config = config_handler.get_config(config_name)
-        if not config:
+        try:
+            config = config_handler.get_config(config_name)
+        except FileNotFoundError:
             return jsonify({'error': 'Configuration not found'}), 404
         
         # Use user-provided prompt or template prompt
@@ -518,8 +520,9 @@ def start_batch():
         if not config_name:
             return jsonify({'error': 'Config name is required'}), 400
         
-        config = config_handler.get_config(config_name)
-        if not config:
+        try:
+            config = config_handler.get_config(config_name)
+        except FileNotFoundError:
             return jsonify({'error': 'Configuration not found'}), 404
         
         # Calculate total images
@@ -600,8 +603,9 @@ def preview_batch():
         if not config_name:
             return jsonify({'error': 'Config name is required'}), 400
         
-        config = config_handler.get_config(config_name)
-        if not config:
+        try:
+            config = config_handler.get_config(config_name)
+        except FileNotFoundError:
             return jsonify({'error': 'Configuration not found'}), 404
         
         # Calculate total prompts needed
@@ -1261,31 +1265,320 @@ def disable_rundiffusion():
 
 @app.route('/api/status/current-api')
 def get_current_api_status():
-    """Get current API configuration and status."""
+    """Get current API connection status."""
     try:
-        from core.api_config import api_config
+        # Get current API preference
+        api_preference_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'api_preference.json')
+        current_api = 'local'
         
-        api_info = api_config.get_current_api_info()
+        if os.path.exists(api_preference_file):
+            try:
+                with open(api_preference_file, 'r') as f:
+                    preference = json.load(f)
+                    current_api = preference.get('current_api', 'local')
+            except Exception as e:
+                logger.warning(f"Failed to read API preference: {e}")
         
-        # Test connection
-        try:
-            connected = forge_api_client.test_connection()
-        except:
-            connected = False
+        # Test connection based on current API
+        if current_api == 'rundiffusion':
+            try:
+                # Test RunDiffusion connection
+                response = forge_api_client.get_progress()
+                connected = True
+                response_time = response.get('response_time', 0)
+            except Exception as e:
+                connected = False
+                response_time = 0
+        else:
+            try:
+                # Test local Forge connection
+                response = forge_api_client.get_progress()
+                connected = True
+                response_time = response.get('response_time', 0)
+            except Exception as e:
+                connected = False
+                response_time = 0
         
         return jsonify({
-            'success': True,
-            'api_info': api_info,
+            'current_api': current_api,
             'connected': connected,
-            'base_url': api_config.base_url
+            'response_time': response_time,
+            'timestamp': datetime.now().isoformat()
         })
-        
     except Exception as e:
         logger.log_error(f"Error getting current API status: {e}")
         return jsonify({
-            'success': False,
-            'error': str(e)
+            'current_api': 'local',
+            'connected': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
         }), 500
+
+# Image Analysis and Config Management Endpoints
+@app.route('/api/analyze-image', methods=['POST'])
+def analyze_image():
+    """Analyze an uploaded image to extract generation settings."""
+    try:
+        from core.image_analyzer import ImageAnalyzer
+        
+        # Get image data from request
+        data = request.get_json()
+        if not data or 'image_data' not in data:
+            return jsonify({'error': 'No image data provided'}), 400
+        
+        image_data = data['image_data']
+        
+        # Initialize image analyzer
+        analyzer = ImageAnalyzer()
+        
+        # Analyze the image
+        result = analyzer.analyze_image(image_data)
+        
+        if not result.get('success', False):
+            return jsonify({'error': result.get('error', 'Failed to analyze image')}), 400
+        
+        # Create suggested config from analysis
+        if 'parameters' in result and 'prompt_info' in result:
+            suggested_config = analyzer._create_suggested_config(
+                result['parameters'], 
+                result['prompt_info']
+            )
+            result['suggested_config'] = suggested_config
+        
+        logger.log_app_event("image_analyzed", {
+            "image_width": result.get('width', 0),
+            "image_height": result.get('height', 0),
+            "has_metadata": 'metadata' in result,
+            "has_parameters": 'parameters' in result,
+            "has_prompt": 'prompt' in result
+        })
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.log_error(f"Error analyzing image: {e}")
+        return jsonify({'error': f'Failed to analyze image: {str(e)}'}), 500
+
+@app.route('/api/configs/<config_name>/settings', methods=['GET'])
+def get_config_settings(config_name):
+    """Get detailed settings for a specific config."""
+    try:
+        config = config_handler.get_config(config_name)
+        
+        # Return the full config with all settings
+        return jsonify({
+            'config_name': config_name,
+            'settings': config,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except FileNotFoundError:
+        logger.log_error(f"Config file not found: {config_name}")
+        return jsonify({'error': f'Config {config_name} not found'}), 404
+    except ConfigurationError as e:
+        logger.log_error(f"Configuration error getting settings for {config_name}: {e}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.log_error(f"Unexpected error getting settings for {config_name}: {e}")
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+@app.route('/api/configs/<config_name>/settings', methods=['PUT'])
+def update_config_settings(config_name):
+    """Update settings for a specific config."""
+    try:
+        data = request.get_json()
+        if not data or 'settings' not in data:
+            return jsonify({'error': 'No settings data provided'}), 400
+        
+        new_settings = data['settings']
+        
+        # Validate the config structure
+        required_fields = ['name', 'model_type']
+        for field in required_fields:
+            if field not in new_settings:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # Update the config
+        success = config_handler.update_config(config_name, new_settings)
+        
+        if success:
+            logger.log_app_event("config_updated", {
+                "config_name": config_name,
+                "model_type": new_settings.get('model_type', 'unknown'),
+                "has_prompt_settings": 'prompt_settings' in new_settings,
+                "has_generation_settings": 'generation_settings' in new_settings
+            })
+            
+            return jsonify({
+                'message': f'Config {config_name} updated successfully',
+                'config_name': config_name,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({'error': 'Failed to update configuration'}), 400
+        
+    except ConfigurationError as e:
+        logger.log_error(f"Configuration error updating {config_name}: {e}")
+        return jsonify({'error': str(e)}), 400
+    except ValidationError as e:
+        logger.log_error(f"Validation error updating {config_name}: {e}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.log_error(f"Unexpected error updating {config_name}: {e}")
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+@app.route('/api/configs/create-from-image', methods=['POST'])
+def create_config_from_image():
+    """Create a new config based on image analysis."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        config_name = data.get('config_name')
+        analysis_result = data.get('analysis_result')
+        custom_settings = data.get('custom_settings', {})
+        
+        if not config_name:
+            return jsonify({'error': 'Config name is required'}), 400
+        
+        if not analysis_result:
+            return jsonify({'error': 'Analysis result is required'}), 400
+        
+        # Check if config already exists
+        if config_handler.config_exists(config_name):
+            return jsonify({'error': f'Config {config_name} already exists'}), 409
+        
+        # Create config from analysis
+        from core.image_analyzer import ImageAnalyzer
+        analyzer = ImageAnalyzer()
+        
+        # Merge analysis result with custom settings
+        if 'suggested_config' in analysis_result:
+            suggested_config = analysis_result['suggested_config']
+            # Handle case where suggested_config might be a string
+            if isinstance(suggested_config, str):
+                # Try to parse as JSON, otherwise use as description
+                try:
+                    import json
+                    base_config = json.loads(suggested_config)
+                except (json.JSONDecodeError, TypeError):
+                    # If it's not valid JSON, create a basic config with the string as description
+                    base_config = {
+                        'name': config_name,
+                        'description': suggested_config,
+                        'model_type': 'sd',
+                        'prompt_settings': {
+                            'base_prompt': analysis_result.get('prompt', ''),
+                            'negative_prompt': analysis_result.get('negative_prompt', '')
+                        },
+                        'generation_settings': {
+                            'steps': 20,
+                            'width': analysis_result.get('width', 512),
+                            'height': analysis_result.get('height', 512),
+                            'batch_size': 1,
+                            'sampler': 'Euler a',
+                            'cfg_scale': 7.0
+                        },
+                        'model_settings': {
+                            'checkpoint': '',
+                            'vae': '',
+                            'text_encoder': '',
+                            'gpu_weight': 1.0,
+                            'swap_method': 'weight',
+                            'swap_location': 'cpu'
+                        },
+                        'output_settings': {
+                            'dir': f'outputs/{config_name}/{{timestamp}}/',
+                            'format': 'png',
+                            'save_metadata': True,
+                            'save_prompts': True
+                        }
+                    }
+            else:
+                # It's already a dictionary
+                base_config = suggested_config
+        else:
+            # Create basic config if no suggested config
+            base_config = {
+                'name': config_name,
+                'description': f'Config created from image analysis - {datetime.now().strftime("%Y-%m-%d %H:%M")}',
+                'model_type': 'sd',
+                'prompt_settings': {
+                    'base_prompt': analysis_result.get('prompt', ''),
+                    'negative_prompt': analysis_result.get('negative_prompt', '')
+                },
+                'generation_settings': {
+                    'steps': 20,
+                    'width': analysis_result.get('width', 512),
+                    'height': analysis_result.get('height', 512),
+                    'batch_size': 1,
+                    'sampler': 'Euler a',
+                    'cfg_scale': 7.0
+                },
+                'model_settings': {
+                    'checkpoint': '',
+                    'vae': '',
+                    'text_encoder': '',
+                    'gpu_weight': 1.0,
+                    'swap_method': 'weight',
+                    'swap_location': 'cpu'
+                },
+                'output_settings': {
+                    'dir': f'outputs/{config_name}/{{timestamp}}/',
+                    'format': 'png',
+                    'save_metadata': True,
+                    'save_prompts': True
+                }
+            }
+        
+        # Override with custom settings
+        if custom_settings:
+            for section, settings in custom_settings.items():
+                if section in base_config:
+                    if isinstance(settings, dict) and isinstance(base_config[section], dict):
+                        base_config[section].update(settings)
+                    else:
+                        # If either is not a dict, replace the entire section
+                        base_config[section] = settings
+                else:
+                    base_config[section] = settings
+        
+        # Update name and description
+        base_config['name'] = config_name
+        if 'description' not in base_config:
+            base_config['description'] = f'Config created from image analysis - {datetime.now().strftime("%Y-%m-%d %H:%M")}'
+        
+        # Save the config
+        success = config_handler.create_config(config_name, base_config)
+        
+        if not success:
+            return jsonify({'error': 'Failed to create configuration'}), 400
+        
+        logger.log_app_event("config_created_from_image", {
+            "config_name": config_name,
+            "image_width": analysis_result.get('width', 0),
+            "image_height": analysis_result.get('height', 0),
+            "has_metadata": 'metadata' in analysis_result,
+            "has_parameters": 'parameters' in analysis_result
+        })
+        
+        return jsonify({
+            'message': f'Config {config_name} created successfully',
+            'config_name': config_name,
+            'config': base_config,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except ConfigurationError as e:
+        logger.log_error(f"Configuration error creating config from image: {e}")
+        return jsonify({'error': str(e)}), 400
+    except ValidationError as e:
+        logger.log_error(f"Validation error creating config from image: {e}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.log_error(f"Unexpected error creating config from image: {e}")
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 if __name__ == '__main__':
     # Start background processor

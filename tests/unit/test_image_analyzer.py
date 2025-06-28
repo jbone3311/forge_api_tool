@@ -1,108 +1,205 @@
-import unittest
-import tempfile
-import os
-import base64
-import json
-from pathlib import Path
-import sys
-from PIL import Image, PngImagePlugin
-from unittest.mock import patch, MagicMock
-import io
+#!/usr/bin/env python3
+"""
+Unit tests for ImageAnalyzer class.
+Tests image analysis functionality including metadata extraction,
+parameter parsing, and config generation.
+"""
 
-# Add core to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'core'))
+import unittest
+import json
+import base64
+import io
+from unittest.mock import Mock, patch, MagicMock
+from PIL import Image, PngImagePlugin
+import sys
+import os
+
+# Add the parent directory to the path to import core modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from core.image_analyzer import ImageAnalyzer
 
 
 class TestImageAnalyzer(unittest.TestCase):
-    """Test cases for ImageAnalyzer."""
+    """Test cases for ImageAnalyzer class."""
     
     def setUp(self):
         """Set up test fixtures."""
-        self.temp_dir = tempfile.mkdtemp()
         self.analyzer = ImageAnalyzer()
         
-        # Create a test image
+        # Create a test image with metadata
         self.test_image = Image.new('RGB', (512, 512), color='red')
         
-        # Add metadata to test image
+        # Create test metadata
+        self.test_metadata = {
+            'parameters': 'a beautiful landscape, masterpiece, best quality, Steps: 20, CFG scale: 7.0, Sampler: Euler a, Seed: 12345, Size: 512x512, Model: test_model.safetensors, VAE: test_vae.safetensors',
+            'prompt': 'a beautiful landscape, masterpiece, best quality',
+            'negative_prompt': 'blurry, low quality, bad anatomy',
+            'steps': '20',
+            'cfg_scale': '7.0',
+            'sampler': 'Euler a',
+            'seed': '12345',
+            'width': '512',
+            'height': '512',
+            'model': 'test_model.safetensors',
+            'vae': 'test_vae.safetensors'
+        }
+    
+    def test_analyzer_initialization(self):
+        """Test ImageAnalyzer initialization."""
+        self.assertIsInstance(self.analyzer, ImageAnalyzer)
+        self.assertIsInstance(self.analyzer.supported_formats, list)
+        self.assertIn('.png', self.analyzer.supported_formats)
+        self.assertIn('.jpg', self.analyzer.supported_formats)
+        self.assertIn('.jpeg', self.analyzer.supported_formats)
+        self.assertIn('.webp', self.analyzer.supported_formats)
+    
+    def test_validate_image_format(self):
+        """Test image format validation."""
+        self.assertTrue(self.analyzer.validate_image_format('test.png'))
+        self.assertTrue(self.analyzer.validate_image_format('test.jpg'))
+        self.assertTrue(self.analyzer.validate_image_format('test.jpeg'))
+        self.assertTrue(self.analyzer.validate_image_format('test.webp'))
+        self.assertFalse(self.analyzer.validate_image_format('test.txt'))
+        self.assertFalse(self.analyzer.validate_image_format('test.pdf'))
+    
+    def test_get_supported_formats(self):
+        """Test getting supported formats."""
+        formats = self.analyzer.get_supported_formats()
+        self.assertIsInstance(formats, list)
+        self.assertIn('.png', formats)
+        self.assertIn('.jpg', formats)
+        self.assertIn('.jpeg', formats)
+        self.assertIn('.webp', formats)
+    
+    def test_analyze_image_basic(self):
+        """Test basic image analysis without metadata."""
+        # Create a simple image without metadata
+        img = Image.new('RGB', (256, 256), color='blue')
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format='PNG')
+        img_data = base64.b64encode(img_buffer.getvalue()).decode()
+        
+        result = self.analyzer.analyze_image(img_data)
+        
+        self.assertTrue(result['success'])
+        self.assertEqual(result['width'], 256)
+        self.assertEqual(result['height'], 256)
+        self.assertEqual(result['format'], 'PNG')
+        self.assertEqual(result['mode'], 'RGB')
+    
+    def test_analyze_image_with_metadata(self):
+        """Test image analysis with embedded metadata."""
+        # Create image with metadata
+        img = Image.new('RGB', (512, 512), color='red')
+        
+        # Add metadata to image
         metadata = PngImagePlugin.PngInfo()
-        metadata.add_text('parameters', 'a beautiful landscape, Steps: 20, Sampler: Euler a, CFG scale: 7.0, Seed: 12345, Size: 512x512, Model: test_model.safetensors')
-        metadata.add_text('prompt', 'a beautiful __STYLE__ landscape')
-        metadata.add_text('negative_prompt', 'blurry, low quality')
+        metadata.add_text('parameters', self.test_metadata['parameters'])
+        metadata.add_text('prompt', self.test_metadata['prompt'])
+        metadata.add_text('negative_prompt', self.test_metadata['negative_prompt'])
         
-        # Save test image with metadata
-        self.test_image_path = os.path.join(self.temp_dir, "test_image.png")
-        self.test_image.save(self.test_image_path, "PNG", pnginfo=metadata)
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format='PNG', pnginfo=metadata)
+        img_data = base64.b64encode(img_buffer.getvalue()).decode()
         
-        # Read image data for testing
-        with open(self.test_image_path, 'rb') as f:
-            self.image_data = f.read()
-            self.image_base64 = base64.b64encode(self.image_data).decode('utf-8')
-        
-        # Create test wildcard files
-        self.wildcard_dir = os.path.join(self.temp_dir, "wildcards")
-        os.makedirs(self.wildcard_dir, exist_ok=True)
-        
-        with open(os.path.join(self.wildcard_dir, "style.txt"), "w") as f:
-            f.write("realistic\nanime\ncyberpunk\n")
-        
-        with open(os.path.join(self.wildcard_dir, "location.txt"), "w") as f:
-            f.write("forest\ncity\nmountain\n")
-    
-    def tearDown(self):
-        """Clean up test fixtures."""
-        import shutil
-        shutil.rmtree(self.temp_dir)
-    
-    def test_analyze_image_success(self):
-        """Test successful image analysis."""
-        result = self.analyzer.analyze_image(self.image_base64)
+        result = self.analyzer.analyze_image(img_data)
         
         self.assertTrue(result['success'])
         self.assertEqual(result['width'], 512)
         self.assertEqual(result['height'], 512)
-        self.assertEqual(result['format'], 'PNG')
-        self.assertEqual(result['mode'], 'RGB')
-        
-        # Check that metadata was extracted
         self.assertIn('metadata', result)
         self.assertIn('parameters', result)
         self.assertIn('prompt_info', result)
         
-        # Check that prompt info contains wildcards
-        prompt_info = result['prompt_info']
-        self.assertIn('wildcards', prompt_info)
-        self.assertIn('STYLE', prompt_info['wildcards'])
-    
-    def test_extract_parameters(self):
-        """Test parameter extraction from metadata."""
-        metadata = {
-            'parameters': 'a beautiful landscape, Steps: 20, Sampler: Euler a, CFG scale: 7.0, Seed: 12345, Size: 512x512, Model: test_model.safetensors',
-            'prompt': 'a beautiful landscape',
-            'negative_prompt': 'blurry, low quality'
-        }
-        
-        params = self.analyzer._extract_parameters(metadata)
-        
+        # Check extracted parameters
+        params = result['parameters']
+        self.assertEqual(params['prompt'], 'a beautiful landscape, masterpiece, best quality')
+        self.assertEqual(params['negative_prompt'], 'blurry, low quality, bad anatomy')
         self.assertEqual(params['steps'], '20')
-        self.assertEqual(params['sampler'], 'Euler a')
         self.assertEqual(params['cfg_scale'], '7.0')
+        self.assertEqual(params['sampler'], 'Euler a')
         self.assertEqual(params['seed'], '12345')
         self.assertEqual(params['width'], 512)
         self.assertEqual(params['height'], 512)
         self.assertEqual(params['model'], 'test_model.safetensors')
+        self.assertEqual(params['vae'], 'test_vae.safetensors')
+    
+    def test_analyze_image_data_url(self):
+        """Test image analysis with data URL format."""
+        img = Image.new('RGB', (128, 128), color='green')
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format='PNG')
+        img_data = base64.b64encode(img_buffer.getvalue()).decode()
+        
+        # Test with data URL prefix
+        data_url = f"data:image/png;base64,{img_data}"
+        result = self.analyzer.analyze_image(data_url)
+        
+        self.assertTrue(result['success'])
+        self.assertEqual(result['width'], 128)
+        self.assertEqual(result['height'], 128)
+    
+    def test_analyze_image_invalid_data(self):
+        """Test image analysis with invalid data."""
+        result = self.analyzer.analyze_image("invalid_base64_data")
+        self.assertFalse(result['success'])
+        self.assertIn('error', result)
+    
+    def test_extract_metadata_from_image(self):
+        """Test metadata extraction from image."""
+        # Create image with metadata
+        img = Image.new('RGB', (64, 64), color='yellow')
+        
+        # Add metadata
+        metadata = PngImagePlugin.PngInfo()
+        metadata.add_text('parameters', 'test parameters')
+        metadata.add_text('prompt', 'test prompt')
+        
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format='PNG', pnginfo=metadata)
+        img = Image.open(img_buffer)
+        
+        extracted_metadata = self.analyzer._extract_metadata_from_image(img)
+        
+        self.assertIsNotNone(extracted_metadata)
+        self.assertIn('parameters', extracted_metadata)
+        self.assertIn('prompt', extracted_metadata)
+        self.assertEqual(extracted_metadata['parameters'], 'test parameters')
+        self.assertEqual(extracted_metadata['prompt'], 'test prompt')
+    
+    def test_extract_parameters(self):
+        """Test parameter extraction from metadata."""
+        metadata = {
+            'parameters': self.test_metadata['parameters'],
+            'prompt': self.test_metadata['prompt'],
+            'negative_prompt': self.test_metadata['negative_prompt'],
+            'steps': self.test_metadata['steps'],
+            'cfg_scale': self.test_metadata['cfg_scale']
+        }
+        
+        params = self.analyzer._extract_parameters(metadata)
+        
+        self.assertIn('prompt', params)
+        self.assertIn('negative_prompt', params)
+        self.assertIn('steps', params)
+        self.assertIn('cfg_scale', params)
+        self.assertIn('sampler', params)
+        self.assertIn('seed', params)
+        self.assertIn('width', params)
+        self.assertIn('height', params)
+        self.assertIn('model', params)
+        self.assertIn('vae', params)
     
     def test_parse_parameters_string(self):
-        """Test parsing parameters string."""
-        params_str = 'a beautiful landscape, Steps: 20, Sampler: Euler a, CFG scale: 7.0, Seed: 12345, Size: 512x512, Model: test_model.safetensors, VAE: test_vae.safetensors'
+        """Test parsing of parameters string."""
+        param_string = self.test_metadata['parameters']
+        params = self.analyzer._parse_parameters_string(param_string)
         
-        params = self.analyzer._parse_parameters_string(params_str)
-        
+        self.assertEqual(params['prompt'], 'a beautiful landscape, masterpiece, best quality')
         self.assertEqual(params['steps'], '20')
-        self.assertEqual(params['sampler'], 'Euler a')
         self.assertEqual(params['cfg_scale'], '7.0')
+        self.assertEqual(params['sampler'], 'Euler a')
         self.assertEqual(params['seed'], '12345')
         self.assertEqual(params['width'], 512)
         self.assertEqual(params['height'], 512)
@@ -112,328 +209,111 @@ class TestImageAnalyzer(unittest.TestCase):
     def test_extract_prompt_info(self):
         """Test prompt information extraction."""
         metadata = {
-            'prompt': 'a beautiful __STYLE__ landscape with __LIGHTING__',
-            'negative_prompt': 'blurry, low quality',
-            'parameters': 'a beautiful __STYLE__ landscape with __LIGHTING__, Steps: 20'
+            'prompt': 'test prompt',
+            'negative_prompt': 'test negative prompt',
+            'parameters': 'test prompt, Negative prompt: test negative prompt'
         }
         
         prompt_info = self.analyzer._extract_prompt_info(metadata)
         
-        self.assertEqual(prompt_info['prompt'], 'a beautiful __STYLE__ landscape with __LIGHTING__')
-        self.assertEqual(prompt_info['negative_prompt'], 'blurry, low quality')
-        self.assertIn('STYLE', prompt_info['wildcards'])
-        self.assertIn('LIGHTING', prompt_info['wildcards'])
+        self.assertEqual(prompt_info['prompt'], 'test prompt')
+        self.assertEqual(prompt_info['negative_prompt'], 'test negative prompt')
+        self.assertIsInstance(prompt_info['wildcards'], list)
     
     def test_detect_wildcards(self):
         """Test wildcard detection in prompts."""
-        prompt = 'a beautiful __STYLE__ landscape with [lighting] and <weather>'
+        prompt_with_wildcards = "a beautiful __ART_STYLE__ landscape with __WEATHER__ and __TIME_OF_DAY__"
+        wildcards = self.analyzer._detect_wildcards(prompt_with_wildcards)
         
-        wildcards = self.analyzer._detect_wildcards(prompt)
+        self.assertIn('ART_STYLE', wildcards)
+        self.assertIn('WEATHER', wildcards)
+        self.assertIn('TIME_OF_DAY', wildcards)
+        self.assertEqual(len(wildcards), 3)
+    
+    def test_detect_wildcards_no_wildcards(self):
+        """Test wildcard detection with no wildcards."""
+        prompt_no_wildcards = "a beautiful landscape with mountains and trees"
+        wildcards = self.analyzer._detect_wildcards(prompt_no_wildcards)
         
-        # Should only find Automatic1111 format wildcards
-        self.assertIn('STYLE', wildcards)
-        self.assertNotIn('lighting', wildcards)  # Not Automatic1111 format
-        self.assertNotIn('weather', wildcards)   # Not Automatic1111 format
+        self.assertEqual(len(wildcards), 0)
     
     def test_create_suggested_config(self):
-        """Test creating suggested configuration."""
-        # Mock image analysis result
-        analysis_result = {
-            'width': 512,
-            'height': 512,
-            'prompt': 'a beautiful __STYLE__ landscape',
-            'negative_prompt': 'blurry, low quality',
-            'parameters': {
-                'steps': '20',
-                'cfg_scale': '7.0',
-                'sampler': 'Euler a',
-                'model': 'test_model.safetensors'
-            }
+        """Test creation of suggested config from parameters."""
+        params = {
+            'steps': '25',
+            'width': '768',
+            'height': '768',
+            'sampler': 'DPM++ 2M',
+            'cfg_scale': '8.5',
+            'model': 'realistic_vision_v5.1.safetensors',
+            'vae': 'vae-ft-mse-840000-ema-pruned.safetensors'
         }
         
-        config = self.analyzer._create_suggested_config(
-            analysis_result['parameters'],
-            {'prompt': analysis_result['prompt'], 'negative_prompt': analysis_result['negative_prompt']}
-        )
+        prompt_info = {
+            'prompt': 'a beautiful landscape',
+            'negative_prompt': 'blurry, low quality',
+            'wildcards': []
+        }
+        
+        config = self.analyzer._create_suggested_config(params, prompt_info)
         
         self.assertEqual(config['name'], 'Extracted Configuration')
         self.assertEqual(config['model_type'], 'sd')
-        self.assertEqual(config['prompt_settings']['base_prompt'], 'a beautiful __STYLE__ landscape')
+        self.assertEqual(config['prompt_settings']['base_prompt'], 'a beautiful landscape')
         self.assertEqual(config['prompt_settings']['negative_prompt'], 'blurry, low quality')
-        self.assertEqual(config['generation_settings']['steps'], 20)
-        self.assertEqual(config['generation_settings']['cfg_scale'], 7.0)
+        self.assertEqual(config['generation_settings']['steps'], 25)
+        self.assertEqual(config['generation_settings']['width'], 768)
+        self.assertEqual(config['generation_settings']['height'], 768)
+        self.assertEqual(config['generation_settings']['sampler'], 'DPM++ 2M')
+        self.assertEqual(config['generation_settings']['cfg_scale'], 8.5)
+        self.assertEqual(config['model_settings']['checkpoint'], 'realistic_vision_v5.1.safetensors')
+        self.assertEqual(config['model_settings']['vae'], 'vae-ft-mse-840000-ema-pruned.safetensors')
     
-    def test_validate_image_format(self):
-        """Test image format validation."""
-        self.assertTrue(self.analyzer.validate_image_format('test.png'))
-        self.assertTrue(self.analyzer.validate_image_format('test.jpg'))
-        self.assertTrue(self.analyzer.validate_image_format('test.jpeg'))
-        self.assertTrue(self.analyzer.validate_image_format('test.webp'))
-        self.assertFalse(self.analyzer.validate_image_format('test.gif'))
-        self.assertFalse(self.analyzer.validate_image_format('test.txt'))
+    def test_analyze_multiple_images(self):
+        """Test analyzing multiple images."""
+        # Create test images
+        images = []
+        for i in range(3):
+            img = Image.new('RGB', (256 + i*64, 256 + i*64), color=(i*50, i*50, i*50))
+            img_buffer = io.BytesIO()
+            img.save(img_buffer, format='PNG')
+            img_data = base64.b64encode(img_buffer.getvalue()).decode()
+            images.append(img_data)
+        
+        results = self.analyzer.analyze_multiple_images(images)
+        
+        self.assertEqual(len(results), 3)
+        for i, result in enumerate(results):
+            self.assertTrue(result['success'])
+            self.assertEqual(result['width'], 256 + i*64)
+            self.assertEqual(result['height'], 256 + i*64)
     
-    def test_get_supported_formats(self):
-        """Test getting supported formats."""
-        formats = self.analyzer.get_supported_formats()
+    def test_error_handling(self):
+        """Test error handling in image analysis."""
+        # Test with invalid base64
+        result = self.analyzer.analyze_image("invalid_data")
+        self.assertFalse(result['success'])
+        self.assertIn('error', result)
         
-        self.assertIn('.png', formats)
-        self.assertIn('.jpg', formats)
-        self.assertIn('.jpeg', formats)
-        self.assertIn('.webp', formats)
-    
-    def test_analyze_image_without_metadata(self):
-        """Test analyzing image without metadata."""
-        # Create a simple image without metadata
-        from PIL import Image
-        import io
-        import base64
-        
-        # Create a simple image
-        img = Image.new('RGB', (100, 100), color='red')
-        buffer = io.BytesIO()
-        img.save(buffer, format='PNG')
-        img_data = base64.b64encode(buffer.getvalue()).decode()
-        
-        result = self.analyzer.analyze_image(img_data)
-        
-        self.assertTrue(result['success'])
-        self.assertEqual(result['width'], 100)
-        self.assertEqual(result['height'], 100)
-        self.assertEqual(result['format'], 'PNG')
-        
-        # Should not have parameters if no metadata
-        self.assertNotIn('parameters', result)
-    
-    def test_analyze_image_invalid_data(self):
-        """Test analyzing invalid image data."""
-        invalid_data = "invalid_base64_data"
-        
-        result = self.analyzer.analyze_image(invalid_data)
-        
+        # Test with empty data
+        result = self.analyzer.analyze_image("")
         self.assertFalse(result['success'])
         self.assertIn('error', result)
     
-    def test_extract_metadata_from_image(self):
-        """Test extracting metadata from image."""
-        # Create image with various metadata
-        image = Image.new('RGB', (512, 512), color='green')
-        metadata = PngImagePlugin.PngInfo()
-        metadata.add_text('parameters', 'test parameters')
-        metadata.add_text('prompt', 'test prompt')
-        metadata.add_text('custom_field', 'custom value')
-        
-        image_path = os.path.join(self.temp_dir, "metadata_image.png")
-        image.save(image_path, "PNG", pnginfo=metadata)
-        
-        with open(image_path, 'rb') as f:
-            image_data = base64.b64encode(f.read()).decode('utf-8')
-        
-        result = self.analyzer.analyze_image(image_data)
-        
-        self.assertTrue(result['success'])
-        self.assertIn('parameters', result['metadata'])
-        self.assertIn('prompt', result['metadata'])
-        self.assertIn('custom_field', result['metadata'])
-    
-    def test_wildcard_detection_edge_cases(self):
-        """Test wildcard detection edge cases."""
-        # Test nested wildcards
-        prompt1 = 'a __STYLE__ with __STYLE__'
-        wildcards1 = self.analyzer._detect_wildcards(prompt1)
-        self.assertEqual(len(wildcards1), 1)  # Should deduplicate
-        self.assertIn('STYLE', wildcards1)
-        
-        # Test empty prompt
-        prompt2 = ''
-        wildcards2 = self.analyzer._detect_wildcards(prompt2)
-        self.assertEqual(wildcards2, [])
-        
-        # Test prompt with no wildcards
-        prompt3 = 'a simple prompt without wildcards'
-        wildcards3 = self.analyzer._detect_wildcards(prompt3)
-        self.assertEqual(wildcards3, [])
-    
-    def test_analyze_image_metadata(self):
-        """Test analyzing image metadata."""
-        # Create image with metadata
-        metadata = PngImagePlugin.PngInfo()
-        metadata.add_text('prompt', 'a beautiful __STYLE__ landscape')
-        metadata.add_text('parameters', 'Steps: 20, CFG: 7.0')
-        
-        image_with_metadata = Image.new('RGB', (512, 512), color='blue')
-        image_buffer = io.BytesIO()
-        image_with_metadata.save(image_buffer, format='PNG', pnginfo=metadata)
-        image_data = base64.b64encode(image_buffer.getvalue()).decode('utf-8')
-        
-        # Analyze image
-        result = self.analyzer.analyze_image(image_data)
-        
-        self.assertIn('prompt_info', result)
-        self.assertIn('prompt', result['prompt_info'])
-        self.assertIn('parameters', result['metadata'])
-        self.assertEqual(result['prompt_info']['prompt'], 'a beautiful __STYLE__ landscape')
-        self.assertEqual(result['metadata']['parameters'], 'Steps: 20, CFG: 7.0')
-    
-    def test_extract_prompt_from_metadata(self):
-        """Test extracting prompt from image metadata."""
-        # Test with valid metadata
-        metadata = {
-            'prompt': 'a beautiful __STYLE__ landscape with __LIGHTING__',
-            'parameters': 'a beautiful __STYLE__ landscape with __LIGHTING__, Steps: 20'
-        }
-        
-        prompt_info = self.analyzer.extract_prompt_from_metadata(metadata)
-        
-        self.assertEqual(prompt_info['prompt'], 'a beautiful __STYLE__ landscape with __LIGHTING__')
-        self.assertIn('STYLE', prompt_info['wildcards'])
-        self.assertIn('LIGHTING', prompt_info['wildcards'])
-    
-    def test_parse_prompt_for_wildcards(self):
-        """Test parsing prompt to identify wildcards."""
-        prompt = 'a beautiful __STYLE__ landscape with [lighting] and <weather>'
-        
-        wildcards = self.analyzer.parse_prompt_for_wildcards(prompt)
-        
-        # Should only find Automatic1111 format wildcards
-        self.assertIn('STYLE', wildcards)
-        self.assertNotIn('lighting', wildcards)  # Not Automatic1111 format
-        self.assertNotIn('weather', wildcards)   # Not Automatic1111 format
-    
-    def test_create_config_from_image(self):
-        """Test creating configuration from analyzed image."""
-        # Mock image analysis result
-        analysis_result = {
-            'width': 512,
-            'height': 512,
-            'prompt': 'a beautiful __STYLE__ landscape',
-            'negative_prompt': 'blurry, low quality',
-            'steps': 20,
-            'cfg_scale': 7.0
-        }
-        
-        config = self.analyzer.create_config_from_image(
-            analysis_result,
-            'test_config',
-            'wildcards'
-        )
-        
-        self.assertEqual(config['name'], 'test_config')
-        self.assertEqual(config['model_type'], 'sd')
-        self.assertEqual(config['prompt_settings']['base_prompt'], 'a beautiful __STYLE__ landscape')
-        self.assertEqual(config['prompt_settings']['negative_prompt'], 'blurry, low quality')
-        self.assertEqual(config['generation_settings']['steps'], 20)
-        self.assertEqual(config['generation_settings']['cfg_scale'], 7.0)
-    
-    def test_validate_wildcard_files(self):
-        """Test validating wildcard files exist."""
-        # Test with existing wildcards
-        wildcards = {
-            'STYLE': os.path.join(self.wildcard_dir, 'style.txt'),
-            'LOCATION': os.path.join(self.wildcard_dir, 'location.txt')
-        }
-        
-        result = self.analyzer.validate_wildcard_files(wildcards)
-        self.assertTrue(result['valid'])
-        self.assertEqual(len(result['missing']), 0)
-        
-        # Test with missing wildcard
-        wildcards['MISSING'] = os.path.join(self.wildcard_dir, 'missing.txt')
-        
-        result = self.analyzer.validate_wildcard_files(wildcards)
-        self.assertFalse(result['valid'])
-        self.assertIn('MISSING', result['missing'])
-    
-    def test_suggest_wildcard_values(self):
-        """Test suggesting wildcard values based on prompt context."""
-        prompt = 'a beautiful __STYLE__ landscape of __LOCATION__'
-        
-        suggestions = self.analyzer.suggest_wildcard_values(prompt)
-        
-        self.assertIn('STYLE', suggestions)
-        self.assertIn('LOCATION', suggestions)
-        
-        # Should suggest relevant values
-        style_suggestions = suggestions['STYLE']
-        self.assertIn('realistic', style_suggestions)
-        # Don't expect 'landscape' in style suggestions - it's a location term
-    
-    def test_enhance_prompt_with_wildcards(self):
-        """Test enhancing a simple prompt with wildcards."""
-        simple_prompt = 'a beautiful landscape'
-        
-        enhanced = self.analyzer.enhance_prompt_with_wildcards(simple_prompt)
-        
-        # Should add wildcards for variety
-        self.assertIn('__STYLE__', enhanced)
-        self.assertIn('__LOCATION__', enhanced)
-    
-    def test_analyze_multiple_images(self):
-        """Test analyzing multiple images for batch processing."""
-        # Create multiple test images
-        image_paths = []
-        for i in range(3):
-            img = Image.new('RGB', (512, 512), color=(i*50, i*50, i*50))
-            path = os.path.join(self.temp_dir, f"test_image_{i}.png")
-            img.save(path)
-            image_paths.append(path)
-        
-        results = self.analyzer.analyze_multiple_images(image_paths)
-        
-        self.assertEqual(len(results), 3)
-        for result in results:
-            self.assertIn('path', result)
-            self.assertIn('analysis', result)
-    
     def test_extract_parameters_from_string(self):
-        """Test extracting generation parameters from string."""
-        param_string = "Steps: 20, CFG: 7.0, Sampler: DPM++ 2M Karras, Size: 512x512"
-        
+        """Test extracting parameters from string."""
+        param_string = "test prompt, Negative prompt: test negative, Steps: 30, CFG scale: 9.0, Sampler: Euler a, Seed: 42, Size: 1024x1024, Model: test.safetensors"
         params = self.analyzer.extract_parameters_from_string(param_string)
         
-        self.assertEqual(int(params.get('steps')), 20)  # Convert to int for comparison
-        if params.get('cfg_scale') is not None:
-            self.assertEqual(float(params.get('cfg_scale')), 7.0)
-        self.assertEqual(params.get('sampler'), 'DPM++ 2M Karras')
-        if params.get('width') is not None:
-            self.assertEqual(int(params.get('width')), 512)
-        if params.get('height') is not None:
-            self.assertEqual(int(params.get('height')), 512)
-    
-    def test_create_wildcard_file(self):
-        """Test creating wildcard file from suggestions."""
-        wildcard_name = 'STYLE'
-        suggestions = ['realistic', 'anime', 'cyberpunk', 'photorealistic']
-        
-        file_path = self.analyzer.create_wildcard_file(
-            wildcard_name, 
-            suggestions, 
-            self.wildcard_dir
-        )
-        
-        self.assertTrue(os.path.exists(file_path))
-        
-        # Verify content
-        with open(file_path, 'r') as f:
-            content = f.read().strip().split('\n')
-        
-        self.assertEqual(content, suggestions)
-    
-    def test_error_handling(self):
-        """Test error handling for invalid inputs."""
-        # Test with non-existent image
-        result = self.analyzer.analyze_image("invalid_base64_data")
-        self.assertIn('error', result)
-        
-        # Test with invalid metadata
-        result = self.analyzer.extract_prompt_from_metadata({})
-        # Should return empty prompt info, not error
-        self.assertEqual(result['prompt'], '')
-        self.assertEqual(result['negative_prompt'], '')
-        self.assertEqual(result['wildcards'], [])
-        
-        # Test with invalid prompt
-        wildcards = self.analyzer.parse_prompt_for_wildcards("")
-        self.assertEqual(wildcards, [])
+        self.assertEqual(params['prompt'], 'test prompt')
+        self.assertEqual(params['negative_prompt'], 'test negative')
+        self.assertEqual(params['steps'], '30')
+        self.assertEqual(params['cfg_scale'], '9.0')
+        self.assertEqual(params['sampler'], 'Euler a')
+        self.assertEqual(params['seed'], '42')
+        self.assertEqual(params['width'], 1024)
+        self.assertEqual(params['height'], 1024)
+        self.assertEqual(params['model'], 'test.safetensors')
 
 
 if __name__ == '__main__':

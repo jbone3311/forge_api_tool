@@ -1,0 +1,45 @@
+{
+  "name": "test_extracted_config",
+  "description": "Config created from image analysis",
+  "model_type": "sd",
+  "prompt_settings": {
+    "base_prompt": "",
+    "negative_prompt": ""
+  },
+  "generation_settings": {
+    "steps": 20,
+    "width": 512,
+    "height": 512,
+    "batch_size": 1,
+    "sampler": "Euler a",
+    "cfg_scale": 7.0
+  },
+  "model_settings": {
+    "checkpoint": "",
+    "vae": "",
+    "text_encoder": "",
+    "gpu_weight": 1.0,
+    "swap_method": "weight",
+    "swap_location": "cpu"
+  },
+  "output_settings": {
+    "dir": "outputs/test_extracted_config/{timestamp}/",
+    "format": "png",
+    "save_metadata": true,
+    "save_prompts": true
+  },
+  "script_settings": {
+    "script_name": null,
+    "script_args": []
+  },
+  "alwayson_scripts": {
+    "controlnet": {
+      "args": []
+    }
+  },
+  "api_settings": {
+    "base_url": "http://127.0.0.1:7860",
+    "timeout": 300,
+    "retry_attempts": 3
+  }
+}

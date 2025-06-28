@@ -203,6 +203,180 @@
                     </div>
                 </div>
 
+                <!-- Image Analysis Section -->
+                <div class="image-analysis-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-microscope"></i> Image Analysis & Config Creation</h3>
+                        <div class="section-actions">
+                            <button class="btn btn-sm btn-info" onclick="showAnalysisSummary()" title="Show Analysis Summary">
+                                <i class="fas fa-list"></i> Summary
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="clearImageAnalysis()">
+                                <i class="fas fa-trash"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Image Drop Zone -->
+                    <div class="image-drop-zone" id="image-drop-zone">
+                        <div class="drop-zone-content">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <h4>Drop an image here to analyze</h4>
+                            <p>or click to select a file</p>
+                            <input type="file" id="image-file-input" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                    
+                    <!-- Analysis Results -->
+                    <div class="analysis-results" id="analysis-results" style="display: none;">
+                        <div class="analysis-header">
+                            <h4><i class="fas fa-chart-line"></i> Analysis Results</h4>
+                            <div class="analysis-actions">
+                                <select id="analysis-selector" onchange="selectAnalysis(parseInt(this.value))" style="margin-right: 0.5rem; padding: 0.25rem; border-radius: 4px; border: 1px solid #ddd;">
+                                    <option value="">No analyzed images</option>
+                                </select>
+                                <button class="btn btn-sm btn-danger" onclick="removeAnalysis(selectedAnalysisIndex)" title="Remove Current Analysis">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="createConfigFromAnalysis()">
+                                    <i class="fas fa-save"></i> Create Config
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="editAnalysisConfig()">
+                                    <i class="fas fa-edit"></i> Edit Settings
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="analysis-content">
+                            <div class="analysis-image">
+                                <img id="analysis-image-preview" src="" alt="Analyzed Image">
+                            </div>
+                            
+                            <div class="analysis-details">
+                                <div class="detail-group">
+                                    <h5>Image Information</h5>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Dimensions:</span>
+                                        <span class="detail-value" id="analysis-dimensions">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Format:</span>
+                                        <span class="detail-value" id="analysis-format">-</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="detail-group">
+                                    <h5>Extracted Settings</h5>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Prompt:</span>
+                                        <span class="detail-value" id="analysis-prompt">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Negative Prompt:</span>
+                                        <span class="detail-value" id="analysis-negative-prompt">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Steps:</span>
+                                        <span class="detail-value" id="analysis-steps">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">CFG Scale:</span>
+                                        <span class="detail-value" id="analysis-cfg-scale">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Sampler:</span>
+                                        <span class="detail-value" id="analysis-sampler">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Seed:</span>
+                                        <span class="detail-value" id="analysis-seed">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Denoising Strength:</span>
+                                        <span class="detail-value" id="analysis-denoising-strength">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Clip Skip:</span>
+                                        <span class="detail-value" id="analysis-clip-skip">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Restore Faces:</span>
+                                        <span class="detail-value" id="analysis-restore-faces">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Tiling:</span>
+                                        <span class="detail-value" id="analysis-tiling">-</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="detail-group">
+                                    <h5>Hires Fix Settings</h5>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Hires Fix:</span>
+                                        <span class="detail-value" id="analysis-hires-fix">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Hires Steps:</span>
+                                        <span class="detail-value" id="analysis-hires-steps">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Hires Upscaler:</span>
+                                        <span class="detail-value" id="analysis-hires-upscaler">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Hires Denoising:</span>
+                                        <span class="detail-value" id="analysis-hires-denoising">-</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="detail-group">
+                                    <h5>Advanced Settings</h5>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Subseed:</span>
+                                        <span class="detail-value" id="analysis-subseed">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Subseed Strength:</span>
+                                        <span class="detail-value" id="analysis-subseed-strength">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Text Encoder:</span>
+                                        <span class="detail-value" id="analysis-text-encoder">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Model Hash:</span>
+                                        <span class="detail-value" id="analysis-model-hash">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">VAE Hash:</span>
+                                        <span class="detail-value" id="analysis-vae-hash">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">LoRA:</span>
+                                        <span class="detail-value" id="analysis-lora">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Embedding:</span>
+                                        <span class="detail-value" id="analysis-embedding">-</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="detail-group">
+                                    <h5>Model Information</h5>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Model:</span>
+                                        <span class="detail-value" id="analysis-model">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">VAE:</span>
+                                        <span class="detail-value" id="analysis-vae">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Outputs Section -->
                 <div class="outputs-section">
                     <div class="section-header">
@@ -427,6 +601,224 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('live-status-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Editor Modal -->
+    <div id="config-editor-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Config Editor</h3>
+                <button class="close-btn" onclick="closeModal('config-editor-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="config-editor-tabs">
+                    <button class="tab-btn active" onclick="switchConfigTab('basic')">Basic Settings</button>
+                    <button class="tab-btn" onclick="switchConfigTab('prompt')">Prompt Settings</button>
+                    <button class="tab-btn" onclick="switchConfigTab('generation')">Generation Settings</button>
+                    <button class="tab-btn" onclick="switchConfigTab('model')">Model Settings</button>
+                    <button class="tab-btn" onclick="switchConfigTab('output')">Output Settings</button>
+                    <button class="tab-btn" onclick="switchConfigTab('json')">Raw JSON</button>
+                </div>
+                
+                <div class="config-editor-content">
+                    <!-- Basic Settings Tab -->
+                    <div id="config-tab-basic" class="config-tab active">
+                        <div class="input-group">
+                            <label for="config-name">Config Name:</label>
+                            <input type="text" id="config-name" placeholder="Enter config name">
+                        </div>
+                        <div class="input-group">
+                            <label for="config-description">Description:</label>
+                            <textarea id="config-description" placeholder="Enter description"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="config-model-type">Model Type:</label>
+                            <select id="config-model-type">
+                                <option value="sd">Stable Diffusion</option>
+                                <option value="sdxl">SDXL</option>
+                                <option value="sd15">SD 1.5</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Prompt Settings Tab -->
+                    <div id="config-tab-prompt" class="config-tab">
+                        <div class="input-group">
+                            <label for="config-base-prompt">Base Prompt:</label>
+                            <textarea id="config-base-prompt" placeholder="Enter base prompt"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="config-negative-prompt">Negative Prompt:</label>
+                            <textarea id="config-negative-prompt" placeholder="Enter negative prompt"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Generation Settings Tab -->
+                    <div id="config-tab-generation" class="config-tab">
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="config-steps">Steps:</label>
+                                <input type="number" id="config-steps" min="1" max="100" value="20">
+                            </div>
+                            <div class="input-group">
+                                <label for="config-cfg-scale">CFG Scale:</label>
+                                <input type="number" id="config-cfg-scale" min="1" max="30" step="0.5" value="7.0">
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="config-width">Width:</label>
+                                <input type="number" id="config-width" min="64" max="2048" step="64" value="512">
+                            </div>
+                            <div class="input-group">
+                                <label for="config-height">Height:</label>
+                                <input type="number" id="config-height" min="64" max="2048" step="64" value="512">
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="config-batch-size">Batch Size:</label>
+                                <input type="number" id="config-batch-size" min="1" max="10" value="1">
+                            </div>
+                            <div class="input-group">
+                                <label for="config-sampler">Sampler:</label>
+                                <select id="config-sampler">
+                                    <option value="Euler a">Euler a</option>
+                                    <option value="Euler">Euler</option>
+                                    <option value="LMS">LMS</option>
+                                    <option value="Heun">Heun</option>
+                                    <option value="DPM2">DPM2</option>
+                                    <option value="DPM2 a">DPM2 a</option>
+                                    <option value="DPM++ 2S a">DPM++ 2S a</option>
+                                    <option value="DPM++ 2M">DPM++ 2M</option>
+                                    <option value="DPM++ SDE">DPM++ SDE</option>
+                                    <option value="DPM fast">DPM fast</option>
+                                    <option value="DPM adaptive">DPM adaptive</option>
+                                    <option value="LMS Karras">LMS Karras</option>
+                                    <option value="DPM2 Karras">DPM2 Karras</option>
+                                    <option value="DPM2 a Karras">DPM2 a Karras</option>
+                                    <option value="DPM++ 2S a Karras">DPM++ 2S a Karras</option>
+                                    <option value="DPM++ 2M Karras">DPM++ 2M Karras</option>
+                                    <option value="DPM++ SDE Karras">DPM++ SDE Karras</option>
+                                    <option value="DDIM">DDIM</option>
+                                    <option value="PLMS">PLMS</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Model Settings Tab -->
+                    <div id="config-tab-model" class="config-tab">
+                        <div class="input-group">
+                            <label for="config-checkpoint">Checkpoint:</label>
+                            <input type="text" id="config-checkpoint" placeholder="Enter checkpoint name">
+                        </div>
+                        <div class="input-group">
+                            <label for="config-vae">VAE:</label>
+                            <input type="text" id="config-vae" placeholder="Enter VAE name">
+                        </div>
+                        <div class="input-group">
+                            <label for="config-text-encoder">Text Encoder:</label>
+                            <input type="text" id="config-text-encoder" placeholder="Enter text encoder">
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="config-gpu-weight">GPU Weight:</label>
+                                <input type="number" id="config-gpu-weight" min="0" max="1" step="0.1" value="1.0">
+                            </div>
+                            <div class="input-group">
+                                <label for="config-swap-method">Swap Method:</label>
+                                <select id="config-swap-method">
+                                    <option value="weight">Weight</option>
+                                    <option value="cpu">CPU</option>
+                                    <option value="offload">Offload</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="config-swap-location">Swap Location:</label>
+                            <select id="config-swap-location">
+                                <option value="cpu">CPU</option>
+                                <option value="gpu">GPU</option>
+                                <option value="disk">Disk</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Output Settings Tab -->
+                    <div id="config-tab-output" class="config-tab">
+                        <div class="input-group">
+                            <label for="config-output-dir">Output Directory:</label>
+                            <input type="text" id="config-output-dir" placeholder="outputs/{config_name}/{timestamp}/">
+                        </div>
+                        <div class="input-group">
+                            <label for="config-output-format">Output Format:</label>
+                            <select id="config-output-format">
+                                <option value="png">PNG</option>
+                                <option value="jpg">JPG</option>
+                                <option value="webp">WebP</option>
+                            </select>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="config-save-metadata" checked>
+                                    Save Metadata
+                                </label>
+                            </div>
+                            <div class="input-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="config-save-prompts" checked>
+                                    Save Prompts
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Raw JSON Tab -->
+                    <div id="config-tab-json" class="config-tab">
+                        <div class="input-group">
+                            <label for="config-json">Configuration JSON:</label>
+                            <textarea id="config-json" placeholder="Enter configuration JSON..." style="height: 400px; font-family: monospace;"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('config-editor-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveConfigFromEditor()">Save Config</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Config from Analysis Modal -->
+    <div id="create-config-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Config from Analysis</h3>
+                <button class="close-btn" onclick="closeModal('create-config-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="new-config-name">Config Name:</label>
+                    <input type="text" id="new-config-name" placeholder="Enter config name">
+                </div>
+                <div class="input-group">
+                    <label for="new-config-description">Description:</label>
+                    <textarea id="new-config-description" placeholder="Enter description"></textarea>
+                </div>
+                <div class="analysis-summary">
+                    <h5>Analysis Summary:</h5>
+                    <div id="create-config-summary">
+                        <!-- Analysis summary will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('create-config-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCreateConfig()">Create Config</button>
             </div>
         </div>
     </div>

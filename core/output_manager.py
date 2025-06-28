@@ -210,6 +210,7 @@ class OutputManager:
             configs_with_outputs = set()
             recent_outputs = []
             total_size_bytes = 0
+            date_breakdown = {}
             
             # Get all date directories
             if os.path.exists(self.base_output_dir):
@@ -223,6 +224,9 @@ class OutputManager:
                 for date_dir in date_dirs:
                     date_outputs = self.get_outputs_for_date(date_dir)
                     total_outputs += len(date_outputs)
+                    
+                    # Add to date breakdown
+                    date_breakdown[date_dir] = len(date_outputs)
                     
                     # Add configs
                     for output in date_outputs:
@@ -245,7 +249,8 @@ class OutputManager:
                 'total_size_bytes': total_size_bytes,
                 'total_size_mb': round(total_size_bytes / (1024 * 1024), 2),
                 'recent_outputs': recent_outputs,
-                'configs_with_outputs': list(configs_with_outputs)
+                'configs_with_outputs': list(configs_with_outputs),
+                'date_breakdown': date_breakdown
             }
             
         except Exception as e:
@@ -256,7 +261,8 @@ class OutputManager:
                 'total_size_bytes': 0,
                 'total_size_mb': 0,
                 'recent_outputs': [],
-                'configs_with_outputs': []
+                'configs_with_outputs': [],
+                'date_breakdown': {}
             }
     
     def cleanup_old_outputs(self, days_to_keep: int = 30) -> int:

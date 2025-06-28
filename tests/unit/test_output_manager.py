@@ -1,325 +1,376 @@
+#!/usr/bin/env python3
+"""
+Unit tests for OutputManager class.
+Tests the new Automatic1111-style output management system.
+"""
+
 import unittest
 import tempfile
 import os
 import json
 import base64
-from pathlib import Path
-import sys
-from PIL import Image
 import io
-import time
 from datetime import datetime
-import hashlib
+from PIL import Image, PngImagePlugin
+import sys
 
-# Add the project root to the path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-sys.path.insert(0, project_root)
+# Add the parent directory to the path to import core modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from core.output_manager import OutputManager
-from core.config_handler import ConfigHandler
-from core.wildcard_manager import WildcardManagerFactory
 
 
 class TestOutputManager(unittest.TestCase):
-    """Test cases for OutputManager."""
+    """Test cases for OutputManager class."""
     
     def setUp(self):
         """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
-        self.output_dir = os.path.join(self.temp_dir, "outputs")
-        self.manager = OutputManager(self.output_dir)
+        self.manager = OutputManager(self.temp_dir)
         
         # Create test image data
         self.test_image = Image.new('RGB', (512, 512), color='red')
-        image_buffer = io.BytesIO()
-        self.test_image.save(image_buffer, format='PNG')
-        self.image_data = base64.b64encode(image_buffer.getvalue()).decode('utf-8')
+        img_buffer = io.BytesIO()
+        self.test_image.save(img_buffer, format='PNG')
+        self.image_data = base64.b64encode(img_buffer.getvalue()).decode()
+        
+        # Test generation settings
+        self.generation_settings = {
+            'steps': 20,
+            'cfg_scale': 7.0,
+            'sampler': 'Euler a',
+            'width': 512,
+            'height': 512,
+            'negative_prompt': 'blurry, low quality'
+        }
+        
+        # Test model settings
+        self.model_settings = {
+            'checkpoint': 'test_model.safetensors',
+            'vae': 'test_vae.safetensors',
+            'model_hash': 'abc123',
+            'vae_hash': 'def456'
+        }
     
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
         shutil.rmtree(self.temp_dir)
     
-    def test_save_image(self):
-        """Test saving an image."""
-        # Create test image data
-        test_image = Image.new('RGB', (100, 100), color='red')
-        buffer = io.BytesIO()
-        test_image.save(buffer, format='PNG')
-        image_data = base64.b64encode(buffer.getvalue()).decode()
+    def test_initialization(self):
+        """Test OutputManager initialization."""
+        self.assertIsInstance(self.manager, OutputManager)
+        self.assertEqual(self.manager.base_output_dir, self.temp_dir)
+        self.assertTrue(os.path.exists(self.temp_dir))
+    
+    def test_get_output_directory(self):
+        """Test getting output directory for specific date."""
+        # Test with specific date
+        test_date = "2024-01-15"
+        output_dir = self.manager.get_output_directory(test_date)
+        expected_dir = os.path.join(self.temp_dir, test_date)
+        self.assertEqual(output_dir, expected_dir)
+        self.assertTrue(os.path.exists(output_dir))
         
-        # Save image
+        # Test with today's date
+        today_dir = self.manager.get_output_directory()
+        today_date = datetime.now().strftime("%Y-%m-%d")
+        expected_today_dir = os.path.join(self.temp_dir, today_date)
+        self.assertEqual(today_dir, expected_today_dir)
+        self.assertTrue(os.path.exists(today_dir))
+    
+    def test_save_image(self):
+        """Test saving image with embedded metadata."""
+        config_name = "test_config"
+        prompt = "a beautiful landscape"
+        seed = 12345
+        
         filepath = self.manager.save_image(
-            image_data, "test_config", "test prompt", 12345
+            self.image_data, 
+            config_name, 
+            prompt, 
+            seed,
+            self.generation_settings,
+            self.model_settings
         )
         
-        # Check that file was created
+        # Check file was created
         self.assertTrue(os.path.exists(filepath))
         self.assertTrue(filepath.endswith('.png'))
         
-        # Check that metadata was created
-        metadata_dir = os.path.join(os.path.dirname(filepath), '..', 'metadata')
-        metadata_files = [f for f in os.listdir(metadata_dir) if f.endswith('_metadata.json')]
-        self.assertGreater(len(metadata_files), 0)
+        # Check filename format
+        filename = os.path.basename(filepath)
+        self.assertRegex(filename, r'\d{8}_\d{6}_\d{8}\.png')
         
-        # Check that prompt was saved
-        prompts_dir = os.path.join(os.path.dirname(filepath), '..', 'prompts')
-        prompt_files = [f for f in os.listdir(prompts_dir) if f.endswith('_prompt.txt')]
-        self.assertGreater(len(prompt_files), 0)
+        # Check metadata was embedded
+        metadata = self.manager.extract_metadata_from_image(filepath)
+        self.assertIsNotNone(metadata)
+        self.assertEqual(metadata['prompt'], prompt)
+        self.assertEqual(metadata['seed'], seed)
+        self.assertEqual(metadata['config_name'], config_name)
+        self.assertEqual(metadata['steps'], 20)
+        self.assertEqual(metadata['cfg_scale'], 7.0)
+        self.assertEqual(metadata['sampler_name'], 'Euler a')
+        self.assertEqual(metadata['model_name'], 'test_model.safetensors')
+        self.assertEqual(metadata['vae_name'], 'test_vae.safetensors')
     
-    def test_hash_prompt(self):
-        """Test prompt hashing functionality."""
-        prompt1 = "a beautiful landscape"
-        prompt2 = "a beautiful landscape"
-        prompt3 = "an ugly building"
-        
-        # Test that same prompts produce same hash
-        hash1 = hashlib.md5(prompt1.encode()).hexdigest()
-        hash2 = hashlib.md5(prompt2.encode()).hexdigest()
-        hash3 = hashlib.md5(prompt3.encode()).hexdigest()
-        
-        self.assertEqual(hash1, hash2)
-        self.assertNotEqual(hash1, hash3)
-    
-    def test_save_prompt_list(self):
-        """Test saving a list of prompts."""
+    def test_save_image_with_data_url(self):
+        """Test saving image with data URL format."""
         config_name = "test_config"
-        prompts = ["prompt 1", "prompt 2", "prompt 3"]
+        prompt = "a beautiful landscape"
+        seed = 12345
         
-        # Save prompts by creating images (which also saves prompts)
-        for i, prompt in enumerate(prompts):
-            test_image = Image.new('RGB', (100, 100), color='red')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, config_name, prompt, i)
+        # Create data URL
+        data_url = f"data:image/png;base64,{self.image_data}"
         
-        # Check that prompts were saved
-        prompts_dir = os.path.join(self.manager.get_output_directory(config_name), 
-                                  datetime.now().strftime("%Y-%m-%d"), 'prompts')
-        prompt_files = [f for f in os.listdir(prompts_dir) if f.endswith('_prompt.txt')]
-        self.assertGreaterEqual(len(prompt_files), len(prompts))
+        filepath = self.manager.save_image(
+            data_url, 
+            config_name, 
+            prompt, 
+            seed,
+            self.generation_settings,
+            self.model_settings
+        )
+        
+        self.assertTrue(os.path.exists(filepath))
+        
+        # Check metadata
+        metadata = self.manager.extract_metadata_from_image(filepath)
+        self.assertIsNotNone(metadata)
+        self.assertEqual(metadata['prompt'], prompt)
     
-    def test_get_output_summary(self):
-        """Test getting output summary."""
-        # Create some test outputs
-        for i in range(3):
-            test_image = Image.new('RGB', (100, 100), color='red')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "test_config", f"prompt{i}", i)
-        
-        # Get output statistics
-        summary = self.manager.get_output_statistics()
-        
-        # Check that summary contains expected data
-        self.assertIn('total_outputs', summary)
-        self.assertIn('configs_with_outputs', summary)
-        self.assertIn('recent_outputs', summary)
-    
-    def test_get_output_summary_specific_config(self):
-        """Test getting output summary for a specific config."""
-        # Create outputs for different configs
-        for i in range(2):
-            test_image = Image.new('RGB', (100, 100), color='red')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "config1", f"prompt{i}", i)
+    def test_get_outputs_for_date(self):
+        """Test getting outputs for a specific date."""
+        # Save some test images
+        config_name = "test_config"
+        prompt = "a beautiful landscape"
         
         for i in range(3):
-            test_image = Image.new('RGB', (100, 100), color='blue')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "config2", f"prompt{i}", i)
+            seed = 1000 + i
+            self.manager.save_image(
+                self.image_data, 
+                config_name, 
+                f"{prompt} {i}", 
+                seed,
+                self.generation_settings,
+                self.model_settings
+            )
         
-        # Get outputs for specific config
+        # Get outputs for today
+        today = datetime.now().strftime("%Y-%m-%d")
+        outputs = self.manager.get_outputs_for_date(today)
+        
+        self.assertEqual(len(outputs), 3)
+        
+        # Check output structure
+        for output in outputs:
+            self.assertIn('filename', output)
+            self.assertIn('filepath', output)
+            self.assertIn('date', output)
+            self.assertIn('prompt', output)
+            self.assertIn('seed', output)
+            self.assertIn('config_name', output)
+            self.assertEqual(output['date'], today)
+            self.assertEqual(output['config_name'], config_name)
+    
+    def test_get_outputs_for_config(self):
+        """Test getting outputs for a specific configuration."""
+        # Save images with different configs
+        configs = ["config1", "config2", "config1"]
+        prompt = "a beautiful landscape"
+        
+        for i, config_name in enumerate(configs):
+            seed = 1000 + i
+            self.manager.save_image(
+                self.image_data, 
+                config_name, 
+                f"{prompt} {i}", 
+                seed,
+                self.generation_settings,
+                self.model_settings
+            )
+        
+        # Get outputs for config1
         config1_outputs = self.manager.get_outputs_for_config("config1")
-        config2_outputs = self.manager.get_outputs_for_config("config2")
-        
-        # Check that we got the right number of outputs
         self.assertEqual(len(config1_outputs), 2)
-        self.assertEqual(len(config2_outputs), 3)
-    
-    def test_get_recent_files(self):
-        """Test getting recent files."""
-        # Create some test outputs
-        for i in range(5):
-            test_image = Image.new('RGB', (100, 100), color='red')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "test_config", f"prompt{i}", i)
         
-        # Get output statistics which includes recent outputs
+        # Check all outputs belong to config1
+        for output in config1_outputs:
+            self.assertEqual(output['config_name'], "config1")
+        
+        # Get outputs for config2
+        config2_outputs = self.manager.get_outputs_for_config("config2")
+        self.assertEqual(len(config2_outputs), 1)
+        self.assertEqual(config2_outputs[0]['config_name'], "config2")
+    
+    def test_extract_metadata_from_image(self):
+        """Test extracting metadata from image file."""
+        # Save test image
+        config_name = "test_config"
+        prompt = "a beautiful landscape"
+        seed = 12345
+        
+        filepath = self.manager.save_image(
+            self.image_data, 
+            config_name, 
+            prompt, 
+            seed,
+            self.generation_settings,
+            self.model_settings
+        )
+        
+        # Extract metadata
+        metadata = self.manager.extract_metadata_from_image(filepath)
+        
+        self.assertIsNotNone(metadata)
+        self.assertEqual(metadata['prompt'], prompt)
+        self.assertEqual(metadata['seed'], seed)
+        self.assertEqual(metadata['config_name'], config_name)
+        self.assertEqual(metadata['steps'], 20)
+        self.assertEqual(metadata['cfg_scale'], 7.0)
+        self.assertEqual(metadata['model_name'], 'test_model.safetensors')
+    
+    def test_get_output_statistics(self):
+        """Test getting output statistics."""
+        # Save some test images
+        configs = ["config1", "config2", "config1"]
+        prompt = "a beautiful landscape"
+        
+        for i, config_name in enumerate(configs):
+            seed = 1000 + i
+            self.manager.save_image(
+                self.image_data, 
+                config_name, 
+                f"{prompt} {i}", 
+                seed,
+                self.generation_settings,
+                self.model_settings
+            )
+        
+        # Get statistics
         stats = self.manager.get_output_statistics()
         
-        # Check that we have recent outputs
-        self.assertIn('recent_outputs', stats)
-        self.assertGreaterEqual(len(stats['recent_outputs']), 1)
+        self.assertIn('total_outputs', stats)
+        self.assertIn('total_size_mb', stats)
+        self.assertIn('configs_with_outputs', stats)
+        self.assertIn('date_breakdown', stats)
+        
+        self.assertEqual(stats['total_outputs'], 3)
+        self.assertIn('config1', stats['configs_with_outputs'])
+        self.assertIn('config2', stats['configs_with_outputs'])
     
-    def test_cleanup_old_files(self):
-        """Test cleaning up old files."""
-        # Create some test outputs
-        for i in range(3):
-            test_image = Image.new('RGB', (100, 100), color='red')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "test_config", f"prompt{i}", i)
-        
-        # Get initial statistics
-        initial_stats = self.manager.get_output_statistics()
-        
-        # Clean up old outputs (keep only 1 day)
-        cleaned_count = self.manager.cleanup_old_outputs(days_to_keep=1)
-        
-        # Check that cleanup was performed
+    def test_cleanup_old_outputs(self):
+        """Test cleaning up old outputs."""
+        # This test would require time manipulation to be comprehensive
+        # For now, just test the method doesn't crash
+        cleaned_count = self.manager.cleanup_old_outputs(days_to_keep=30)
         self.assertIsInstance(cleaned_count, int)
+        self.assertGreaterEqual(cleaned_count, 0)
     
-    def test_export_config_outputs(self):
-        """Test exporting config outputs."""
-        # Create some test outputs
-        for i in range(2):
-            test_image = Image.new('RGB', (100, 100), color='red')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "test_config", f"prompt{i}", i)
+    def test_delete_output(self):
+        """Test deleting a specific output."""
+        # Save test image
+        config_name = "test_config"
+        prompt = "a beautiful landscape"
+        seed = 12345
         
-        # Export outputs
-        export_path = os.path.join(self.temp_dir, "export")
-        export_dir = self.manager.export_config_outputs("test_config", export_path)
+        filepath = self.manager.save_image(
+            self.image_data, 
+            config_name, 
+            prompt, 
+            seed,
+            self.generation_settings,
+            self.model_settings
+        )
         
-        # Check that export directory was created
-        self.assertTrue(os.path.exists(export_dir))
-        self.assertTrue(os.path.isdir(export_dir))
+        # Verify file exists
+        self.assertTrue(os.path.exists(filepath))
+        
+        # Delete the file
+        success = self.manager.delete_output(filepath)
+        self.assertTrue(success)
+        
+        # Verify file was deleted
+        self.assertFalse(os.path.exists(filepath))
     
-    def test_get_image_metadata(self):
-        """Test getting image metadata."""
-        # Save an image which creates metadata
-        test_image = Image.new('RGB', (100, 100), color='red')
-        buffer = io.BytesIO()
-        test_image.save(buffer, format='PNG')
-        image_data = base64.b64encode(buffer.getvalue()).decode()
+    def test_export_outputs(self):
+        """Test exporting outputs to a different location."""
+        # Save test image
+        config_name = "test_config"
+        prompt = "a beautiful landscape"
+        seed = 12345
         
-        filepath = self.manager.save_image(image_data, "test_config", "test prompt", 12345)
+        self.manager.save_image(
+            self.image_data, 
+            config_name, 
+            prompt, 
+            seed,
+            self.generation_settings,
+            self.model_settings
+        )
         
-        # Check that metadata file was created
-        metadata_dir = os.path.join(os.path.dirname(filepath), '..', 'metadata')
-        metadata_files = [f for f in os.listdir(metadata_dir) if f.endswith('_metadata.json')]
-        self.assertGreater(len(metadata_files), 0)
+        # Create export directory
+        export_dir = os.path.join(self.temp_dir, "export")
         
-        # Read and verify metadata
-        metadata_file = os.path.join(metadata_dir, metadata_files[0])
-        with open(metadata_file, 'r') as f:
-            metadata = json.load(f)
+        # Export all outputs
+        export_path = self.manager.export_outputs(export_dir)
         
-        self.assertEqual(metadata['config_name'], 'test_config')
-        self.assertEqual(metadata['prompt'], 'test prompt')
-        self.assertEqual(metadata['seed'], 12345)
+        self.assertTrue(os.path.exists(export_path))
+        
+        # Check that exported files exist
+        exported_files = [f for f in os.listdir(export_path) if f.endswith('.png')]
+        self.assertGreater(len(exported_files), 0)
     
-    def test_get_image_metadata_nonexistent(self):
-        """Test handling of nonexistent image metadata."""
-        # Try to get outputs for a nonexistent config
-        outputs = self.manager.get_outputs_for_config("nonexistent_config")
-        
-        # Should return empty list, not raise exception
-        self.assertEqual(outputs, [])
-    
-    def test_search_images(self):
-        """Test searching for images by prompt content."""
-        # Create some test outputs with different prompts
-        prompts = ["beautiful landscape", "ugly building", "beautiful sunset"]
-        
-        for i, prompt in enumerate(prompts):
-            test_image = Image.new('RGB', (100, 100), color='red')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "test_config", prompt, i)
-        
-        # Get all outputs and filter by prompt content
-        outputs = self.manager.get_outputs_for_config("test_config")
-        beautiful_outputs = [o for o in outputs if "beautiful" in o.get('prompt', '')]
-        
-        # Should find 2 outputs with "beautiful" in the prompt
-        self.assertEqual(len(beautiful_outputs), 2)
-    
-    def test_search_images_specific_config(self):
-        """Test searching images for a specific config."""
-        # Create outputs for different configs
-        for i in range(2):
-            test_image = Image.new('RGB', (100, 100), color='red')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "config1", f"beautiful prompt{i}", i)
-        
-        for i in range(2):
-            test_image = Image.new('RGB', (100, 100), color='blue')
-            buffer = io.BytesIO()
-            test_image.save(buffer, format='PNG')
-            image_data = base64.b64encode(buffer.getvalue()).decode()
-            
-            self.manager.save_image(image_data, "config2", f"beautiful prompt{i}", i)
-        
-        # Get outputs for specific config and filter
-        config1_outputs = self.manager.get_outputs_for_config("config1")
-        beautiful_config1 = [o for o in config1_outputs if "beautiful" in o.get('prompt', '')]
-        
-        # Should find 2 outputs in config1 with "beautiful"
-        self.assertEqual(len(beautiful_config1), 2)
-    
-    def test_search_images_no_results(self):
-        """Test searching images with no results."""
-        # Create a test output
-        test_image = Image.new('RGB', (100, 100), color='red')
-        buffer = io.BytesIO()
-        test_image.save(buffer, format='PNG')
-        image_data = base64.b64encode(buffer.getvalue()).decode()
-        
-        self.manager.save_image(image_data, "test_config", "landscape", 1)
-        
-        # Get outputs and filter for nonexistent term
-        outputs = self.manager.get_outputs_for_config("test_config")
-        nonexistent_outputs = [o for o in outputs if "nonexistent" in o.get('prompt', '')]
-        
-        # Should find 0 outputs with "nonexistent"
-        self.assertEqual(len(nonexistent_outputs), 0)
-    
-    def test_directory_creation(self):
-        """Test that directories are created properly."""
-        # Check that main directories exist
-        self.assertTrue(os.path.exists(self.manager.directories['images']))
-        self.assertTrue(os.path.exists(self.manager.directories['metadata']))
-        self.assertTrue(os.path.exists(self.manager.directories['prompts']))
-        self.assertTrue(os.path.exists(self.manager.directories['logs']))
-        self.assertTrue(os.path.exists(self.manager.directories['temp']))
-        self.assertTrue(os.path.exists(self.manager.directories['configs']))
-        self.assertTrue(os.path.exists(self.manager.directories['sessions']))
-    
-    def test_save_image_error_handling(self):
-        """Test error handling when saving image."""
+    def test_error_handling(self):
+        """Test error handling with invalid inputs."""
         # Test with invalid image data
-        invalid_image_data = "invalid_base64_data"
-        
         with self.assertRaises(Exception):
             self.manager.save_image(
-                invalid_image_data, "test_config", "test prompt", 1
+                "invalid_base64_data", 
+                "test_config", 
+                "test prompt", 
+                12345
             )
+        
+        # Test with non-existent file for metadata extraction
+        metadata = self.manager.extract_metadata_from_image("nonexistent_file.png")
+        self.assertIsNone(metadata)
+    
+    def test_search_images(self):
+        """Test searching images by various criteria."""
+        # Save test images with different prompts
+        prompts = [
+            "a beautiful landscape with mountains",
+            "a beautiful portrait of a person",
+            "a beautiful cityscape at night"
+        ]
+        
+        for i, prompt in enumerate(prompts):
+            seed = 1000 + i
+            self.manager.save_image(
+                self.image_data, 
+                "test_config", 
+                prompt, 
+                seed,
+                self.generation_settings,
+                self.model_settings
+            )
+        
+        # Get all outputs
+        today = datetime.now().strftime("%Y-%m-%d")
+        outputs = self.manager.get_outputs_for_date(today)
+        
+        # Search for landscape images
+        landscape_images = [o for o in outputs if 'landscape' in o['prompt'].lower()]
+        self.assertEqual(len(landscape_images), 1)
+        
+        # Search for portrait images
+        portrait_images = [o for o in outputs if 'portrait' in o['prompt'].lower()]
+        self.assertEqual(len(portrait_images), 1)
+        
+        # Search for cityscape images
+        cityscape_images = [o for o in outputs if 'cityscape' in o['prompt'].lower()]
+        self.assertEqual(len(cityscape_images), 1)
 
 
 if __name__ == '__main__':

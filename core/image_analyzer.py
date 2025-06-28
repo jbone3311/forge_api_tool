@@ -60,17 +60,44 @@ class ImageAnalyzer:
     def _extract_metadata_from_image(self, image: Image.Image) -> Optional[Dict[str, Any]]:
         """Extract metadata from image."""
         try:
+            metadata = {}
+            
             # Try to get EXIF data
-            exif = image.getexif()
-            if exif:
-                return dict(exif)
+            try:
+                exif = image.getexif()
+                if exif:
+                    metadata.update(dict(exif))
+            except Exception:
+                pass
             
-            # Try to get other metadata
+            # Try to get PNG-specific metadata
             if hasattr(image, 'info') and image.info:
-                return image.info
+                metadata.update(image.info)
             
-            return None
-        except Exception:
+            # Try to get PNG text chunks (common in AI-generated images)
+            if hasattr(image, 'text') and image.text:
+                metadata.update(image.text)
+            
+            # Try to get PNG metadata chunks
+            if hasattr(image, '_getexif') and image._getexif:
+                png_metadata = image._getexif()
+                if png_metadata:
+                    metadata.update(png_metadata)
+            
+            # Look for specific PNG chunks that might contain generation data
+            if hasattr(image, 'info') and image.info:
+                # Check for common PNG text chunks used by AI generators
+                text_chunks = ['parameters', 'prompt', 'negative_prompt', 'generation_data', 
+                              'comfyui_workflow', 'automatic1111_metadata', 'generation_settings']
+                
+                for chunk in text_chunks:
+                    if chunk in image.info:
+                        metadata[chunk] = image.info[chunk]
+            
+            return metadata if metadata else None
+            
+        except Exception as e:
+            print(f"Error extracting metadata: {e}")
             return None
     
     def _extract_parameters(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
@@ -79,7 +106,10 @@ class ImageAnalyzer:
         
         # Look for common parameter keys
         parameter_keys = ['parameters', 'prompt', 'negative_prompt', 'steps', 'cfg_scale', 
-                         'sampler', 'seed', 'width', 'height', 'model', 'vae']
+                         'sampler', 'seed', 'width', 'height', 'model', 'vae', 'denoising_strength',
+                         'clip_skip', 'restore_faces', 'tiling', 'hires_fix', 'hires_steps',
+                         'hires_upscaler', 'hires_denoising', 'subseed', 'subseed_strength',
+                         'text_encoder', 'model_hash', 'vae_hash', 'lora', 'embedding']
         
         for key in parameter_keys:
             if key in metadata:
@@ -90,14 +120,38 @@ class ImageAnalyzer:
             parsed_params = self._parse_parameters_string(metadata['parameters'])
             params.update(parsed_params)
         
+        # Try to parse generation_data if present
+        if 'generation_data' in metadata:
+            try:
+                gen_data = json.loads(metadata['generation_data'])
+                if isinstance(gen_data, dict):
+                    params.update(gen_data)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Try to parse automatic1111_metadata if present
+        if 'automatic1111_metadata' in metadata:
+            try:
+                a1111_data = json.loads(metadata['automatic1111_metadata'])
+                if isinstance(a1111_data, dict):
+                    params.update(a1111_data)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # If we have individual prompt fields, use them (but don't override parsed ones)
+        if 'prompt' in metadata and not params.get('prompt'):
+            params['prompt'] = metadata['prompt']
+        if 'negative_prompt' in metadata and not params.get('negative_prompt'):
+            params['negative_prompt'] = metadata['negative_prompt']
+        
         return params
     
     def _parse_parameters_string(self, param_string: str) -> Dict[str, Any]:
         """Parse parameters string to extract individual values."""
         params = {}
         
-        # Extract prompt and negative prompt
-        prompt_match = re.search(r'^([^,]+?)(?:,|$)', param_string)
+        # Extract prompt (up to ', Steps:' or ', Negative prompt:' or end)
+        prompt_match = re.search(r'^(.*?)(?:,\s*Steps:|,\s*Negative prompt:|$)', param_string)
         if prompt_match:
             params['prompt'] = prompt_match.group(1).strip()
         
@@ -106,7 +160,7 @@ class ImageAnalyzer:
         if neg_prompt_match:
             params['negative_prompt'] = neg_prompt_match.group(1).strip()
         
-        # Extract other parameters
+        # Extract other parameters with enhanced patterns
         param_patterns = {
             'steps': r'Steps: (\d+)',
             'cfg_scale': r'CFG scale: ([\d.]+)',
@@ -114,7 +168,22 @@ class ImageAnalyzer:
             'seed': r'Seed: (\d+)',
             'width': r'Size: (\d+)x(\d+)',
             'model': r'Model: ([^,]+)',
-            'vae': r'VAE: ([^,]+)'
+            'vae': r'VAE: ([^,]+)',
+            'denoising_strength': r'Denoising strength: ([\d.]+)',
+            'clip_skip': r'Clip skip: (\d+)',
+            'restore_faces': r'Restore faces: ([^,]+)',
+            'tiling': r'Tiling: ([^,]+)',
+            'hires_fix': r'Hires fix: ([^,]+)',
+            'hires_steps': r'Hires steps: (\d+)',
+            'hires_upscaler': r'Hires upscaler: ([^,]+)',
+            'hires_denoising': r'Hires denoising: ([\d.]+)',
+            'subseed': r'Subseed: (\d+)',
+            'subseed_strength': r'Subseed strength: ([\d.]+)',
+            'text_encoder': r'Text encoder: ([^,]+)',
+            'model_hash': r'Model hash: ([a-f0-9]+)',
+            'vae_hash': r'VAE hash: ([a-f0-9]+)',
+            'lora': r'LoRA: ([^,]+)',
+            'embedding': r'Embedding: ([^,]+)'
         }
         
         for param_name, pattern in param_patterns.items():
@@ -123,6 +192,10 @@ class ImageAnalyzer:
                 if param_name == 'width':
                     params['width'] = int(match.group(1))
                     params['height'] = int(match.group(2))
+                elif param_name in ['steps', 'clip_skip', 'hires_steps', 'subseed']:
+                    params[param_name] = int(match.group(1))
+                elif param_name in ['cfg_scale', 'denoising_strength', 'hires_denoising', 'subseed_strength']:
+                    params[param_name] = float(match.group(1))
                 else:
                     params[param_name] = match.group(1)
         
@@ -136,7 +209,7 @@ class ImageAnalyzer:
             'wildcards': []
         }
         
-        # Extract prompt
+        # Extract prompt - prioritize individual prompt field over parameters string
         if 'prompt' in metadata:
             prompt_info['prompt'] = metadata['prompt']
         elif 'parameters' in metadata:
@@ -145,9 +218,14 @@ class ImageAnalyzer:
             if prompt_match:
                 prompt_info['prompt'] = prompt_match.group(1).strip()
         
-        # Extract negative prompt
+        # Extract negative prompt - prioritize individual negative_prompt field
         if 'negative_prompt' in metadata:
             prompt_info['negative_prompt'] = metadata['negative_prompt']
+        elif 'parameters' in metadata:
+            # Try to extract negative prompt from parameters
+            neg_prompt_match = re.search(r'Negative prompt: ([^,]+?)(?:,|$)', metadata['parameters'])
+            if neg_prompt_match:
+                prompt_info['negative_prompt'] = neg_prompt_match.group(1).strip()
         
         # Detect potential wildcards in prompt
         if prompt_info['prompt']:
@@ -334,29 +412,19 @@ class ImageAnalyzer:
         
         return enhanced
     
-    def analyze_multiple_images(self, image_paths: List[str]) -> List[Dict[str, Any]]:
+    def analyze_multiple_images(self, image_data_list: List[str]) -> List[Dict[str, Any]]:
         """Analyze multiple images for batch processing."""
         results = []
         
-        for path in image_paths:
+        for image_data in image_data_list:
             try:
-                # For now, return basic info since we can't easily decode file paths
-                results.append({
-                    'path': path,
-                    'analysis': {
-                        'success': True,
-                        'metadata': {},
-                        'parameters': {},
-                        'prompt_info': {'prompt': '', 'negative_prompt': '', 'wildcards': []}
-                    }
-                })
+                # Analyze each image using the existing method
+                result = self.analyze_image(image_data)
+                results.append(result)
             except Exception as e:
                 results.append({
-                    'path': path,
-                    'analysis': {
-                        'success': False,
-                        'error': str(e)
-                    }
+                    'success': False,
+                    'error': str(e)
                 })
         
         return results

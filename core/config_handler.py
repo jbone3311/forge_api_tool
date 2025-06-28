@@ -313,10 +313,56 @@ class ConfigHandler:
             config_path = os.path.join(self.config_dir, f"{config_name}.json")
             if os.path.exists(config_path):
                 os.remove(config_path)
+                logger.log_app_event("config_deleted", {"config_name": config_name})
+                return True
             else:
-                raise FileNotFoundError(f"Config {config_name} not found")
+                logger.warning(f"Config file not found for deletion: {config_path}")
+                return False
         except Exception as e:
-            raise ValueError(f"Error deleting config {config_name}: {e}")
+            logger.log_error(f"Failed to delete config {config_name}: {e}")
+            return False
+    
+    def create_config(self, config_name: str, config_data: Dict[str, Any]) -> bool:
+        """Create a new configuration file."""
+        try:
+            # Validate the config structure
+            self._validate_config(config_data, config_name)
+            
+            # Save the config
+            self.save_config(config_name, config_data)
+            
+            logger.log_app_event("config_created", {
+                "config_name": config_name,
+                "model_type": config_data.get('model_type', 'unknown')
+            })
+            
+            return True
+        except Exception as e:
+            logger.log_error(f"Failed to create config {config_name}: {e}")
+            return False
+    
+    def update_config(self, config_name: str, config_data: Dict[str, Any]) -> bool:
+        """Update an existing configuration file."""
+        try:
+            # Check if config exists
+            if not self.config_exists(config_name):
+                raise FileNotFoundError(f"Config {config_name} not found")
+            
+            # Validate the config structure
+            self._validate_config(config_data, config_name)
+            
+            # Save the updated config
+            self.save_config(config_name, config_data)
+            
+            logger.log_app_event("config_updated", {
+                "config_name": config_name,
+                "model_type": config_data.get('model_type', 'unknown')
+            })
+            
+            return True
+        except Exception as e:
+            logger.log_error(f"Failed to update config {config_name}: {e}")
+            return False
     
     def get_config_summary(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Get a summary of configuration for display."""

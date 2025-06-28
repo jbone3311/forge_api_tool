@@ -1,191 +1,260 @@
 #!/usr/bin/env python3
 """
-Comprehensive test suite for Forge API Tool.
-Organized by test type: unit, integration, functional, debug
+Comprehensive test runner for the Forge API Tool.
+Runs all unit, integration, and functional tests.
 """
 
+import unittest
 import sys
 import os
 import time
-import argparse
 from datetime import datetime
-from pathlib import Path
 
 # Add the project root to the path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
 
-def run_test_category(category: str, test_dir: str) -> dict:
-    """Run all tests in a specific category."""
-    print(f"\n{'='*60}")
-    print(f"TESTING {category.upper()}")
-    print(f"{'='*60}")
-    
-    results = {}
-    test_path = Path(test_dir)
-    
-    if not test_path.exists():
-        print(f"⚠️  Test directory {test_dir} not found")
-        return results
-    
-    # Find all test files in the category
-    test_files = list(test_path.glob("test_*.py"))
-    
-    if not test_files:
-        print(f"⚠️  No test files found in {test_dir}")
-        return results
-    
-    for test_file in sorted(test_files):
-        test_name = test_file.stem
-        print(f"\nRunning {test_name}...")
-        
-        try:
-            # Set up the Python path for this test
-            test_dir_path = test_file.parent
-            project_root = test_dir_path.parent.parent
-            
-            # Create a temporary environment for the test
-            import subprocess
-            import sys
-            
-            # Run the test as a subprocess with proper path setup
-            env = os.environ.copy()
-            env['PYTHONPATH'] = f"{project_root}:{env.get('PYTHONPATH', '')}"
-            
-            result = subprocess.run([
-                sys.executable, str(test_file)
-            ], 
-            cwd=project_root,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=30)
-            
-            if result.returncode == 0:
-                results[test_name] = "✓ PASS"
-                print(f"✓ {test_name}: PASS")
-                if result.stdout.strip():
-                    print(f"  Output: {result.stdout.strip()}")
-            else:
-                results[test_name] = f"✗ FAIL: {result.stderr.strip() if result.stderr else 'Unknown error'}"
-                print(f"✗ {test_name}: FAIL")
-                if result.stderr.strip():
-                    print(f"  Error: {result.stderr.strip()}")
-                
-        except subprocess.TimeoutExpired:
-            results[test_name] = "✗ FAIL: Timeout"
-            print(f"✗ {test_name}: FAIL - Timeout")
-        except Exception as e:
-            results[test_name] = f"✗ FAIL: {e}"
-            print(f"✗ {test_name}: FAIL - {e}")
-    
-    return results
-
-def run_comprehensive_tests():
-    """Run all tests in organized categories."""
-    print("FORGE API TOOL - COMPREHENSIVE TEST SUITE")
+def run_all_tests():
+    """Run all tests and return results."""
+    print("🧪 Forge API Tool - Comprehensive Test Suite")
+    print("=" * 60)
     print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("="*60)
+    print()
     
-    all_results = {}
+    # Create test suite
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
     
     # Test categories
-    test_categories = [
-        ("UNIT TESTS", "tests/unit"),
-        ("INTEGRATION TESTS", "tests/integration"), 
-        ("FUNCTIONAL TESTS", "tests/functional"),
-        ("DEBUG TESTS", "tests/debug")
-    ]
+    test_categories = {
+        'Unit Tests': [
+            'tests.unit.test_config_handler',
+            'tests.unit.test_image_analyzer',
+            'tests.unit.test_output_manager',
+            'tests.unit.test_wildcard_manager',
+            'tests.unit.test_imports'
+        ],
+        'Integration Tests': [
+            'tests.integration.test_api_comprehensive',
+            'tests.integration.test_api_simple',
+            'tests.integration.test_endpoint_coverage',
+            'tests.integration.test_error_handling',
+            'tests.integration.test_forge_api',
+            'tests.integration.test_forge_direct',
+            'tests.integration.test_forge_endpoints',
+            'tests.integration.test_integration',
+            'tests.integration.test_performance',
+            'tests.integration.test_permissions',
+            'tests.integration.test_image_analysis_endpoints'
+        ],
+        'Functional Tests': [
+            'tests.functional.test_completed_prompts',
+            'tests.functional.test_generation',
+            'tests.functional.test_preview_wildcards',
+            'tests.functional.test_status_indicators',
+            'tests.functional.test_template_loading',
+            'tests.functional.test_template_prompt_loading',
+            'tests.functional.test_templates',
+            'tests.functional.test_image_analysis_frontend'
+        ]
+    }
     
-    for category_name, test_dir in test_categories:
-        category_results = run_test_category(category_name, test_dir)
-        all_results[category_name] = category_results
+    # Add tests to suite
+    total_tests = 0
+    for category, test_modules in test_categories.items():
+        print(f"📋 Loading {category}...")
+        category_tests = 0
+        
+        for module_name in test_modules:
+            try:
+                # Load the test module
+                module = __import__(module_name, fromlist=[''])
+                
+                # Add all tests from the module
+                module_suite = loader.loadTestsFromModule(module)
+                suite.addTest(module_suite)
+                
+                # Count tests in this module
+                module_test_count = module_suite.countTestCases()
+                category_tests += module_test_count
+                total_tests += module_test_count
+                
+                print(f"  ✅ {module_name}: {module_test_count} tests")
+                
+            except ImportError as e:
+                print(f"  ❌ {module_name}: Import failed - {e}")
+            except Exception as e:
+                print(f"  ❌ {module_name}: Loading failed - {e}")
+        
+        print(f"  📊 {category}: {category_tests} tests loaded")
+        print()
+    
+    print(f"🎯 Total tests loaded: {total_tests}")
+    print("=" * 60)
+    print()
+    
+    # Run tests
+    start_time = time.time()
+    
+    # Create test runner with detailed output
+    runner = unittest.TextTestRunner(
+        verbosity=2,
+        stream=sys.stdout,
+        descriptions=True,
+        failfast=False
+    )
+    
+    # Run the test suite
+    result = runner.run(suite)
+    
+    end_time = time.time()
+    duration = end_time - start_time
     
     # Print summary
-    print(f"\n{'='*60}")
-    print("TEST SUMMARY")
-    print(f"{'='*60}")
+    print()
+    print("=" * 60)
+    print("📊 TEST SUMMARY")
+    print("=" * 60)
+    print(f"Total tests run: {result.testsRun}")
+    print(f"Failures: {len(result.failures)}")
+    print(f"Errors: {len(result.errors)}")
+    print(f"Skipped: {len(result.skipped) if hasattr(result, 'skipped') else 0}")
+    print(f"Duration: {duration:.2f} seconds")
+    print()
     
-    total_tests = 0
-    passed_tests = 0
-    failed_tests = 0
+    # Print detailed results
+    if result.failures:
+        print("❌ FAILURES:")
+        print("-" * 30)
+        for test, traceback in result.failures:
+            print(f"Test: {test}")
+            print(f"Traceback:\n{traceback}")
+            print()
     
-    for category_name, category_results in all_results.items():
-        print(f"\n{category_name}:")
-        for test_name, result in category_results.items():
-            print(f"  {test_name}: {result}")
-            total_tests += 1
-            if "✓ PASS" in result:
-                passed_tests += 1
-            elif "✗ FAIL" in result:
-                failed_tests += 1
+    if result.errors:
+        print("🚨 ERRORS:")
+        print("-" * 30)
+        for test, traceback in result.errors:
+            print(f"Test: {test}")
+            print(f"Traceback:\n{traceback}")
+            print()
     
-    print(f"\nSUMMARY:")
-    print(f"  Total tests: {total_tests}")
-    print(f"  Passed: {passed_tests}")
-    print(f"  Failed: {failed_tests}")
-    print(f"  Warnings: {total_tests - passed_tests - failed_tests}")
+    # Print success rate
+    success_rate = ((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100) if result.testsRun > 0 else 0
+    print(f"✅ Success Rate: {success_rate:.1f}%")
     
-    if failed_tests > 0:
-        print(f"\n❌ {failed_tests} TESTS FAILED ❌")
+    # Return appropriate exit code
+    if result.failures or result.errors:
+        print("❌ Some tests failed!")
+        return 1
     else:
-        print(f"\n✅ ALL TESTS PASSED ✅")
-    
-    return failed_tests == 0
+        print("🎉 All tests passed!")
+        return 0
 
-def run_quick_tests():
-    """Run only essential tests for quick validation."""
-    print("Running quick validation tests...")
-    
-    # Test core imports
-    try:
-        from tests.unit.test_imports import test_imports
-        success = test_imports()
-        if success:
-            print("✅ Core imports working")
-        else:
-            print("❌ Core imports failed")
-            return False
-    except Exception as e:
-        print(f"❌ Import test failed: {e}")
-        return False
-    
-    # Test basic functionality
-    try:
-        from core.config_handler import config_handler
-        configs = config_handler.list_configs()
-        print(f"✅ Config handler working ({len(configs)} configs found)")
-    except Exception as e:
-        print(f"❌ Config handler failed: {e}")
-        return False
-    
-    return True
 
-def main():
-    """Main test runner with command line options."""
-    parser = argparse.ArgumentParser(description="Forge API Tool Test Suite")
-    parser.add_argument("--quick", action="store_true", help="Run only quick validation tests")
-    parser.add_argument("--category", choices=["unit", "integration", "functional", "debug"], 
-                       help="Run tests from specific category only")
+def run_specific_category(category):
+    """Run tests from a specific category."""
+    categories = {
+        'unit': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'unit'),
+        'integration': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'integration'), 
+        'functional': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'functional')
+    }
+    
+    if category not in categories:
+        print(f"❌ Unknown category: {category}")
+        print(f"Available categories: {', '.join(categories.keys())}")
+        return 1
+    
+    print(f"🧪 Running {category} tests...")
+    
+    # Create test suite for specific category
+    loader = unittest.TestLoader()
+    
+    # Add the category directory to Python path
+    category_path = categories[category]
+    if category_path not in sys.path:
+        sys.path.insert(0, category_path)
+    
+    # Discover tests in the category directory
+    suite = loader.discover(category_path, pattern='test_*.py')
+    
+    # Run tests
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+    
+    return 0 if not (result.failures or result.errors) else 1
+
+
+def run_specific_test(test_name):
+    """Run a specific test."""
+    print(f"🧪 Running specific test: {test_name}")
+    
+    # Create test suite for specific test
+    loader = unittest.TestLoader()
+    suite = loader.loadTestsFromName(test_name)
+    
+    # Run test
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+    
+    return 0 if not (result.failures or result.errors) else 1
+
+
+if __name__ == '__main__':
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Run Forge API Tool tests')
+    parser.add_argument('--category', '-c', choices=['unit', 'integration', 'functional'],
+                       help='Run tests from a specific category')
+    parser.add_argument('--test', '-t', help='Run a specific test')
+    parser.add_argument('--list', '-l', action='store_true', help='List all available tests')
     
     args = parser.parse_args()
     
-    if args.quick:
-        success = run_quick_tests()
-    elif args.category:
-        category_map = {
-            "unit": "tests/unit",
-            "integration": "tests/integration", 
-            "functional": "tests/functional",
-            "debug": "tests/debug"
-        }
-        test_dir = category_map[args.category]
-        results = run_test_category(args.category.upper(), test_dir)
-        success = all("✓ PASS" in result for result in results.values())
-    else:
-        success = run_comprehensive_tests()
+    if args.list:
+        print("📋 Available test categories:")
+        print("  unit - Unit tests for individual components")
+        print("  integration - Integration tests for API endpoints")
+        print("  functional - Functional tests for user workflows")
+        print()
+        print("📋 Available test modules:")
+        
+        # List all test modules
+        test_modules = [
+            'tests.unit.test_config_handler',
+            'tests.unit.test_image_analyzer', 
+            'tests.unit.test_output_manager',
+            'tests.unit.test_wildcard_manager',
+            'tests.unit.test_imports',
+            'tests.integration.test_api_comprehensive',
+            'tests.integration.test_api_simple',
+            'tests.integration.test_endpoint_coverage',
+            'tests.integration.test_error_handling',
+            'tests.integration.test_forge_api',
+            'tests.integration.test_forge_direct',
+            'tests.integration.test_forge_endpoints',
+            'tests.integration.test_integration',
+            'tests.integration.test_performance',
+            'tests.integration.test_permissions',
+            'tests.integration.test_image_analysis_endpoints',
+            'tests.functional.test_completed_prompts',
+            'tests.functional.test_generation',
+            'tests.functional.test_preview_wildcards',
+            'tests.functional.test_status_indicators',
+            'tests.functional.test_template_loading',
+            'tests.functional.test_template_prompt_loading',
+            'tests.functional.test_templates',
+            'tests.functional.test_image_analysis_frontend'
+        ]
+        
+        for module in test_modules:
+            print(f"  {module}")
+        
+        sys.exit(0)
     
-    sys.exit(0 if success else 1)
-
-if __name__ == "__main__":
-    main() 
+    if args.category:
+        sys.exit(run_specific_category(args.category))
+    elif args.test:
+        sys.exit(run_specific_test(args.test))
+    else:
+        sys.exit(run_all_tests()) 

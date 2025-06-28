@@ -1211,4 +1211,280 @@ input:checked + .toggle-slider:before {
     background: #fff3cd;
     color: #856404;
     border: 1px solid #ffeaa7;
+}
+
+/* Image Analysis Section */
+.image-analysis-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.image-drop-zone {
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin: 1rem;
+}
+
+.image-drop-zone:hover {
+    border-color: #007bff;
+    background: #f0f8ff;
+}
+
+.image-drop-zone.dragover {
+    border-color: #007bff;
+    background: #e3f2fd;
+    transform: scale(1.02);
+}
+
+.drop-zone-content {
+    color: #6c757d;
+}
+
+.drop-zone-content i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #007bff;
+}
+
+.drop-zone-content h4 {
+    margin: 0.5rem 0;
+    color: #495057;
+}
+
+.drop-zone-content p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.analysis-results {
+    padding: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.analysis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.analysis-header h4 {
+    margin: 0;
+    color: #495057;
+}
+
+.analysis-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#analysis-selector {
+    min-width: 200px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    font-size: 0.9rem;
+}
+
+#analysis-selector:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.analysis-content {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.analysis-image {
+    text-align: center;
+}
+
+.analysis-image img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.analysis-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.detail-group {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+
+.detail-group h5 {
+    margin: 0 0 0.5rem 0;
+    color: #495057;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.detail-item:last-child {
+    margin-bottom: 0;
+}
+
+.detail-label {
+    font-weight: 500;
+    color: #6c757d;
+    min-width: 120px;
+}
+
+.detail-value {
+    color: #495057;
+    text-align: right;
+    word-break: break-word;
+    max-width: 200px;
+}
+
+/* Config Editor Styles */
+.config-editor-tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: #6c757d;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    color: #007bff;
+    background: #f8f9fa;
+}
+
+.tab-btn.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+    background: #f8f9fa;
+}
+
+.config-editor-content {
+    min-height: 400px;
+}
+
+.config-tab {
+    display: none;
+}
+
+.config-tab.active {
+    display: block;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+}
+
+.analysis-summary {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+
+.analysis-summary h5 {
+    margin: 0 0 0.5rem 0;
+    color: #495057;
+}
+
+#create-config-summary {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Responsive Design for Image Analysis */
+@media (max-width: 768px) {
+    .analysis-content {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .analysis-image {
+        text-align: center;
+    }
+    
+    .analysis-image img {
+        max-height: 150px;
+    }
+    
+    .config-editor-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+        flex: 1;
+        min-width: 100px;
+        text-align: center;
+    }
+    
+    .detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .detail-value {
+        text-align: left;
+        max-width: none;
+    }
+}
+
+/* Modal Large Size */
+.modal-large .modal-content {
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 1200px;
+}
+
+.modal-large .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
 } 

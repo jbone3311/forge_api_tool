@@ -4,6 +4,10 @@
 let socket;
 let statusUpdateInterval;
 let currentBatchPreview = null;
+let currentAnalysisResult = null;
+let currentEditingConfig = null;
+let analyzedImages = []; // Array to store multiple analyzed images
+let selectedAnalysisIndex = 0; // Index of currently selected analysis
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -13,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadInitialData();
     setupEventListeners();
     loadCurrentAPIState();
+    initializeImageDropZone();
 });
 
 // Socket.IO initialization
@@ -336,20 +341,20 @@ function showCreateTemplateModal() {
 
 function editTemplate(configName) {
     console.log('Editing template:', configName);
-    fetch(`/api/configs/${configName}`)
+    fetch(`/api/configs/${configName}/settings`)
         .then(response => response.json())
         .then(data => {
-            const nameEl = document.getElementById('edit-template-name');
-            const configEl = document.getElementById('edit-template-config');
-            const modal = document.getElementById('edit-template-modal');
+            if (data.error) {
+                updateNotification(`Failed to load config: ${data.error}`, 'error');
+                return;
+            }
             
-            if (nameEl) nameEl.value = configName;
-            if (configEl) configEl.value = JSON.stringify(data, null, 2);
-            if (modal) modal.style.display = 'block';
+            loadConfigIntoEditor(data.settings);
+            openModal('config-editor-modal');
         })
         .catch(error => {
-            console.error('Failed to load template:', error);
-            updateNotification('Failed to load template', 'error');
+            console.error('Error loading config:', error);
+            updateNotification('Failed to load config', 'error');
         });
 }
 
@@ -1016,7 +1021,16 @@ function clearLogs() {
 // Modal Management
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
 function closeAllModals() {
@@ -1371,4 +1385,605 @@ function loadCurrentAPIState() {
         .catch(error => {
             console.error('Failed to load current API state:', error);
         });
+}
+
+// Image Analysis and Config Management
+function initializeImageDropZone() {
+    const dropZone = document.getElementById('image-drop-zone');
+    const fileInput = document.getElementById('image-file-input');
+    
+    if (!dropZone || !fileInput) return;
+    
+    // Click to select file
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            handleImageFile(file);
+        }
+    });
+    
+    // Drag and drop events
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleImageFile(files[0]);
+        }
+    });
+}
+
+function handleImageFile(file) {
+    if (!file.type.startsWith('image/')) {
+        updateNotification('Please select an image file', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imageData = e.target.result;
+        analyzeImage(imageData);
+    };
+    reader.readAsDataURL(file);
+}
+
+function analyzeImage(imageData) {
+    updateNotification('Analyzing image...', 'info');
+    
+    fetch('/api/analyze-image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image_data: imageData })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            updateNotification(`Analysis failed: ${data.error}`, 'error');
+            return;
+        }
+        
+        // Add timestamp and filename to the analysis result
+        data.timestamp = new Date().toISOString();
+        data.filename = `analyzed_image_${analyzedImages.length + 1}`;
+        
+        // Add to analyzed images array
+        analyzedImages.push(data);
+        selectedAnalysisIndex = analyzedImages.length - 1;
+        currentAnalysisResult = data;
+        
+        displayAnalysisResults(data);
+        updateAnalysisSelector();
+        
+        updateNotification(`Image analysis completed (${analyzedImages.length} total)`, 'success');
+    })
+    .catch(error => {
+        console.error('Error analyzing image:', error);
+        updateNotification('Failed to analyze image', 'error');
+    });
+}
+
+function displayAnalysisResults(data) {
+    const resultsDiv = document.getElementById('analysis-results');
+    const imagePreview = document.getElementById('analysis-image-preview');
+    
+    if (!resultsDiv || !imagePreview) return;
+    
+    // Show results section
+    resultsDiv.style.display = 'block';
+    
+    // Set image preview
+    imagePreview.src = data.image_data || '';
+    
+    // Update analysis details
+    updateAnalysisDetail('analysis-dimensions', `${data.width} × ${data.height}`);
+    updateAnalysisDetail('analysis-format', data.format || 'Unknown');
+    
+    // Extract and display parameters
+    const params = data.parameters || {};
+    const promptInfo = data.prompt_info || {};
+    
+    // Basic settings
+    updateAnalysisDetail('analysis-prompt', promptInfo.prompt || params.prompt || 'Not found');
+    updateAnalysisDetail('analysis-negative-prompt', promptInfo.negative_prompt || params.negative_prompt || 'Not found');
+    updateAnalysisDetail('analysis-steps', params.steps || 'Not found');
+    updateAnalysisDetail('analysis-cfg-scale', params.cfg_scale || 'Not found');
+    updateAnalysisDetail('analysis-sampler', params.sampler || 'Not found');
+    updateAnalysisDetail('analysis-seed', params.seed || 'Not found');
+    updateAnalysisDetail('analysis-denoising-strength', params.denoising_strength || 'Not found');
+    updateAnalysisDetail('analysis-clip-skip', params.clip_skip || 'Not found');
+    updateAnalysisDetail('analysis-restore-faces', params.restore_faces || 'Not found');
+    updateAnalysisDetail('analysis-tiling', params.tiling || 'Not found');
+    
+    // Hires fix settings
+    updateAnalysisDetail('analysis-hires-fix', params.hires_fix || 'Not found');
+    updateAnalysisDetail('analysis-hires-steps', params.hires_steps || 'Not found');
+    updateAnalysisDetail('analysis-hires-upscaler', params.hires_upscaler || 'Not found');
+    updateAnalysisDetail('analysis-hires-denoising', params.hires_denoising || 'Not found');
+    
+    // Advanced settings
+    updateAnalysisDetail('analysis-subseed', params.subseed || 'Not found');
+    updateAnalysisDetail('analysis-subseed-strength', params.subseed_strength || 'Not found');
+    updateAnalysisDetail('analysis-text-encoder', params.text_encoder || 'Not found');
+    updateAnalysisDetail('analysis-model-hash', params.model_hash || 'Not found');
+    updateAnalysisDetail('analysis-vae-hash', params.vae_hash || 'Not found');
+    updateAnalysisDetail('analysis-lora', params.lora || 'Not found');
+    updateAnalysisDetail('analysis-embedding', params.embedding || 'Not found');
+    
+    // Model information
+    updateAnalysisDetail('analysis-model', params.model || 'Not found');
+    updateAnalysisDetail('analysis-vae', params.vae || 'Not found');
+    
+    updateNotification('Image analysis completed', 'success');
+}
+
+function updateAnalysisDetail(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+function clearImageAnalysis() {
+    const resultsDiv = document.getElementById('analysis-results');
+    const fileInput = document.getElementById('image-file-input');
+    
+    if (resultsDiv) {
+        resultsDiv.style.display = 'none';
+    }
+    
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    
+    // Clear all analyzed images
+    analyzedImages = [];
+    selectedAnalysisIndex = 0;
+    currentAnalysisResult = null;
+    
+    updateAnalysisSelector();
+    updateNotification('All analyses cleared', 'info');
+}
+
+function createConfigFromAnalysis() {
+    if (analyzedImages.length === 0) {
+        updateNotification('No analyzed images available', 'error');
+        return;
+    }
+    
+    if (selectedAnalysisIndex < 0 || selectedAnalysisIndex >= analyzedImages.length) {
+        updateNotification('Please select a valid analysis', 'error');
+        return;
+    }
+    
+    const selectedAnalysis = analyzedImages[selectedAnalysisIndex];
+    
+    // Populate the create config modal
+    const summaryDiv = document.getElementById('create-config-summary');
+    if (summaryDiv) {
+        const params = selectedAnalysis.parameters || {};
+        const promptInfo = selectedAnalysis.prompt_info || {};
+        
+        summaryDiv.innerHTML = `
+            <div><strong>Selected Image:</strong> ${selectedAnalysis.filename}</div>
+            <div><strong>Dimensions:</strong> ${selectedAnalysis.width} × ${selectedAnalysis.height}</div>
+            <div><strong>Prompt:</strong> ${promptInfo.prompt || params.prompt || 'Not found'}</div>
+            <div><strong>Steps:</strong> ${params.steps || 'Not found'}</div>
+            <div><strong>CFG Scale:</strong> ${params.cfg_scale || 'Not found'}</div>
+            <div><strong>Sampler:</strong> ${params.sampler || 'Not found'}</div>
+            <div><strong>Model:</strong> ${params.model || 'Not found'}</div>
+        `;
+    }
+    
+    // Set default config name
+    const configNameInput = document.getElementById('new-config-name');
+    if (configNameInput) {
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        configNameInput.value = `extracted_config_${selectedAnalysis.filename}_${timestamp}`;
+    }
+    
+    openModal('create-config-modal');
+}
+
+function confirmCreateConfig() {
+    const configName = document.getElementById('new-config-name').value.trim();
+    const description = document.getElementById('new-config-description').value.trim();
+    
+    if (!configName) {
+        updateNotification('Please enter a config name', 'error');
+        return;
+    }
+    
+    if (analyzedImages.length === 0) {
+        updateNotification('No analyzed images available', 'error');
+        return;
+    }
+    
+    if (selectedAnalysisIndex < 0 || selectedAnalysisIndex >= analyzedImages.length) {
+        updateNotification('Please select a valid analysis', 'error');
+        return;
+    }
+    
+    const selectedAnalysis = analyzedImages[selectedAnalysisIndex];
+    
+    const data = {
+        config_name: configName,
+        analysis_result: selectedAnalysis,
+        custom_settings: {
+            name: configName,
+            description: description || `Config created from image analysis - ${new Date().toLocaleString()}`
+        }
+    };
+    
+    fetch('/api/configs/create-from-image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            updateNotification(`Failed to create config: ${data.error}`, 'error');
+            return;
+        }
+        
+        updateNotification(`Config '${configName}' created successfully`, 'success');
+        closeModal('create-config-modal');
+        
+        // Refresh templates
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    })
+    .catch(error => {
+        console.error('Error creating config:', error);
+        updateNotification('Failed to create config', 'error');
+    });
+}
+
+function editAnalysisConfig() {
+    if (analyzedImages.length === 0) {
+        updateNotification('No analyzed images available', 'error');
+        return;
+    }
+    
+    if (selectedAnalysisIndex < 0 || selectedAnalysisIndex >= analyzedImages.length) {
+        updateNotification('Please select a valid analysis', 'error');
+        return;
+    }
+    
+    const selectedAnalysis = analyzedImages[selectedAnalysisIndex];
+    
+    // Populate the config editor with the selected analysis
+    loadConfigIntoEditor(selectedAnalysis);
+    
+    // Set the config name to indicate it's from analysis
+    const configNameInput = document.getElementById('config-name');
+    if (configNameInput) {
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        configNameInput.value = `extracted_config_${selectedAnalysis.filename}_${timestamp}`;
+    }
+    
+    openModal('config-editor-modal');
+}
+
+// Config Editor Functions
+function switchConfigTab(tabName) {
+    // Hide all tabs
+    const tabs = document.querySelectorAll('.config-tab');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    
+    // Show selected tab
+    const selectedTab = document.getElementById(`config-tab-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Add active class to clicked button
+    const clickedButton = event.target;
+    if (clickedButton) {
+        clickedButton.classList.add('active');
+    }
+}
+
+function loadConfigIntoEditor(config) {
+    currentEditingConfig = config;
+    
+    // Load basic settings
+    document.getElementById('config-name').value = config.name || '';
+    document.getElementById('config-description').value = config.description || '';
+    document.getElementById('config-model-type').value = config.model_type || 'sd';
+    
+    // Load prompt settings
+    const promptSettings = config.prompt_settings || {};
+    document.getElementById('config-base-prompt').value = promptSettings.base_prompt || '';
+    document.getElementById('config-negative-prompt').value = promptSettings.negative_prompt || '';
+    
+    // Load generation settings
+    const generationSettings = config.generation_settings || {};
+    document.getElementById('config-steps').value = generationSettings.steps || 20;
+    document.getElementById('config-cfg-scale').value = generationSettings.cfg_scale || 7.0;
+    document.getElementById('config-width').value = generationSettings.width || 512;
+    document.getElementById('config-height').value = generationSettings.height || 512;
+    document.getElementById('config-batch-size').value = generationSettings.batch_size || 1;
+    document.getElementById('config-sampler').value = generationSettings.sampler || 'Euler a';
+    
+    // Load model settings
+    const modelSettings = config.model_settings || {};
+    document.getElementById('config-checkpoint').value = modelSettings.checkpoint || '';
+    document.getElementById('config-vae').value = modelSettings.vae || '';
+    document.getElementById('config-text-encoder').value = modelSettings.text_encoder || '';
+    document.getElementById('config-gpu-weight').value = modelSettings.gpu_weight || 1.0;
+    document.getElementById('config-swap-method').value = modelSettings.swap_method || 'weight';
+    document.getElementById('config-swap-location').value = modelSettings.swap_location || 'cpu';
+    
+    // Load output settings
+    const outputSettings = config.output_settings || {};
+    document.getElementById('config-output-dir').value = outputSettings.dir || 'outputs/{config_name}/{timestamp}/';
+    document.getElementById('config-output-format').value = outputSettings.format || 'png';
+    document.getElementById('config-save-metadata').checked = outputSettings.save_metadata !== false;
+    document.getElementById('config-save-prompts').checked = outputSettings.save_prompts !== false;
+    
+    // Load raw JSON
+    document.getElementById('config-json').value = JSON.stringify(config, null, 2);
+}
+
+function saveConfigFromEditor() {
+    const configName = document.getElementById('config-name').value.trim();
+    
+    if (!configName) {
+        updateNotification('Please enter a config name', 'error');
+        return;
+    }
+    
+    // Build config object from form
+    const config = {
+        name: configName,
+        description: document.getElementById('config-description').value,
+        model_type: document.getElementById('config-model-type').value,
+        prompt_settings: {
+            base_prompt: document.getElementById('config-base-prompt').value,
+            negative_prompt: document.getElementById('config-negative-prompt').value
+        },
+        generation_settings: {
+            steps: parseInt(document.getElementById('config-steps').value),
+            cfg_scale: parseFloat(document.getElementById('config-cfg-scale').value),
+            width: parseInt(document.getElementById('config-width').value),
+            height: parseInt(document.getElementById('config-height').value),
+            batch_size: parseInt(document.getElementById('config-batch-size').value),
+            sampler: document.getElementById('config-sampler').value
+        },
+        model_settings: {
+            checkpoint: document.getElementById('config-checkpoint').value,
+            vae: document.getElementById('config-vae').value,
+            text_encoder: document.getElementById('config-text-encoder').value,
+            gpu_weight: parseFloat(document.getElementById('config-gpu-weight').value),
+            swap_method: document.getElementById('config-swap-method').value,
+            swap_location: document.getElementById('config-swap-location').value
+        },
+        output_settings: {
+            dir: document.getElementById('config-output-dir').value,
+            format: document.getElementById('config-output-format').value,
+            save_metadata: document.getElementById('config-save-metadata').checked,
+            save_prompts: document.getElementById('config-save-prompts').checked
+        }
+    };
+    
+    // Check if this is a new config or updating existing
+    const isNewConfig = !currentEditingConfig || !currentEditingConfig.name;
+    
+    if (isNewConfig) {
+        // Create new config
+        fetch('/api/configs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: configName,
+                config: config
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                updateNotification(`Failed to create config: ${data.error}`, 'error');
+                return;
+            }
+            
+            updateNotification(`Config "${configName}" created successfully`, 'success');
+            closeModal('config-editor-modal');
+            
+            // Refresh the page to show the new config
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Error creating config:', error);
+            updateNotification('Failed to create config', 'error');
+        });
+    } else {
+        // Update existing config
+        fetch(`/api/configs/${configName}/settings`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                settings: config
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                updateNotification(`Failed to update config: ${data.error}`, 'error');
+                return;
+            }
+            
+            updateNotification(`Config "${configName}" updated successfully`, 'success');
+            closeModal('config-editor-modal');
+            
+            // Refresh the page to show the updated config
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Error updating config:', error);
+            updateNotification('Failed to update config', 'error');
+        });
+    }
+}
+
+// Enhanced template editing function
+function editTemplate(configName) {
+    fetch(`/api/configs/${configName}/settings`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                updateNotification(`Failed to load config: ${data.error}`, 'error');
+                return;
+            }
+            
+            loadConfigIntoEditor(data.settings);
+            openModal('config-editor-modal');
+        })
+        .catch(error => {
+            console.error('Error loading config:', error);
+            updateNotification('Failed to load config', 'error');
+        });
+}
+
+function updateAnalysisSelector() {
+    const selector = document.getElementById('analysis-selector');
+    if (!selector) return;
+    
+    // Clear existing options
+    selector.innerHTML = '';
+    
+    if (analyzedImages.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No analyzed images';
+        option.disabled = true;
+        selector.appendChild(option);
+        return;
+    }
+    
+    // Add options for each analyzed image
+    analyzedImages.forEach((analysis, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${analysis.filename} (${analysis.width}x${analysis.height}) - ${new Date(analysis.timestamp).toLocaleTimeString()}`;
+        if (index === selectedAnalysisIndex) {
+            option.selected = true;
+        }
+        selector.appendChild(option);
+    });
+}
+
+function selectAnalysis(index) {
+    if (index >= 0 && index < analyzedImages.length) {
+        selectedAnalysisIndex = index;
+        currentAnalysisResult = analyzedImages[index];
+        displayAnalysisResults(currentAnalysisResult);
+        updateNotification(`Selected analysis: ${currentAnalysisResult.filename}`, 'info');
+    }
+}
+
+function removeAnalysis(index) {
+    if (index >= 0 && index < analyzedImages.length) {
+        const removedAnalysis = analyzedImages[index];
+        analyzedImages.splice(index, 1);
+        
+        // Update selected index if needed
+        if (analyzedImages.length === 0) {
+            selectedAnalysisIndex = 0;
+            currentAnalysisResult = null;
+            const resultsDiv = document.getElementById('analysis-results');
+            if (resultsDiv) {
+                resultsDiv.style.display = 'none';
+            }
+        } else if (selectedAnalysisIndex >= analyzedImages.length) {
+            selectedAnalysisIndex = analyzedImages.length - 1;
+            currentAnalysisResult = analyzedImages[selectedAnalysisIndex];
+            displayAnalysisResults(currentAnalysisResult);
+        } else if (selectedAnalysisIndex === index) {
+            currentAnalysisResult = analyzedImages[selectedAnalysisIndex];
+            displayAnalysisResults(currentAnalysisResult);
+        }
+        
+        updateAnalysisSelector();
+        updateNotification(`Removed analysis: ${removedAnalysis.filename}`, 'info');
+    }
+}
+
+function showAnalysisSummary() {
+    if (analyzedImages.length === 0) {
+        updateNotification('No analyzed images to show', 'info');
+        return;
+    }
+    
+    let summary = `Analysis Summary (${analyzedImages.length} images):\n\n`;
+    
+    analyzedImages.forEach((analysis, index) => {
+        const params = analysis.parameters || {};
+        const promptInfo = analysis.prompt_info || {};
+        const timestamp = new Date(analysis.timestamp).toLocaleTimeString();
+        
+        summary += `${index + 1}. ${analysis.filename}\n`;
+        summary += `   Time: ${timestamp}\n`;
+        summary += `   Size: ${analysis.width}x${analysis.height}\n`;
+        summary += `   Model: ${params.model || 'Unknown'}\n`;
+        summary += `   Steps: ${params.steps || 'Unknown'}\n`;
+        summary += `   Sampler: ${params.sampler || 'Unknown'}\n`;
+        summary += `   Prompt: ${(promptInfo.prompt || params.prompt || 'None').substring(0, 50)}${(promptInfo.prompt || params.prompt || '').length > 50 ? '...' : ''}\n\n`;
+    });
+    
+    // Create a modal to show the summary
+    const modalId = 'analysis-summary-modal';
+    const modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Analysis Summary</h3>
+                <button class="close-btn" onclick="closeModal('${modalId}')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre style="white-space: pre-wrap; font-family: monospace; font-size: 0.9rem; max-height: 400px; overflow-y: auto;">${summary}</pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('${modalId}')">Close</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    openModal(modalId);
 } 
