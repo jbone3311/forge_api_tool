@@ -305,27 +305,50 @@ class CentralizedLogger:
         try:
             cutoff_date = datetime.now().timestamp() - (days_to_keep * 24 * 3600)
             deleted_count = 0
+            failed_deletions = []
             
+            # Clean up .log files
             for log_file in self.log_dir.rglob("*.log"):
-                if log_file.stat().st_mtime < cutoff_date:
-                    log_file.unlink()
-                    deleted_count += 1
+                try:
+                    if log_file.stat().st_mtime < cutoff_date:
+                        log_file.unlink()
+                        deleted_count += 1
+                        self.logger.info(f"Deleted old log file: {log_file}")
+                except (OSError, PermissionError) as e:
+                    failed_deletions.append(f"{log_file}: {str(e)}")
+                    self.logger.warning(f"Failed to delete log file {log_file}: {e}")
             
+            # Clean up .json files
             for json_file in self.log_dir.rglob("*.json"):
-                if json_file.stat().st_mtime < cutoff_date:
-                    json_file.unlink()
-                    deleted_count += 1
+                try:
+                    if json_file.stat().st_mtime < cutoff_date:
+                        json_file.unlink()
+                        deleted_count += 1
+                        self.logger.info(f"Deleted old JSON file: {json_file}")
+                except (OSError, PermissionError) as e:
+                    failed_deletions.append(f"{json_file}: {str(e)}")
+                    self.logger.warning(f"Failed to delete JSON file {json_file}: {e}")
             
-            self.log_app_event("logs_cleaned", {
+            # Log the cleanup operation
+            cleanup_data = {
                 "deleted_count": deleted_count,
-                "days_to_keep": days_to_keep
-            })
+                "days_to_keep": days_to_keep,
+                "failed_deletions": failed_deletions,
+                "total_failures": len(failed_deletions)
+            }
+            
+            self.log_app_event("logs_cleaned", cleanup_data)
+            
+            # If there were failures, log them as a warning
+            if failed_deletions:
+                self.logger.warning(f"Log cleanup completed with {len(failed_deletions)} failures: {failed_deletions}")
             
             return deleted_count
             
         except Exception as e:
-            self.log_error("Failed to cleanup old logs", e)
-            return 0
+            error_msg = f"Failed to cleanup old logs: {e}"
+            self.log_error(error_msg, e)
+            raise Exception(error_msg)
     
     def log_image_generation(self, config_name: str, prompt: str, seed: int, success: bool, output_path: str = None):
         """Log image generation events."""
@@ -419,6 +442,98 @@ class CentralizedLogger:
     def error(self, message: str, context: Dict[str, Any] = None):
         """Alias for log_error for compatibility."""
         self.log_error(message, context=context)
+    
+    def get_log_directory_structure(self) -> Dict[str, Any]:
+        """Get information about the log directory structure."""
+        try:
+            structure = {
+                "log_dir": str(self.log_dir),
+                "subdirectories": {},
+                "file_counts": {},
+                "total_size_mb": 0
+            }
+            
+            # Check each subdirectory
+            for subdir_name, subdir_path in [
+                ("errors", self.error_dir),
+                ("performance", self.performance_dir),
+                ("application", self.application_dir),
+                ("sessions", self.sessions_dir)
+            ]:
+                if subdir_path.exists():
+                    file_count = len(list(subdir_path.glob("*")))
+                    size_mb = sum(f.stat().st_size for f in subdir_path.rglob("*") if f.is_file()) / (1024 * 1024)
+                    
+                    structure["subdirectories"][subdir_name] = {
+                        "path": str(subdir_path),
+                        "exists": True,
+                        "file_count": file_count,
+                        "size_mb": round(size_mb, 2)
+                    }
+                    structure["total_size_mb"] += size_mb
+                else:
+                    structure["subdirectories"][subdir_name] = {
+                        "path": str(subdir_path),
+                        "exists": False,
+                        "file_count": 0,
+                        "size_mb": 0
+                    }
+            
+            # Check main log files
+            main_log_files = ["app.log", "api.log", "jobs.log"]
+            for log_file in main_log_files:
+                file_path = self.log_dir / log_file
+                if file_path.exists():
+                    size_mb = file_path.stat().st_size / (1024 * 1024)
+                    structure["file_counts"][log_file] = {
+                        "exists": True,
+                        "size_mb": round(size_mb, 2)
+                    }
+                    structure["total_size_mb"] += size_mb
+                else:
+                    structure["file_counts"][log_file] = {
+                        "exists": False,
+                        "size_mb": 0
+                    }
+            
+            structure["total_size_mb"] = round(structure["total_size_mb"], 2)
+            return structure
+            
+        except Exception as e:
+            self.log_error(f"Failed to get log directory structure: {e}", e)
+            return {
+                "error": str(e),
+                "log_dir": str(self.log_dir)
+            }
+    
+    def get_session_summary(self) -> Dict[str, Any]:
+        """Get a summary of recent session events."""
+        try:
+            recent_events = []
+            
+            # Get recent events from application directory
+            for event_file in self.application_dir.glob("*.json"):
+                try:
+                    with open(event_file, 'r', encoding='utf-8') as f:
+                        for line in f:
+                            if line.strip():
+                                event_data = json.loads(line.strip())
+                                recent_events.append(event_data)
+                except Exception as e:
+                    self.logger.warning(f"Failed to read event file {event_file}: {e}")
+            
+            # Sort by timestamp and get the most recent 50
+            recent_events.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            recent_events = recent_events[:50]
+            
+            return {
+                "recent_events": recent_events,
+                "total_events": len(recent_events)
+            }
+            
+        except Exception as e:
+            self.log_error(f"Failed to get session summary: {e}", e)
+            return {"recent_events": [], "total_events": 0}
 
 
 # Global logger instance

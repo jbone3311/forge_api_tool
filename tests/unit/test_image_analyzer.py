@@ -120,8 +120,8 @@ class TestImageAnalyzer(unittest.TestCase):
         self.assertEqual(params['cfg_scale'], '7.0')
         self.assertEqual(params['sampler'], 'Euler a')
         self.assertEqual(params['seed'], '12345')
-        self.assertEqual(params['width'], 512)
-        self.assertEqual(params['height'], 512)
+        self.assertEqual(params['width'], '512')
+        self.assertEqual(params['height'], '512')
         self.assertEqual(params['model'], 'test_model.safetensors')
         self.assertEqual(params['vae'], 'test_vae.safetensors')
     
@@ -201,8 +201,8 @@ class TestImageAnalyzer(unittest.TestCase):
         self.assertEqual(params['cfg_scale'], '7.0')
         self.assertEqual(params['sampler'], 'Euler a')
         self.assertEqual(params['seed'], '12345')
-        self.assertEqual(params['width'], 512)
-        self.assertEqual(params['height'], 512)
+        self.assertEqual(params['width'], '512')
+        self.assertEqual(params['height'], '512')
         self.assertEqual(params['model'], 'test_model.safetensors')
         self.assertEqual(params['vae'], 'test_vae.safetensors')
     
@@ -311,8 +311,8 @@ class TestImageAnalyzer(unittest.TestCase):
         self.assertEqual(params['cfg_scale'], '9.0')
         self.assertEqual(params['sampler'], 'Euler a')
         self.assertEqual(params['seed'], '42')
-        self.assertEqual(params['width'], 1024)
-        self.assertEqual(params['height'], 1024)
+        self.assertEqual(params['width'], '1024')
+        self.assertEqual(params['height'], '1024')
         self.assertEqual(params['model'], 'test.safetensors')
 
 

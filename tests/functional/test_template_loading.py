@@ -6,6 +6,7 @@ Simple test script to verify template loading
 import os
 import sys
 import json
+import pytest
 
 # Add the project root to the path
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -16,21 +17,17 @@ def test_template_loading():
     print("Testing template loading...")
     
     # Test 1: Check config directory
-    config_dir = os.path.join(project_root, "configs")
+    config_dir = os.path.join(project_root, "..", "..", "configs")
     print(f"Config directory: {config_dir}")
     print(f"Config directory exists: {os.path.exists(config_dir)}")
     
-    if not os.path.exists(config_dir):
-        print("ERROR: Config directory does not exist!")
-        return False
+    assert os.path.exists(config_dir), "Config directory does not exist!"
     
     # Test 2: List JSON files
     json_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
     print(f"JSON files found: {json_files}")
     
-    if not json_files:
-        print("ERROR: No JSON files found in config directory!")
-        return False
+    assert len(json_files) > 0, "No JSON files found in config directory!"
     
     # Test 3: Test loading each file
     successful_loads = 0
@@ -62,9 +59,10 @@ def test_template_loading():
                 
         except Exception as e:
             print(f"  {config_name}: ✗ Error loading: {e}")
+            pytest.fail(f"Error loading {config_name}: {e}")
     
     print(f"\nSummary: {successful_loads}/{len(json_files)} templates loaded successfully")
-    return successful_loads == len(json_files)
+    assert successful_loads == len(json_files), f"Only {successful_loads}/{len(json_files)} templates loaded successfully"
 
 def test_config_handler():
     """Test the config handler"""
@@ -78,16 +76,16 @@ def test_config_handler():
         configs = config_handler.get_all_configs()
         print(f"✓ Loaded {len(configs)} configurations")
         
+        assert len(configs) > 0, "No configurations loaded"
+        
         for config_name, config in configs.items():
             print(f"  {config_name}: {config.get('name', 'N/A')} ({config.get('model_type', 'N/A')})")
-        
-        return True
         
     except Exception as e:
         print(f"✗ Config handler test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Config handler test failed: {e}")
 
 def main():
     """Run all tests"""

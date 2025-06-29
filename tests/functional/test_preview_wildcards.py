@@ -6,6 +6,7 @@ Test script to verify that preview functionality correctly resolves wildcards
 import os
 import sys
 import json
+import pytest
 
 # Add the project root to the path
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -25,9 +26,7 @@ def test_preview_wildcard_resolution():
         config_name = "SD_Default"
         config = config_handler.get_config(config_name)
         
-        if not config:
-            print(f"❌ Could not load config: {config_name}")
-            return False
+        assert config is not None, f"Could not load config: {config_name}"
         
         print(f"✓ Loaded config: {config_name}")
         print(f"Base prompt: {config['prompt_settings']['base_prompt']}")
@@ -39,6 +38,8 @@ def test_preview_wildcard_resolution():
         # Test preview with 5 prompts
         preview_count = 5
         preview_prompts = prompt_builder.preview_prompts(config, preview_count)
+        
+        assert len(preview_prompts) == preview_count, f"Expected {preview_count} prompts, got {len(preview_prompts)}"
         
         print(f"\nGenerated {len(preview_prompts)} preview prompts:")
         print("-" * 40)
@@ -56,10 +57,8 @@ def test_preview_wildcard_resolution():
         print(f"\nTesting preview repeatability...")
         preview_prompts2 = prompt_builder.preview_prompts(config, preview_count)
         
-        if preview_prompts == preview_prompts2:
-            print("✓ Preview is repeatable (doesn't consume wildcards)")
-        else:
-            print("⚠️  Preview is not repeatable (may be consuming wildcards)")
+        assert preview_prompts == preview_prompts2, "Preview should be repeatable (doesn't consume wildcards)"
+        print("✓ Preview is repeatable (doesn't consume wildcards)")
         
         # Test actual wildcard consumption
         print(f"\nTesting actual wildcard consumption...")
@@ -72,19 +71,16 @@ def test_preview_wildcard_resolution():
             print(f"{i}. {prompt}")
         
         # Test that actual prompts are different (wildcards are consumed)
-        if len(set(actual_prompts)) == len(actual_prompts):
-            print("✓ Actual prompts are varied (wildcards are consumed)")
-        else:
-            print("⚠️  Actual prompts may not be varied enough")
-        
-        return True
+        assert len(set(actual_prompts)) == len(actual_prompts), "Actual prompts should be varied (wildcards are consumed)"
+        print("✓ Actual prompts are varied (wildcards are consumed)")
         
     except Exception as e:
         print(f"❌ Error testing preview wildcard resolution: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Test failed with exception: {e}")
 
+@pytest.mark.skip(reason="Requires running Flask server")
 def test_batch_preview_api():
     """Test the batch preview API endpoint."""
     print("\nTesting batch preview API...")
@@ -93,8 +89,7 @@ def test_batch_preview_api():
     try:
         import requests
     except ImportError:
-        print("❌ Requests library not available. Install with: pip install requests")
-        return False
+        pytest.skip("Requests library not available. Install with: pip install requests")
     
     try:
         # Test data
@@ -116,43 +111,33 @@ def test_batch_preview_api():
         
         print(f"Response status: {response.status_code}")
         
-        if response.status_code == 200:
-            result = response.json()
-            if result.get('success'):
-                prompts = result.get('prompts', [])
-                wildcards_resolved = result.get('wildcards_resolved', False)
-                template_used = result.get('template_used', False)
-                
-                print(f"✓ Preview successful!")
-                print(f"  Template used: {template_used}")
-                print(f"  Wildcards resolved: {wildcards_resolved}")
-                print(f"  Generated {len(prompts)} prompts:")
-                
-                for i, prompt in enumerate(prompts, 1):
-                    print(f"    {i}. {prompt}")
-                
-                # Check if wildcards were resolved
-                unresolved_wildcards = sum(1 for p in prompts if '__' in p)
-                if unresolved_wildcards == 0:
-                    print("✓ All wildcards resolved successfully")
-                else:
-                    print(f"⚠️  {unresolved_wildcards} prompts still contain wildcards")
-                
-                return True
-            else:
-                print(f"❌ Preview failed: {result.get('error', 'Unknown error')}")
-                return False
-        else:
-            print(f"❌ Request failed with status {response.status_code}")
-            print(f"Response: {response.text}")
-            return False
-            
+        assert response.status_code == 200, f"Request failed with status {response.status_code}"
+        
+        result = response.json()
+        assert result.get('success'), f"Preview failed: {result.get('error', 'Unknown error')}"
+        
+        prompts = result.get('prompts', [])
+        wildcards_resolved = result.get('wildcards_resolved', False)
+        template_used = result.get('template_used', False)
+        
+        print(f"✓ Preview successful!")
+        print(f"  Template used: {template_used}")
+        print(f"  Wildcards resolved: {wildcards_resolved}")
+        print(f"  Generated {len(prompts)} prompts:")
+        
+        for i, prompt in enumerate(prompts, 1):
+            print(f"    {i}. {prompt}")
+        
+        # Check if wildcards were resolved
+        unresolved_wildcards = sum(1 for p in prompts if '__' in p)
+        assert unresolved_wildcards == 0, f"{unresolved_wildcards} prompts still contain wildcards"
+        print("✓ All wildcards resolved successfully")
+        
     except requests.exceptions.ConnectionError:
-        print("❌ Could not connect to Flask server. Make sure it's running on http://127.0.0.1:5000")
-        return False
+        pytest.skip("Could not connect to Flask server. Make sure it's running on http://127.0.0.1:5000")
     except Exception as e:
         print(f"❌ Error testing batch preview API: {e}")
-        return False
+        pytest.fail(f"Test failed with exception: {e}")
 
 def main():
     """Run all tests"""

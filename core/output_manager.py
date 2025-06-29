@@ -369,4 +369,7 @@ class OutputManager:
             
         except Exception as e:
             logger.log_error(f"Failed to export outputs: {e}")
-            raise Exception(f"Export failed: {str(e)}") 
+            raise Exception(f"Export failed: {str(e)}")
+
+# Create a default instance
+output_manager = OutputManager() 

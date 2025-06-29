@@ -6,30 +6,27 @@ Simple template loading test
 import os
 import sys
 import json
+import pytest
 
 def test_templates():
     print("Testing template loading...")
     
     # Get project root
     project_root = os.path.dirname(os.path.abspath(__file__))
-    config_dir = os.path.join(project_root, "configs")
+    config_dir = os.path.join(project_root, "..", "..", "configs")
     
     print(f"Project root: {project_root}")
     print(f"Config directory: {config_dir}")
     print(f"Config directory exists: {os.path.exists(config_dir)}")
     
-    if not os.path.exists(config_dir):
-        print("ERROR: Config directory does not exist!")
-        return False
+    assert os.path.exists(config_dir), "Config directory does not exist!"
     
     # List JSON files
     files = os.listdir(config_dir)
     json_files = [f for f in files if f.endswith('.json')]
     print(f"JSON files: {json_files}")
     
-    if not json_files:
-        print("ERROR: No JSON files found!")
-        return False
+    assert len(json_files) > 0, "No JSON files found!"
     
     # Test loading each file
     successful = 0
@@ -61,9 +58,10 @@ def test_templates():
                 
         except Exception as e:
             print(f"\n{config_name}: ✗ Error: {e}")
+            pytest.fail(f"Error loading {config_name}: {e}")
     
     print(f"\nSummary: {successful}/{len(json_files)} templates are valid")
-    return successful == len(json_files)
+    assert successful == len(json_files), f"Only {successful}/{len(json_files)} templates are valid"
 
 if __name__ == "__main__":
     test_templates() 

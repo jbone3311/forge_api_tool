@@ -660,29 +660,116 @@ def preview_batch():
 
 @app.route('/api/queue/status')
 def get_queue_status():
-    """Get queue status."""
+    """Get detailed queue status with enhanced statistics."""
     try:
-        status = job_queue.get_queue_stats()
-        return jsonify(status)
+        stats = job_queue.get_queue_stats()
+        return jsonify(stats)
     except Exception as e:
-        logger.log_error(f"Failed to get queue status: {e}")
-        return jsonify({'error': str(e)}), 400
+        logger.log_error(f"Error getting queue status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/queue/jobs')
+def get_queue_jobs():
+    """Get all jobs in the queue with detailed information."""
+    try:
+        jobs = job_queue.get_all_jobs()
+        return jsonify({
+            'jobs': [job.to_dict() for job in jobs],
+            'total': len(jobs)
+        })
+    except Exception as e:
+        logger.log_error(f"Error getting queue jobs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/queue/jobs/<job_id>')
+def get_job_details(job_id):
+    """Get detailed information about a specific job."""
+    try:
+        job = job_queue.get_job(job_id)
+        if job:
+            return jsonify(job.to_dict())
+        else:
+            return jsonify({'error': 'Job not found'}), 404
+    except Exception as e:
+        logger.log_error(f"Error getting job details: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/queue/jobs/<job_id>/retry', methods=['POST'])
+def retry_job(job_id):
+    """Retry a failed job."""
+    try:
+        success = job_queue.retry_job(job_id)
+        if success:
+            return jsonify({'message': 'Job queued for retry'})
+        else:
+            return jsonify({'error': 'Job cannot be retried'}), 400
+    except Exception as e:
+        logger.log_error(f"Error retrying job: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/queue/jobs/<job_id>/cancel', methods=['POST'])
+def cancel_job(job_id):
+    """Cancel a specific job."""
+    try:
+        success = job_queue.remove_job(job_id)
+        if success:
+            return jsonify({'message': 'Job cancelled'})
+        else:
+            return jsonify({'error': 'Job not found or cannot be cancelled'}), 404
+    except Exception as e:
+        logger.log_error(f"Error cancelling job: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/queue/clear', methods=['POST'])
 def clear_queue():
-    """Clear the job queue."""
+    """Clear all jobs from the queue."""
     try:
-        cleared_count = job_queue.clear_queue()
-        
-        logger.log_queue_operation("cleared", None, {"cleared_count": cleared_count})
-        
+        cleared_count = job_queue.clear_all_jobs()
         return jsonify({
-            'success': True,
-            'message': f'Queue cleared. {cleared_count} jobs removed.'
+            'message': f'Cleared {cleared_count} jobs from queue',
+            'cleared_count': cleared_count
         })
     except Exception as e:
-        logger.log_error(f"Failed to clear queue: {e}")
-        return jsonify({'error': str(e)}), 400
+        logger.log_error(f"Error clearing queue: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/queue/clear-completed', methods=['POST'])
+def clear_completed_jobs():
+    """Clear only completed and failed jobs from the queue."""
+    try:
+        cleared_count = job_queue.clear_completed_jobs()
+        return jsonify({
+            'message': f'Cleared {cleared_count} completed/failed jobs',
+            'cleared_count': cleared_count
+        })
+    except Exception as e:
+        logger.log_error(f"Error clearing completed jobs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/queue/priority-stats')
+def get_priority_stats():
+    """Get queue statistics broken down by priority."""
+    try:
+        stats = job_queue.get_queue_stats()
+        priority_stats = stats.get('priority_stats', {})
+        
+        # Add detailed priority breakdown
+        detailed_stats = {}
+        for priority_name, count in priority_stats.items():
+            jobs = job_queue.get_jobs_by_priority(getattr(job_queue.JobPriority, priority_name))
+            detailed_stats[priority_name] = {
+                'count': count,
+                'pending': len([j for j in jobs if j.status == job_queue.JobStatus.PENDING]),
+                'running': len([j for j in jobs if j.status == job_queue.JobStatus.RUNNING]),
+                'completed': len([j for j in jobs if j.status == job_queue.JobStatus.COMPLETED]),
+                'failed': len([j for j in jobs if j.status == job_queue.JobStatus.FAILED]),
+                'retrying': len([j for j in jobs if j.status == job_queue.JobStatus.RETRYING])
+            }
+        
+        return jsonify(detailed_stats)
+    except Exception as e:
+        logger.log_error(f"Error getting priority stats: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/outputs')
 def get_outputs():
@@ -850,20 +937,33 @@ def cleanup_logs():
         data = request.get_json() or {}
         days_to_keep = data.get('days_to_keep', 30)
         
+        # Validate input
+        if not isinstance(days_to_keep, int) or days_to_keep < 1:
+            return jsonify({
+                'success': False,
+                'error': 'days_to_keep must be a positive integer'
+            }), 400
+        
         cleaned_files = logger.cleanup_old_logs(days_to_keep)
         
         logger.log_app_event("logs_cleaned", {
             "days_to_keep": days_to_keep,
-            "cleaned_files": len(cleaned_files)
+            "cleaned_files": cleaned_files
         })
         
         return jsonify({
             'success': True,
-            'message': f'Logs older than {days_to_keep} days cleaned up',
+            'message': f'Logs older than {days_to_keep} days cleaned up successfully',
             'cleaned_files': cleaned_files
         })
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        error_msg = f"Error during log cleanup: {str(e)}"
+        logger.log_error(error_msg, e)
+        return jsonify({
+            'success': False,
+            'error': error_msg
+        }), 500
 
 @app.route('/api/logs/structure')
 def get_logs_structure():

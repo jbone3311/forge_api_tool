@@ -6,6 +6,7 @@ Test script to verify template prompt loading functionality
 import os
 import sys
 import json
+import pytest
 
 # Add the project root to the path
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -17,21 +18,17 @@ def test_template_prompt_loading():
     print("=" * 60)
     
     # Test 1: Check config directory
-    config_dir = os.path.join(project_root, "configs")
+    config_dir = os.path.join(project_root, "..", "..", "configs")
     print(f"Config directory: {config_dir}")
     print(f"Config directory exists: {os.path.exists(config_dir)}")
     
-    if not os.path.exists(config_dir):
-        print("ERROR: Config directory does not exist!")
-        return False
+    assert os.path.exists(config_dir), "Config directory does not exist!"
     
     # Test 2: List JSON files
     json_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
     print(f"JSON files found: {json_files}")
     
-    if not json_files:
-        print("ERROR: No JSON files found in config directory!")
-        return False
+    assert len(json_files) > 0, "No JSON files found in config directory!"
     
     # Test 3: Test loading each file and check for base prompts
     successful_loads = 0
@@ -78,33 +75,28 @@ def test_template_prompt_loading():
                 
         except Exception as e:
             print(f"  {config_name}: ✗ Error loading: {e}")
+            pytest.fail(f"Error loading {config_name}: {e}")
     
     print(f"\n" + "=" * 60)
     print(f"Summary:")
     print(f"  Templates loaded successfully: {successful_loads}/{len(json_files)}")
     print(f"  Templates with base prompts: {templates_with_prompts}/{len(json_files)}")
     
-    if templates_with_prompts > 0:
-        print(f"  ✓ Template prompt loading should work correctly")
-        return True
-    else:
-        print(f"  ✗ No templates have base prompts - prompt loading will not work")
-        return False
+    assert templates_with_prompts > 0, "No templates have base prompts - prompt loading will not work"
+    print(f"  ✓ Template prompt loading should work correctly")
 
 def test_wildcard_files():
     """Test that wildcard files exist for the templates."""
     print("\nTesting wildcard file availability...")
     print("=" * 60)
     
-    config_dir = os.path.join(project_root, "configs")
-    wildcards_dir = os.path.join(project_root, "wildcards")
+    config_dir = os.path.join(project_root, "..", "..", "configs")
+    wildcards_dir = os.path.join(project_root, "..", "..", "wildcards")
     
     print(f"Wildcards directory: {wildcards_dir}")
     print(f"Wildcards directory exists: {os.path.exists(wildcards_dir)}")
     
-    if not os.path.exists(wildcards_dir):
-        print("ERROR: Wildcards directory does not exist!")
-        return False
+    assert os.path.exists(wildcards_dir), "Wildcards directory does not exist!"
     
     # Get all wildcard files
     wildcard_files = []
@@ -153,8 +145,7 @@ def test_wildcard_files():
                     
         except Exception as e:
             print(f"  {template_name}: ✗ Error: {e}")
-    
-    return True
+            pytest.fail(f"Error testing {template_name}: {e}")
 
 def main():
     """Run all tests"""

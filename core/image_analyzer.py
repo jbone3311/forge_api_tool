@@ -190,12 +190,8 @@ class ImageAnalyzer:
             match = re.search(pattern, param_string)
             if match:
                 if param_name == 'width':
-                    params['width'] = int(match.group(1))
-                    params['height'] = int(match.group(2))
-                elif param_name in ['steps', 'clip_skip', 'hires_steps', 'subseed']:
-                    params[param_name] = int(match.group(1))
-                elif param_name in ['cfg_scale', 'denoising_strength', 'hires_denoising', 'subseed_strength']:
-                    params[param_name] = float(match.group(1))
+                    params['width'] = match.group(1)
+                    params['height'] = match.group(2)
                 else:
                     params[param_name] = match.group(1)
         

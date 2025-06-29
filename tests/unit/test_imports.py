@@ -5,6 +5,7 @@ Simple import test script to verify all core modules can be imported.
 
 import sys
 import os
+import pytest
 
 # Add the current directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -51,13 +52,12 @@ def test_imports():
         print("   ✓ ImageAnalyzer imported successfully")
         
         print("\nAll imports successful! ✓")
-        return True
         
     except Exception as e:
         print(f"\nImport failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Import failed: {e}")
 
 if __name__ == "__main__":
     success = test_imports()

@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     loadCurrentAPIState();
     initializeImageDropZone();
+    initializeResizableElements();
 });
 
 // Socket.IO initialization
@@ -62,6 +63,8 @@ function initializeStatusUpdates() {
 function loadInitialData() {
     loadOutputs();
     updateQueueStatus();
+    refreshQueue(); // Load detailed queue data
+    loadSavedSettings(); // Load saved settings from localStorage
     
     // Auto-load the first available template
     setTimeout(() => {
@@ -265,15 +268,19 @@ function updateGenerationProgress(data) {
 
 // Update queue status
 function updateQueueStatus(queueData) {
-    if (!queueData) return;
+    // Update header status
+    const queueStatus = document.getElementById('queue-status');
+    if (queueStatus) {
+        const queueText = queueStatus.querySelector('.status-text');
+        if (queueData && queueData.total_jobs !== undefined) {
+            queueText.textContent = `Queue: ${queueData.total_jobs} jobs`;
+        } else {
+            queueText.textContent = 'Queue: 0 jobs';
+        }
+    }
     
-    const activeEl = document.getElementById('queue-active');
-    const pendingEl = document.getElementById('queue-pending');
-    const completedEl = document.getElementById('queue-completed');
-    
-    if (activeEl) activeEl.textContent = queueData.running_jobs || 0;
-    if (pendingEl) pendingEl.textContent = queueData.pending_jobs || 0;
-    if (completedEl) completedEl.textContent = queueData.completed_jobs || 0;
+    // Update compact queue display
+    updateCompactQueue(queueData);
 }
 
 // Update output statistics
@@ -1686,6 +1693,130 @@ function editAnalysisConfig() {
     openModal('config-editor-modal');
 }
 
+function populateSettingsFromAnalysis() {
+    if (analyzedImages.length === 0) {
+        updateNotification('No analyzed images available', 'error');
+        return;
+    }
+    
+    if (selectedAnalysisIndex < 0 || selectedAnalysisIndex >= analyzedImages.length) {
+        updateNotification('Please select a valid analysis', 'error');
+        return;
+    }
+    
+    const selectedAnalysis = analyzedImages[selectedAnalysisIndex];
+    const params = selectedAnalysis.parameters || {};
+    const promptInfo = selectedAnalysis.prompt_info || {};
+    
+    // Populate basic settings
+    const promptInput = document.getElementById('prompt-input');
+    const negativePromptInput = document.getElementById('negative-prompt-input');
+    const seedInput = document.getElementById('seed-input');
+    
+    if (promptInput) {
+        promptInput.value = promptInfo.prompt || params.prompt || '';
+    }
+    
+    if (negativePromptInput) {
+        negativePromptInput.value = promptInfo.negative_prompt || params.negative_prompt || '';
+    }
+    
+    if (seedInput) {
+        seedInput.value = params.seed || '';
+    }
+    
+    // Populate image settings
+    const widthInput = document.getElementById('width-input');
+    const heightInput = document.getElementById('height-input');
+    const stepsInput = document.getElementById('steps-input');
+    const cfgScaleInput = document.getElementById('cfg-scale-input');
+    const samplerInput = document.getElementById('sampler-input');
+    const batchSizeInput = document.getElementById('batch-size-input');
+    
+    if (widthInput) {
+        widthInput.value = selectedAnalysis.width || params.width || 512;
+    }
+    
+    if (heightInput) {
+        heightInput.value = selectedAnalysis.height || params.height || 512;
+    }
+    
+    if (stepsInput) {
+        stepsInput.value = params.steps || 20;
+    }
+    
+    if (cfgScaleInput) {
+        cfgScaleInput.value = params.cfg_scale || 7.0;
+    }
+    
+    if (samplerInput) {
+        samplerInput.value = params.sampler || 'Euler a';
+    }
+    
+    if (batchSizeInput) {
+        batchSizeInput.value = params.batch_size || 1;
+    }
+    
+    // Populate number of batches
+    const numBatchesInput = document.getElementById('num-batches');
+    if (numBatchesInput) {
+        numBatchesInput.value = params.num_batches || 1;
+    }
+    
+    // Populate advanced settings
+    const denoisingStrengthInput = document.getElementById('denoising-strength-input');
+    const clipSkipInput = document.getElementById('clip-skip-input');
+    const restoreFacesInput = document.getElementById('restore-faces-input');
+    const tilingInput = document.getElementById('tiling-input');
+    
+    if (denoisingStrengthInput) {
+        denoisingStrengthInput.value = params.denoising_strength || 0.7;
+    }
+    
+    if (clipSkipInput) {
+        clipSkipInput.value = params.clip_skip || 1;
+    }
+    
+    if (restoreFacesInput) {
+        restoreFacesInput.value = params.restore_faces ? 'true' : 'false';
+    }
+    
+    if (tilingInput) {
+        tilingInput.value = params.tiling ? 'true' : 'false';
+    }
+    
+    // Populate hires fix settings
+    const hiresFixInput = document.getElementById('hires-fix-input');
+    const hiresStepsInput = document.getElementById('hires-steps-input');
+    const hiresUpscalerInput = document.getElementById('hires-upscaler-input');
+    const hiresDenoisingInput = document.getElementById('hires-denoising-input');
+    
+    if (hiresFixInput) {
+        hiresFixInput.value = params.hires_fix ? 'true' : 'false';
+    }
+    
+    if (hiresStepsInput) {
+        hiresStepsInput.value = params.hires_steps || 20;
+    }
+    
+    if (hiresUpscalerInput) {
+        hiresUpscalerInput.value = params.hires_upscaler || 'Latent';
+    }
+    
+    if (hiresDenoisingInput) {
+        hiresDenoisingInput.value = params.hires_denoising || 0.5;
+    }
+    
+    // Show success notification
+    updateNotification(`Settings populated from analysis: ${selectedAnalysis.filename}`, 'success');
+    
+    // Scroll to the generation settings section
+    const generationSettings = document.querySelector('.generation-settings');
+    if (generationSettings) {
+        generationSettings.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
 // Config Editor Functions
 function switchConfigTab(tabName) {
     // Hide all tabs
@@ -1986,4 +2117,679 @@ function showAnalysisSummary() {
     
     document.body.appendChild(modal);
     openModal(modalId);
-} 
+}
+
+// Initialize resizable elements
+function initializeResizableElements() {
+    initializeSidebarResizer();
+    initializeAnalysisResizer();
+}
+
+// Initialize sidebar resizer
+function initializeSidebarResizer() {
+    const sidebar = document.querySelector('.sidebar.resizable');
+    const resizer = document.getElementById('sidebar-resizer');
+    
+    if (!sidebar || !resizer) return;
+    
+    let isResizing = false;
+    let startX, startWidth;
+    
+    resizer.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = parseInt(getComputedStyle(sidebar).width, 10);
+        
+        resizer.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        
+        const width = startWidth + (e.clientX - startX);
+        const minWidth = 300;
+        const maxWidth = 800;
+        
+        if (width >= minWidth && width <= maxWidth) {
+            sidebar.style.width = width + 'px';
+        }
+    });
+    
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            
+            // Save the width to localStorage
+            const width = parseInt(getComputedStyle(sidebar).width, 10);
+            localStorage.setItem('sidebar-width', width);
+        }
+    });
+    
+    // Load saved width
+    const savedWidth = localStorage.getItem('sidebar-width');
+    if (savedWidth) {
+        sidebar.style.width = savedWidth + 'px';
+    }
+}
+
+// Initialize analysis resizer
+function initializeAnalysisResizer() {
+    const analysisContent = document.getElementById('analysis-content');
+    const resizer = document.getElementById('analysis-resizer');
+    
+    if (!analysisContent || !resizer) return;
+    
+    let isResizing = false;
+    let startX, startWidth;
+    
+    resizer.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = parseInt(getComputedStyle(analysisContent).getPropertyValue('--image-column-width') || '200');
+        
+        resizer.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        
+        const width = startWidth + (e.clientX - startX);
+        const minWidth = 150;
+        const maxWidth = 400;
+        
+        if (width >= minWidth && width <= maxWidth) {
+            analysisContent.style.setProperty('--image-column-width', width + 'px');
+            resizer.style.left = width + 'px';
+        }
+    });
+    
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            
+            // Save the width to localStorage
+            const width = parseInt(getComputedStyle(analysisContent).getPropertyValue('--image-column-width') || '200');
+            localStorage.setItem('analysis-image-width', width);
+        }
+    });
+    
+    // Load saved width
+    const savedWidth = localStorage.getItem('analysis-image-width');
+    if (savedWidth) {
+        analysisContent.style.setProperty('--image-column-width', savedWidth + 'px');
+        resizer.style.left = savedWidth + 'px';
+    }
+}
+
+// Queue management functions
+function refreshQueue() {
+    loadQueueStats();
+    loadQueueJobs();
+}
+
+function loadQueueStats() {
+    fetch('/api/queue/status')
+        .then(response => response.json())
+        .then(data => {
+            updateQueueStats(data);
+        })
+        .catch(error => {
+            console.error('Failed to load queue stats:', error);
+            updateNotification('Failed to load queue statistics', 'error');
+        });
+}
+
+function updateQueueStats(data) {
+    document.getElementById('pending-jobs').textContent = data.pending_jobs || 0;
+    document.getElementById('running-jobs').textContent = data.running_jobs || 0;
+    document.getElementById('completed-jobs').textContent = data.completed_jobs || 0;
+    document.getElementById('failed-jobs').textContent = data.failed_jobs || 0;
+    document.getElementById('retrying-jobs').textContent = data.retrying_jobs || 0;
+    document.getElementById('total-jobs').textContent = data.total_jobs || 0;
+}
+
+function loadQueueJobs() {
+    fetch('/api/queue/jobs')
+        .then(response => response.json())
+        .then(data => {
+            displayQueueJobs(data.jobs || []);
+        })
+        .catch(error => {
+            console.error('Failed to load queue jobs:', error);
+            updateNotification('Failed to load queue jobs', 'error');
+        });
+}
+
+function displayQueueJobs(jobs) {
+    const container = document.getElementById('jobs-container');
+    
+    if (jobs.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted" style="padding: 2rem;">No jobs in queue</div>';
+        return;
+    }
+    
+    const jobsHtml = jobs.map(job => createJobItemHtml(job)).join('');
+    container.innerHTML = jobsHtml;
+}
+
+function createJobItemHtml(job) {
+    const priorityNames = { 1: 'Low', 2: 'Normal', 3: 'High', 4: 'Urgent' };
+    const priorityColors = { 1: '#6c757d', 2: '#007bff', 3: '#fd7e14', 4: '#dc3545' };
+    
+    const progress = job.total_images > 0 ? (job.completed_images / job.total_images) * 100 : 0;
+    const elapsed = job.started_at ? formatElapsedTime(job.started_at) : '-';
+    const created = formatDateTime(job.created_at);
+    
+    let actionsHtml = '';
+    if (job.status === 'failed') {
+        actionsHtml = `<button class="btn btn-sm btn-primary" onclick="retryJob('${job.id}')">
+            <i class="fas fa-redo"></i> Retry
+        </button>`;
+    }
+    if (job.status === 'pending' || job.status === 'running') {
+        actionsHtml = `<button class="btn btn-sm btn-danger" onclick="cancelJob('${job.id}')">
+            <i class="fas fa-times"></i> Cancel
+        </button>`;
+    }
+    
+    const errorHtml = job.last_error ? `<div class="job-error">${job.last_error}</div>` : '';
+    
+    return `
+        <div class="job-item ${job.status}" data-job-id="${job.id}" data-status="${job.status}" data-priority="${job.priority}">
+            <div class="job-header">
+                <h5 class="job-title">${job.config_name}</h5>
+                <div class="job-status ${job.status}">
+                    <i class="fas fa-${getStatusIcon(job.status)}"></i>
+                    ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                </div>
+            </div>
+            
+            <div class="job-details">
+                <div class="job-detail">
+                    <span class="job-detail-label">Priority:</span>
+                    <span class="job-detail-value" style="color: ${priorityColors[job.priority]}">
+                        ${priorityNames[job.priority]}
+                    </span>
+                </div>
+                <div class="job-detail">
+                    <span class="job-detail-label">Images:</span>
+                    <span class="job-detail-value">${job.completed_images}/${job.total_images}</span>
+                </div>
+                <div class="job-detail">
+                    <span class="job-detail-label">Created:</span>
+                    <span class="job-detail-value">${created}</span>
+                </div>
+                <div class="job-detail">
+                    <span class="job-detail-label">Elapsed:</span>
+                    <span class="job-detail-value">${elapsed}</span>
+                </div>
+                ${job.retry_count > 0 ? `
+                <div class="job-detail">
+                    <span class="job-detail-label">Retries:</span>
+                    <span class="job-detail-value">${job.retry_count}/${job.max_retries}</span>
+                </div>
+                ` : ''}
+            </div>
+            
+            ${job.total_images > 0 ? `
+            <div class="job-progress">
+                <div class="progress-bar-small">
+                    <div class="progress-fill-small" style="width: ${progress}%"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: #6c757d; margin-top: 0.25rem;">
+                    ${progress.toFixed(1)}% complete
+                </div>
+            </div>
+            ` : ''}
+            
+            ${errorHtml}
+            
+            <div class="job-actions">
+                ${actionsHtml}
+            </div>
+        </div>
+    `;
+}
+
+function getStatusIcon(status) {
+    const icons = {
+        'pending': 'clock',
+        'running': 'cog',
+        'completed': 'check-circle',
+        'failed': 'exclamation-triangle',
+        'retrying': 'redo',
+        'cancelled': 'times-circle'
+    };
+    return icons[status] || 'question-circle';
+}
+
+function formatElapsedTime(startTime) {
+    if (!startTime) return '-';
+    
+    const start = new Date(startTime);
+    const now = new Date();
+    const elapsed = Math.floor((now - start) / 1000);
+    
+    if (elapsed < 60) return `${elapsed}s`;
+    if (elapsed < 3600) return `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+    return `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m`;
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return '-';
+    
+    const date = new Date(dateString);
+    return date.toLocaleString();
+}
+
+function retryJob(jobId) {
+    if (!confirm('Retry this failed job?')) return;
+    
+    fetch(`/api/queue/jobs/${jobId}/retry`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                updateNotification(data.message, 'success');
+                refreshQueue();
+            } else {
+                updateNotification(data.error || 'Failed to retry job', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Failed to retry job:', error);
+            updateNotification('Failed to retry job', 'error');
+        });
+}
+
+function cancelJob(jobId) {
+    if (!confirm('Cancel this job?')) return;
+    
+    fetch(`/api/queue/jobs/${jobId}/cancel`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                updateNotification(data.message, 'success');
+                refreshQueue();
+            } else {
+                updateNotification(data.error || 'Failed to cancel job', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Failed to cancel job:', error);
+            updateNotification('Failed to cancel job', 'error');
+        });
+}
+
+function clearCompletedJobs() {
+    if (!confirm('Clear all completed and failed jobs?')) return;
+    
+    fetch('/api/queue/clear-completed', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                updateNotification(data.message, 'success');
+                refreshQueue();
+            } else {
+                updateNotification(data.error || 'Failed to clear completed jobs', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Failed to clear completed jobs:', error);
+            updateNotification('Failed to clear completed jobs', 'error');
+        });
+}
+
+function clearAllJobs() {
+    if (!confirm('Clear ALL jobs from the queue? This action cannot be undone.')) return;
+    
+    fetch('/api/queue/clear', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                updateNotification(data.message, 'success');
+                refreshQueue();
+            } else {
+                updateNotification(data.error || 'Failed to clear queue', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Failed to clear queue:', error);
+            updateNotification('Failed to clear queue', 'error');
+        });
+}
+
+function filterJobs() {
+    const statusFilter = document.getElementById('status-filter').value;
+    const priorityFilter = document.getElementById('priority-filter').value;
+    
+    const jobItems = document.querySelectorAll('.job-item');
+    
+    jobItems.forEach(item => {
+        const status = item.dataset.status;
+        const priority = item.dataset.priority;
+        
+        let show = true;
+        
+        if (statusFilter && status !== statusFilter) {
+            show = false;
+        }
+        
+        if (priorityFilter && priority !== priorityFilter) {
+            show = false;
+        }
+        
+        item.style.display = show ? 'block' : 'none';
+    });
+}
+
+// Load default settings
+function loadDefaultSettings() {
+    // Reset all settings to default values
+    document.getElementById('prompt-input').value = '';
+    document.getElementById('negative-prompt-input').value = '';
+    document.getElementById('config-select').value = '';
+    document.getElementById('seed-input').value = '';
+    document.getElementById('width-input').value = '512';
+    document.getElementById('height-input').value = '512';
+    document.getElementById('steps-input').value = '20';
+    document.getElementById('cfg-scale-input').value = '7.0';
+    document.getElementById('sampler-input').value = 'Euler a';
+    document.getElementById('batch-size-input').value = '1';
+    document.getElementById('restore-faces-input').value = 'false';
+    document.getElementById('tiling-input').value = 'false';
+    document.getElementById('clip-skip-input').value = '1';
+    document.getElementById('denoising-strength-input').value = '0.7';
+    document.getElementById('hires-fix-input').value = 'false';
+    document.getElementById('hires-upscaler-input').value = 'Latent';
+    document.getElementById('hires-steps-input').value = '20';
+    document.getElementById('hires-denoising-input').value = '0.7';
+    
+    updateNotification('Settings reset to defaults', 'success');
+}
+
+// Save current settings
+function saveSettings() {
+    const settings = {
+        prompt: document.getElementById('prompt-input').value,
+        negative_prompt: document.getElementById('negative-prompt-input').value,
+        config: document.getElementById('config-select').value,
+        seed: document.getElementById('seed-input').value,
+        width: parseInt(document.getElementById('width-input').value),
+        height: parseInt(document.getElementById('height-input').value),
+        steps: parseInt(document.getElementById('steps-input').value),
+        cfg_scale: parseFloat(document.getElementById('cfg-scale-input').value),
+        sampler: document.getElementById('sampler-input').value,
+        batch_size: parseInt(document.getElementById('batch-size-input').value),
+        restore_faces: document.getElementById('restore-faces-input').value === 'true',
+        tiling: document.getElementById('tiling-input').value === 'true',
+        clip_skip: parseInt(document.getElementById('clip-skip-input').value),
+        denoising_strength: parseFloat(document.getElementById('denoising-strength-input').value),
+        hires_fix: document.getElementById('hires-fix-input').value === 'true',
+        hires_upscaler: document.getElementById('hires-upscaler-input').value,
+        hires_steps: parseInt(document.getElementById('hires-steps-input').value),
+        hires_denoising: parseFloat(document.getElementById('hires-denoising-input').value)
+    };
+    
+    // Save to localStorage
+    localStorage.setItem('forge_api_settings', JSON.stringify(settings));
+    updateNotification('Settings saved', 'success');
+}
+
+// Load saved settings
+function loadSavedSettings() {
+    const saved = localStorage.getItem('forge_api_settings');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            
+            if (settings.prompt) document.getElementById('prompt-input').value = settings.prompt;
+            if (settings.negative_prompt) document.getElementById('negative-prompt-input').value = settings.negative_prompt;
+            if (settings.config) document.getElementById('config-select').value = settings.config;
+            if (settings.seed !== undefined) document.getElementById('seed-input').value = settings.seed;
+            if (settings.width) document.getElementById('width-input').value = settings.width;
+            if (settings.height) document.getElementById('height-input').value = settings.height;
+            if (settings.steps) document.getElementById('steps-input').value = settings.steps;
+            if (settings.cfg_scale) document.getElementById('cfg-scale-input').value = settings.cfg_scale;
+            if (settings.sampler) document.getElementById('sampler-input').value = settings.sampler;
+            if (settings.batch_size) document.getElementById('batch-size-input').value = settings.batch_size;
+            if (settings.restore_faces !== undefined) document.getElementById('restore-faces-input').value = settings.restore_faces.toString();
+            if (settings.tiling !== undefined) document.getElementById('tiling-input').value = settings.tiling.toString();
+            if (settings.clip_skip) document.getElementById('clip-skip-input').value = settings.clip_skip;
+            if (settings.denoising_strength) document.getElementById('denoising-strength-input').value = settings.denoising_strength;
+            if (settings.hires_fix !== undefined) document.getElementById('hires-fix-input').value = settings.hires_fix.toString();
+            if (settings.hires_upscaler) document.getElementById('hires-upscaler-input').value = settings.hires_upscaler;
+            if (settings.hires_steps) document.getElementById('hires-steps-input').value = settings.hires_steps;
+            if (settings.hires_denoising) document.getElementById('hires-denoising-input').value = settings.hires_denoising;
+            
+            console.log('Settings loaded from localStorage');
+        } catch (error) {
+            console.error('Failed to load saved settings:', error);
+        }
+    }
+}
+
+// Preview generation settings
+function previewGeneration() {
+    const settings = getCurrentSettings();
+    
+    let previewText = `Generation Preview:\n\n`;
+    previewText += `Template: ${settings.config || 'None selected'}\n`;
+    previewText += `Prompt: ${settings.prompt || 'None'}\n`;
+    previewText += `Negative Prompt: ${settings.negative_prompt || 'None'}\n`;
+    previewText += `Dimensions: ${settings.width}x${settings.height}\n`;
+    previewText += `Steps: ${settings.steps}\n`;
+    previewText += `CFG Scale: ${settings.cfg_scale}\n`;
+    previewText += `Sampler: ${settings.sampler}\n`;
+    previewText += `Batch Size: ${settings.batch_size}\n`;
+    previewText += `Seed: ${settings.seed || 'Random'}\n`;
+    previewText += `Restore Faces: ${settings.restore_faces ? 'Yes' : 'No'}\n`;
+    previewText += `Tiling: ${settings.tiling ? 'Yes' : 'No'}\n`;
+    previewText += `Clip Skip: ${settings.clip_skip}\n`;
+    previewText += `Denoising Strength: ${settings.denoising_strength}\n`;
+    previewText += `Hires Fix: ${settings.hires_fix ? 'Enabled' : 'Disabled'}\n`;
+    
+    if (settings.hires_fix) {
+        previewText += `Hires Upscaler: ${settings.hires_upscaler}\n`;
+        previewText += `Hires Steps: ${settings.hires_steps}\n`;
+        previewText += `Hires Denoising: ${settings.hires_denoising}\n`;
+    }
+    
+    alert(previewText);
+}
+
+// Get current settings from form
+function getCurrentSettings() {
+    return {
+        prompt: document.getElementById('prompt-input').value,
+        negative_prompt: document.getElementById('negative-prompt-input').value,
+        config: document.getElementById('config-select').value,
+        seed: document.getElementById('seed-input').value,
+        width: parseInt(document.getElementById('width-input').value),
+        height: parseInt(document.getElementById('height-input').value),
+        steps: parseInt(document.getElementById('steps-input').value),
+        cfg_scale: parseFloat(document.getElementById('cfg-scale-input').value),
+        sampler: document.getElementById('sampler-input').value,
+        batch_size: parseInt(document.getElementById('batch-size-input').value),
+        restore_faces: document.getElementById('restore-faces-input').value === 'true',
+        tiling: document.getElementById('tiling-input').value === 'true',
+        clip_skip: parseInt(document.getElementById('clip-skip-input').value),
+        denoising_strength: parseFloat(document.getElementById('denoising-strength-input').value),
+        hires_fix: document.getElementById('hires-fix-input').value === 'true',
+        hires_upscaler: document.getElementById('hires-upscaler-input').value,
+        hires_steps: parseInt(document.getElementById('hires-steps-input').value),
+        hires_denoising: parseFloat(document.getElementById('hires-denoising-input').value)
+    };
+}
+
+// Update compact queue display
+function updateCompactQueue(queueData) {
+    if (!queueData) return;
+    
+    // Update compact stats
+    const pendingEl = document.getElementById('queue-pending-compact');
+    const runningEl = document.getElementById('queue-running-compact');
+    const completedEl = document.getElementById('queue-completed-compact');
+    const failedEl = document.getElementById('queue-failed-compact');
+    
+    if (pendingEl) pendingEl.textContent = queueData.pending_jobs || 0;
+    if (runningEl) runningEl.textContent = queueData.running_jobs || 0;
+    if (completedEl) completedEl.textContent = queueData.completed_jobs || 0;
+    if (failedEl) failedEl.textContent = queueData.failed_jobs || 0;
+    
+    // Update compact job list
+    const jobListCompact = document.getElementById('job-list-compact');
+    if (jobListCompact && queueData.jobs) {
+        jobListCompact.innerHTML = '';
+        
+        queueData.jobs.slice(0, 5).forEach(job => { // Show only first 5 jobs
+            const jobItem = document.createElement('div');
+            jobItem.className = 'job-item';
+            jobItem.innerHTML = `
+                <div class="job-title">${job.config_name || 'Unknown'}</div>
+                <span class="job-status ${job.status}">${job.status}</span>
+            `;
+            jobListCompact.appendChild(jobItem);
+        });
+        
+        if (queueData.jobs.length === 0) {
+            jobListCompact.innerHTML = '<div class="job-item">No jobs in queue</div>';
+        } else if (queueData.jobs.length > 5) {
+            const moreItem = document.createElement('div');
+            moreItem.className = 'job-item';
+            moreItem.innerHTML = `<em>... and ${queueData.jobs.length - 5} more</em>`;
+            jobListCompact.appendChild(moreItem);
+        }
+    }
+}
+
+// Enhanced generateImage function with new settings
+function generateImage() {
+    const settings = getCurrentSettings();
+    
+    if (!settings.config) {
+        updateNotification('Please select a template', 'error');
+        return;
+    }
+    
+    if (!settings.prompt.trim()) {
+        updateNotification('Please enter a prompt', 'error');
+        return;
+    }
+    
+    const payload = {
+        config_name: settings.config,
+        prompt: settings.prompt,
+        negative_prompt: settings.negative_prompt,
+        seed: settings.seed || -1,
+        width: settings.width,
+        height: settings.height,
+        steps: settings.steps,
+        cfg_scale: settings.cfg_scale,
+        sampler: settings.sampler,
+        batch_size: settings.batch_size,
+        restore_faces: settings.restore_faces,
+        tiling: settings.tiling,
+        clip_skip: settings.clip_skip,
+        denoising_strength: settings.denoising_strength,
+        hires_fix: settings.hires_fix,
+        hires_upscaler: settings.hires_upscaler,
+        hires_steps: settings.hires_steps,
+        hires_denoising: settings.hires_denoising
+    };
+    
+    fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateNotification('Image generation started', 'success');
+            updateSystemStatus();
+        } else {
+            updateNotification(data.error || 'Failed to start generation', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        updateNotification('Failed to start generation', 'error');
+    });
+}
+
+// Enhanced startBatchGeneration function
+function startBatchGeneration() {
+    const settings = getCurrentSettings();
+    
+    if (!settings.config) {
+        updateNotification('Please select a template', 'error');
+        return;
+    }
+    
+    if (!settings.prompt.trim()) {
+        updateNotification('Please enter a prompt', 'error');
+        return;
+    }
+    
+    const batchSize = parseInt(document.getElementById('batch-size-input').value);
+    const numBatches = parseInt(document.getElementById('num-batches').value) || 1;
+    
+    const payload = {
+        config_name: settings.config,
+        prompt: settings.prompt,
+        negative_prompt: settings.negative_prompt,
+        seed: settings.seed || -1,
+        width: settings.width,
+        height: settings.height,
+        steps: settings.steps,
+        cfg_scale: settings.cfg_scale,
+        sampler: settings.sampler,
+        batch_size: batchSize,
+        num_batches: numBatches,
+        restore_faces: settings.restore_faces,
+        tiling: settings.tiling,
+        clip_skip: settings.clip_skip,
+        denoising_strength: settings.denoising_strength,
+        hires_fix: settings.hires_fix,
+        hires_upscaler: settings.hires_upscaler,
+        hires_steps: settings.hires_steps,
+        hires_denoising: settings.hires_denoising
+    };
+    
+    fetch('/api/batch', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateNotification(`Batch generation started: ${data.total_images} images`, 'success');
+            updateSystemStatus();
+        } else {
+            updateNotification(data.error || 'Failed to start batch generation', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        updateNotification('Failed to start batch generation', 'error');
+    });
+}
