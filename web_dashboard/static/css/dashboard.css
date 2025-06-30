@@ -1400,13 +1400,24 @@ input:checked + .toggle-slider:before {
     text-align: center;
     min-width: 150px;
     max-width: 400px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
 }
 
 .analysis-image img {
     max-width: 100%;
-    max-height: 200px;
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-height: 300px;
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border: 1px solid #dee2e6;
+}
+
+.analysis-image:hover img {
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    transform: scale(1.02);
+    transition: all 0.3s ease;
 }
 
 .analysis-details {
@@ -1437,6 +1448,7 @@ input:checked + .toggle-slider:before {
     align-items: flex-start;
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
+    gap: 1rem;
 }
 
 .detail-item:last-child {
@@ -1446,17 +1458,71 @@ input:checked + .toggle-slider:before {
 .detail-label {
     font-weight: 500;
     color: #6c757d;
-    min-width: 120px;
+    min-width: 140px;
     flex-shrink: 0;
+    font-size: 0.85rem;
 }
 
 .detail-value {
     color: #495057;
-    text-align: right;
+    text-align: left;
     word-break: break-word;
-    max-width: 300px;
     flex: 1;
-    margin-left: 1rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    max-height: 3.6em; /* 3 lines max */
+    overflow: hidden;
+    position: relative;
+}
+
+.detail-value.expandable {
+    cursor: pointer;
+}
+
+.detail-value.expandable::after {
+    content: '...';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: #f8f9fa;
+    padding-left: 4px;
+    color: #007bff;
+    font-weight: bold;
+}
+
+.detail-value.expanded {
+    max-height: none;
+}
+
+.detail-value.expanded::after {
+    display: none;
+}
+
+/* Color coding for different value types */
+.detail-value[data-type="prompt"] {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.detail-value[data-type="number"] {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.detail-value[data-type="boolean"] {
+    color: #6f42c1;
+    font-weight: 600;
+}
+
+.detail-value[data-type="model"] {
+    color: #fd7e14;
+    font-weight: 500;
+}
+
+.detail-value[data-type="hash"] {
+    color: #6c757d;
+    font-family: monospace;
+    font-size: 0.8rem;
 }
 
 /* Config Editor Styles */

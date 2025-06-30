@@ -1453,6 +1453,38 @@ function handleImageFile(file) {
 function analyzeImage(imageData) {
     updateNotification('Analyzing image...', 'info');
     
+    // Show loading state in the analysis results
+    const resultsDiv = document.getElementById('analysis-results');
+    if (resultsDiv) {
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = `
+            <div class="analysis-header">
+                <h4><i class="fas fa-chart-line"></i> Analysis Results</h4>
+                <div class="analysis-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="clearImageAnalysis()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+            <div class="analysis-content">
+                <div class="analysis-image">
+                    <img src="${imageData}" alt="Analyzing..." style="opacity: 0.7;">
+                </div>
+                <div class="analysis-details">
+                    <div class="detail-group">
+                        <h5>Analysis Status</h5>
+                        <div class="detail-item">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value">
+                                <i class="fas fa-spinner fa-spin"></i> Analyzing image...
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
     fetch('/api/analyze-image', {
         method: 'POST',
         headers: {
@@ -1464,6 +1496,40 @@ function analyzeImage(imageData) {
     .then(data => {
         if (data.error) {
             updateNotification(`Analysis failed: ${data.error}`, 'error');
+            // Restore the original analysis results structure
+            if (resultsDiv) {
+                resultsDiv.innerHTML = `
+                    <div class="analysis-header">
+                        <h4><i class="fas fa-chart-line"></i> Analysis Results</h4>
+                        <div class="analysis-actions">
+                            <select id="analysis-selector" onchange="selectAnalysis(parseInt(this.value))" style="margin-right: 0.5rem; padding: 0.25rem; border-radius: 4px; border: 1px solid #ddd;">
+                                <option value="">No analyzed images</option>
+                            </select>
+                            <button class="btn btn-sm btn-danger" onclick="removeAnalysis(selectedAnalysisIndex)" title="Remove Current Analysis">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="populateSettingsFromAnalysis()" title="Populate All Settings">
+                                <i class="fas fa-magic"></i> Populate Settings
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="createConfigFromAnalysis()">
+                                <i class="fas fa-save"></i> Create Config
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="editAnalysisConfig()">
+                                <i class="fas fa-edit"></i> Edit Settings
+                            </button>
+                        </div>
+                    </div>
+                    <div class="analysis-content resizable" id="analysis-content">
+                        <div class="analysis-resizer" id="analysis-resizer"></div>
+                        <div class="analysis-image">
+                            <img id="analysis-image-preview" src="" alt="Analyzed Image">
+                        </div>
+                        <div class="analysis-details">
+                            <!-- Analysis details will be populated here -->
+                        </div>
+                    </div>
+                `;
+            }
             return;
         }
         
@@ -1484,6 +1550,40 @@ function analyzeImage(imageData) {
     .catch(error => {
         console.error('Error analyzing image:', error);
         updateNotification('Failed to analyze image', 'error');
+        // Restore the original analysis results structure on error
+        if (resultsDiv) {
+            resultsDiv.innerHTML = `
+                <div class="analysis-header">
+                    <h4><i class="fas fa-chart-line"></i> Analysis Results</h4>
+                    <div class="analysis-actions">
+                        <select id="analysis-selector" onchange="selectAnalysis(parseInt(this.value))" style="margin-right: 0.5rem; padding: 0.25rem; border-radius: 4px; border: 1px solid #ddd;">
+                            <option value="">No analyzed images</option>
+                        </select>
+                        <button class="btn btn-sm btn-danger" onclick="removeAnalysis(selectedAnalysisIndex)" title="Remove Current Analysis">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="populateSettingsFromAnalysis()" title="Populate All Settings">
+                            <i class="fas fa-magic"></i> Populate Settings
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="createConfigFromAnalysis()">
+                            <i class="fas fa-save"></i> Create Config
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="editAnalysisConfig()">
+                            <i class="fas fa-edit"></i> Edit Settings
+                        </button>
+                    </div>
+                </div>
+                <div class="analysis-content resizable" id="analysis-content">
+                    <div class="analysis-resizer" id="analysis-resizer"></div>
+                    <div class="analysis-image">
+                        <img id="analysis-image-preview" src="" alt="Analyzed Image">
+                    </div>
+                    <div class="analysis-details">
+                        <!-- Analysis details will be populated here -->
+                    </div>
+                </div>
+            `;
+        }
     });
 }
 
@@ -1507,44 +1607,100 @@ function displayAnalysisResults(data) {
     const params = data.parameters || {};
     const promptInfo = data.prompt_info || {};
     
+    // Helper function to format values
+    const formatValue = (value, defaultValue = 'Not found') => {
+        if (value === null || value === undefined || value === '') {
+            return defaultValue;
+        }
+        if (typeof value === 'boolean') {
+            return value ? 'Yes' : 'No';
+        }
+        if (typeof value === 'number') {
+            return value.toString();
+        }
+        return value.toString();
+    };
+    
     // Basic settings
-    updateAnalysisDetail('analysis-prompt', promptInfo.prompt || params.prompt || 'Not found');
-    updateAnalysisDetail('analysis-negative-prompt', promptInfo.negative_prompt || params.negative_prompt || 'Not found');
-    updateAnalysisDetail('analysis-steps', params.steps || 'Not found');
-    updateAnalysisDetail('analysis-cfg-scale', params.cfg_scale || 'Not found');
-    updateAnalysisDetail('analysis-sampler', params.sampler || 'Not found');
-    updateAnalysisDetail('analysis-seed', params.seed || 'Not found');
-    updateAnalysisDetail('analysis-denoising-strength', params.denoising_strength || 'Not found');
-    updateAnalysisDetail('analysis-clip-skip', params.clip_skip || 'Not found');
-    updateAnalysisDetail('analysis-restore-faces', params.restore_faces || 'Not found');
-    updateAnalysisDetail('analysis-tiling', params.tiling || 'Not found');
+    updateAnalysisDetail('analysis-prompt', formatValue(promptInfo.prompt || params.prompt, 'No prompt found'));
+    updateAnalysisDetail('analysis-negative-prompt', formatValue(promptInfo.negative_prompt || params.negative_prompt, 'No negative prompt'));
+    updateAnalysisDetail('analysis-steps', formatValue(params.steps));
+    updateAnalysisDetail('analysis-cfg-scale', formatValue(params.cfg_scale));
+    updateAnalysisDetail('analysis-sampler', formatValue(params.sampler));
+    updateAnalysisDetail('analysis-seed', formatValue(params.seed));
+    updateAnalysisDetail('analysis-denoising-strength', formatValue(params.denoising_strength));
+    updateAnalysisDetail('analysis-clip-skip', formatValue(params.clip_skip));
+    updateAnalysisDetail('analysis-restore-faces', formatValue(params.restore_faces));
+    updateAnalysisDetail('analysis-tiling', formatValue(params.tiling));
     
     // Hires fix settings
-    updateAnalysisDetail('analysis-hires-fix', params.hires_fix || 'Not found');
-    updateAnalysisDetail('analysis-hires-steps', params.hires_steps || 'Not found');
-    updateAnalysisDetail('analysis-hires-upscaler', params.hires_upscaler || 'Not found');
-    updateAnalysisDetail('analysis-hires-denoising', params.hires_denoising || 'Not found');
+    updateAnalysisDetail('analysis-hires-fix', formatValue(params.hires_fix));
+    updateAnalysisDetail('analysis-hires-steps', formatValue(params.hires_steps));
+    updateAnalysisDetail('analysis-hires-upscaler', formatValue(params.hires_upscaler));
+    updateAnalysisDetail('analysis-hires-denoising', formatValue(params.hires_denoising));
     
     // Advanced settings
-    updateAnalysisDetail('analysis-subseed', params.subseed || 'Not found');
-    updateAnalysisDetail('analysis-subseed-strength', params.subseed_strength || 'Not found');
-    updateAnalysisDetail('analysis-text-encoder', params.text_encoder || 'Not found');
-    updateAnalysisDetail('analysis-model-hash', params.model_hash || 'Not found');
-    updateAnalysisDetail('analysis-vae-hash', params.vae_hash || 'Not found');
-    updateAnalysisDetail('analysis-lora', params.lora || 'Not found');
-    updateAnalysisDetail('analysis-embedding', params.embedding || 'Not found');
+    updateAnalysisDetail('analysis-subseed', formatValue(params.subseed));
+    updateAnalysisDetail('analysis-subseed-strength', formatValue(params.subseed_strength));
+    updateAnalysisDetail('analysis-text-encoder', formatValue(params.text_encoder));
+    updateAnalysisDetail('analysis-model-hash', formatValue(params.model_hash));
+    updateAnalysisDetail('analysis-vae-hash', formatValue(params.vae_hash));
+    updateAnalysisDetail('analysis-lora', formatValue(params.lora));
+    updateAnalysisDetail('analysis-embedding', formatValue(params.embedding));
     
     // Model information
-    updateAnalysisDetail('analysis-model', params.model || 'Not found');
-    updateAnalysisDetail('analysis-vae', params.vae || 'Not found');
+    updateAnalysisDetail('analysis-model', formatValue(params.model));
+    updateAnalysisDetail('analysis-vae', formatValue(params.vae));
     
-    updateNotification('Image analysis completed', 'success');
+    // Update the analysis selector
+    updateAnalysisSelector();
+    
+    // Show success notification
+    updateNotification(`Image analysis completed successfully! Found ${Object.keys(params).length} parameters.`, 'success');
+    
+    // Scroll to the analysis results
+    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function updateAnalysisDetail(elementId, value) {
     const element = document.getElementById(elementId);
     if (element) {
-        element.textContent = value;
+        // Determine the data type for color coding
+        let dataType = 'text';
+        if (elementId.includes('prompt')) {
+            dataType = 'prompt';
+        } else if (elementId.includes('model') || elementId.includes('vae') || elementId.includes('sampler') || elementId.includes('upscaler')) {
+            dataType = 'model';
+        } else if (elementId.includes('hash')) {
+            dataType = 'hash';
+        } else if (typeof value === 'boolean' || value === 'Yes' || value === 'No') {
+            dataType = 'boolean';
+        } else if (!isNaN(value) && value !== '') {
+            dataType = 'number';
+        }
+        
+        // Check if the value is long and needs expandable functionality
+        if (value && value.length > 100) {
+            element.textContent = value;
+            element.classList.add('expandable');
+            element.title = 'Click to expand/collapse';
+            element.setAttribute('data-type', dataType);
+            
+            // Add click event listener for expandable text
+            element.onclick = function() {
+                if (this.classList.contains('expanded')) {
+                    this.classList.remove('expanded');
+                } else {
+                    this.classList.add('expanded');
+                }
+            };
+        } else {
+            element.textContent = value;
+            element.classList.remove('expandable', 'expanded');
+            element.onclick = null;
+            element.title = '';
+            element.setAttribute('data-type', dataType);
+        }
     }
 }
 
