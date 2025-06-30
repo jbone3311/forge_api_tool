@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCurrentAPIState();
     initializeImageDropZone();
     initializeResizableElements();
-    initializeDropZone();
     initializeProgressTracking();
     initializeServerInfo();
     updateStatusIndicators();
@@ -2996,64 +2995,6 @@ function startBatchGeneration() {
         console.error('Error:', error);
         updateNotification('Failed to start batch generation', 'error');
     });
-}
-
-// Image Analysis Drop Zone
-function initializeDropZone() {
-    const dropzone = document.getElementById('image-analysis-dropzone');
-    const fileInput = document.getElementById('image-analysis-input');
-    
-    if (!dropzone || !fileInput) return;
-    
-    // Click to select file
-    dropzone.addEventListener('click', () => {
-        fileInput.click();
-    });
-    
-    // File input change
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            handleImageFile(file);
-        }
-    });
-    
-    // Drag and drop events
-    dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('dragover');
-    });
-    
-    dropzone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover');
-    });
-    
-    dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0 && files[0].type.startsWith('image/')) {
-            handleImageFile(files[0]);
-        } else {
-            updateNotification('Please drop an image file', 'error');
-        }
-    });
-}
-
-function handleImageFile(file) {
-    if (!file.type.startsWith('image/')) {
-        updateNotification('Please select an image file', 'error');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const imageData = e.target.result;
-        analyzeImage(imageData);
-    };
-    reader.readAsDataURL(file);
 }
 
 // Enhanced Button Feedback
