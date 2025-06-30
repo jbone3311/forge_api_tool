@@ -97,11 +97,18 @@ function loadInitialData() {
 
 // Setup event listeners
 function setupEventListeners() {
-    // Template card clicks
+    console.log('Setting up event listeners...');
+    
+    // Template card clicks - improved event delegation
     document.addEventListener('click', function(e) {
-        if (e.target.closest('.template-card')) {
-            const configName = e.target.closest('.template-card').dataset.config;
-            selectTemplate(configName);
+        const templateCard = e.target.closest('.template-card');
+        if (templateCard) {
+            console.log('Template card clicked:', templateCard);
+            const configName = templateCard.dataset.config;
+            console.log('Config name from data attribute:', configName);
+            if (configName) {
+                selectTemplate(configName);
+            }
         }
     });
     
@@ -110,6 +117,7 @@ function setupEventListeners() {
     if (configSelect) {
         configSelect.addEventListener('change', function(e) {
             const selectedConfig = e.target.value;
+            console.log('Config select changed to:', selectedConfig);
             if (selectedConfig) {
                 selectTemplate(selectedConfig);
             }
@@ -158,6 +166,8 @@ function setupEventListeners() {
             this.placeholder = 'Random';
         });
     }
+    
+    console.log('Event listeners setup complete');
 }
 
 // Update system status
@@ -315,11 +325,16 @@ function updateOutputStats(outputData) {
 
 // Template Management
 function selectTemplate(configName) {
+    console.log('selectTemplate called with:', configName);
+    
     fetch(`/api/configs/${configName}`)
         .then(response => response.json())
         .then(data => {
+            console.log('Config data received:', data);
             if (data.success && data.config) {
                 const config = data.config;
+                console.log('Loading config:', config);
+                
                 // Basic
                 document.getElementById('prompt-input').value = config.prompt_settings?.base_prompt || '';
                 document.getElementById('negative-prompt-input').value = config.prompt_settings?.negative_prompt || '';
@@ -335,20 +350,26 @@ function selectTemplate(configName) {
                 // Advanced
                 document.getElementById('denoising-strength-input').value = config.generation_settings?.denoising_strength || 0.7;
                 document.getElementById('clip-skip-input').value = config.generation_settings?.clip_skip || 1;
-                document.getElementById('restore-faces-input').checked = !!config.generation_settings?.restore_faces;
-                document.getElementById('tiling-input').checked = !!config.generation_settings?.tiling;
+                document.getElementById('restore-faces-input').value = config.generation_settings?.restore_faces ? 'true' : 'false';
+                document.getElementById('tiling-input').value = config.generation_settings?.tiling ? 'true' : 'false';
                 // Hires
-                document.getElementById('hires-fix-input').checked = !!config.generation_settings?.hires_fix;
+                document.getElementById('hires-fix-input').value = config.generation_settings?.hires_fix ? 'true' : 'false';
                 document.getElementById('hires-upscaler-input').value = config.generation_settings?.hires_upscaler || 'Latent';
                 document.getElementById('hires-steps-input').value = config.generation_settings?.hires_steps || 20;
                 document.getElementById('hires-denoising-input').value = config.generation_settings?.hires_denoising || 0.5;
                 // Set config select dropdown
                 const configSelect = document.getElementById('config-select');
                 if (configSelect) configSelect.value = configName;
+                
+                console.log('Template loaded successfully:', configName);
                 updateNotification('Template loaded!', 'success');
+            } else {
+                console.error('Failed to load config:', data);
+                updateNotification('Failed to load template: Invalid config data', 'error');
             }
         })
         .catch(error => {
+            console.error('Error loading template:', error);
             updateNotification('Failed to load template: ' + error.message, 'error');
         });
 }
