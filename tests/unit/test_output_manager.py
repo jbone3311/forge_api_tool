@@ -111,8 +111,8 @@ class TestOutputManager(unittest.TestCase):
         self.assertEqual(metadata['steps'], 20)
         self.assertEqual(metadata['cfg_scale'], 7.0)
         self.assertEqual(metadata['sampler_name'], 'Euler a')
-        self.assertEqual(metadata['model_name'], 'test_model.safetensors')
-        self.assertEqual(metadata['vae_name'], 'test_vae.safetensors')
+        self.assertEqual(metadata['sd_model_name'], 'test_model.safetensors')
+        self.assertEqual(metadata['sd_vae_name'], 'test_vae.safetensors')
     
     def test_save_image_with_data_url(self):
         """Test saving image with data URL format."""
@@ -228,7 +228,7 @@ class TestOutputManager(unittest.TestCase):
         self.assertEqual(metadata['config_name'], config_name)
         self.assertEqual(metadata['steps'], 20)
         self.assertEqual(metadata['cfg_scale'], 7.0)
-        self.assertEqual(metadata['model_name'], 'test_model.safetensors')
+        self.assertEqual(metadata['sd_model_name'], 'test_model.safetensors')
     
     def test_get_output_statistics(self):
         """Test getting output statistics."""
