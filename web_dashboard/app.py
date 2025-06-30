@@ -461,12 +461,22 @@ def generate_image():
         success, image_data, info = forge_api_client.generate_image(config, prompt, seed)
         
         if success and image_data:
+            # Extract seed from info, ensuring it's an integer
+            api_seed = info.get('seed') if isinstance(info, dict) else None
+            if api_seed is not None:
+                try:
+                    final_seed = int(api_seed)
+                except (ValueError, TypeError):
+                    final_seed = int(seed) if seed is not None else -1
+            else:
+                final_seed = int(seed) if seed is not None else -1
+            
             # Save image with embedded metadata using the new output manager
             filepath = output_manager.save_image(
                 image_data=image_data,
                 config_name=config_name,
                 prompt=prompt,
-                seed=info.get('seed', seed or -1) if isinstance(info, dict) else (seed or -1),
+                seed=final_seed,
                 generation_settings=config['generation_settings'],
                 model_settings=config['model_settings']
             )
@@ -474,7 +484,7 @@ def generate_image():
             logger.log_app_event("image_generation", {
                 "config_name": config_name,
                 "prompt": prompt,
-                "seed": info.get('seed', seed or -1) if isinstance(info, dict) else (seed or -1),
+                "seed": final_seed,
                 "success": True,
                 "output_path": filepath,
                 "timestamp": datetime.now().isoformat()

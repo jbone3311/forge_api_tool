@@ -62,14 +62,16 @@ class OutputManager:
             
             # Create filename with timestamp and seed
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{timestamp}_{seed:08d}.png"
+            # Ensure seed is an integer for formatting
+            seed_int = int(seed) if seed is not None else -1
+            filename = f"{timestamp}_{seed_int:08d}.png"
             filepath = os.path.join(output_dir, filename)
             
             # Prepare metadata for embedding
             metadata = {
                 'prompt': prompt,
                 'negative_prompt': generation_settings.get('negative_prompt', '') if generation_settings else '',
-                'seed': seed,
+                'seed': int(seed) if seed is not None else -1,
                 'steps': generation_settings.get('steps', 20) if generation_settings else 20,
                 'sampler_name': generation_settings.get('sampler', 'Euler a') if generation_settings else 'Euler a',
                 'cfg_scale': generation_settings.get('cfg_scale', 7.0) if generation_settings else 7.0,
