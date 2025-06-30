@@ -97,15 +97,11 @@ function loadInitialData() {
 
 // Setup event listeners
 function setupEventListeners() {
-    console.log('Setting up event listeners...');
-    
     // Template card clicks - improved event delegation
     document.addEventListener('click', function(e) {
         const templateCard = e.target.closest('.template-card');
         if (templateCard) {
-            console.log('Template card clicked:', templateCard);
             const configName = templateCard.dataset.config;
-            console.log('Config name from data attribute:', configName);
             if (configName) {
                 selectTemplate(configName);
             }
@@ -117,7 +113,6 @@ function setupEventListeners() {
     if (configSelect) {
         configSelect.addEventListener('change', function(e) {
             const selectedConfig = e.target.value;
-            console.log('Config select changed to:', selectedConfig);
             if (selectedConfig) {
                 selectTemplate(selectedConfig);
             }
@@ -166,8 +161,6 @@ function setupEventListeners() {
             this.placeholder = 'Random';
         });
     }
-    
-    console.log('Event listeners setup complete');
 }
 
 // Update system status
@@ -325,52 +318,47 @@ function updateOutputStats(outputData) {
 
 // Template Management
 function selectTemplate(configName) {
-    console.log('selectTemplate called with:', configName);
-    
     fetch(`/api/configs/${configName}`)
         .then(response => response.json())
         .then(data => {
-            console.log('Config data received:', data);
             if (data.success && data.config) {
                 const config = data.config;
-                console.log('Loading config:', config);
                 
                 // Basic
                 document.getElementById('prompt-input').value = config.prompt_settings?.base_prompt || '';
                 document.getElementById('negative-prompt-input').value = config.prompt_settings?.negative_prompt || '';
-                document.getElementById('seed-input').value = config.generation_settings?.seed ?? '';
-                // Image
+                document.getElementById('seed-input').value = config.generation_settings?.seed || '';
+                document.getElementById('config-select').value = configName;
+                
+                // Image Settings
                 document.getElementById('width-input').value = config.generation_settings?.width || 512;
                 document.getElementById('height-input').value = config.generation_settings?.height || 512;
                 document.getElementById('steps-input').value = config.generation_settings?.steps || 20;
                 document.getElementById('cfg-scale-input').value = config.generation_settings?.cfg_scale || 7.0;
-                document.getElementById('sampler-input').value = config.generation_settings?.sampler || 'Euler a';
+                document.getElementById('sampler-input').value = config.generation_settings?.sampler_name || 'Euler a';
                 document.getElementById('batch-size-input').value = config.generation_settings?.batch_size || 1;
                 document.getElementById('num-batches').value = config.generation_settings?.num_batches || 1;
-                // Advanced
-                document.getElementById('denoising-strength-input').value = config.generation_settings?.denoising_strength || 0.7;
+                
+                // Advanced Settings
+                document.getElementById('restore-faces-input').value = config.generation_settings?.restore_faces || false;
+                document.getElementById('tiling-input').value = config.generation_settings?.tiling || false;
                 document.getElementById('clip-skip-input').value = config.generation_settings?.clip_skip || 1;
-                document.getElementById('restore-faces-input').value = config.generation_settings?.restore_faces ? 'true' : 'false';
-                document.getElementById('tiling-input').value = config.generation_settings?.tiling ? 'true' : 'false';
-                // Hires
-                document.getElementById('hires-fix-input').value = config.generation_settings?.hires_fix ? 'true' : 'false';
+                document.getElementById('denoising-strength-input').value = config.generation_settings?.denoising_strength || 0.7;
+                
+                // Hires Fix Settings
+                document.getElementById('hires-fix-input').value = config.generation_settings?.hires_fix || false;
                 document.getElementById('hires-upscaler-input').value = config.generation_settings?.hires_upscaler || 'Latent';
                 document.getElementById('hires-steps-input').value = config.generation_settings?.hires_steps || 20;
-                document.getElementById('hires-denoising-input').value = config.generation_settings?.hires_denoising || 0.5;
-                // Set config select dropdown
-                const configSelect = document.getElementById('config-select');
-                if (configSelect) configSelect.value = configName;
+                document.getElementById('hires-denoising-input').value = config.generation_settings?.hires_denoising || 0.7;
                 
-                console.log('Template loaded successfully:', configName);
-                updateNotification('Template loaded!', 'success');
+                showNotification('Template loaded successfully!', 'success');
             } else {
-                console.error('Failed to load config:', data);
-                updateNotification('Failed to load template: Invalid config data', 'error');
+                showNotification('Failed to load template: ' + (data.error || 'Unknown error'), 'error');
             }
         })
         .catch(error => {
             console.error('Error loading template:', error);
-            updateNotification('Failed to load template: ' + error.message, 'error');
+            showNotification('Error loading template: ' + error.message, 'error');
         });
 }
 
