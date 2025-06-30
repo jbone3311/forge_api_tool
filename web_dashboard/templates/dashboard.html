@@ -445,7 +445,123 @@
     </div>
 
     <!-- Modals -->
-    {% include 'modals.html' %}
+    <!-- Create Template Modal -->
+    <div id="create-template-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Template</h3>
+                <button class="close-btn" onclick="closeModal('create-template-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="template-name">Template Name:</label>
+                    <input type="text" id="template-name" placeholder="Enter template name">
+                </div>
+                <div class="input-group">
+                    <label for="template-config">Configuration (JSON):</label>
+                    <textarea id="template-config" placeholder="Enter configuration JSON..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('create-template-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createTemplate()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Template Modal -->
+    <div id="edit-template-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Template</h3>
+                <button class="close-btn" onclick="closeModal('edit-template-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="edit-template-name">Template Name:</label>
+                    <input type="text" id="edit-template-name" readonly>
+                </div>
+                <div class="input-group">
+                    <label for="edit-template-config">Configuration (JSON):</label>
+                    <textarea id="edit-template-config" placeholder="Enter configuration JSON..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('edit-template-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updateTemplate()">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Preview Modal -->
+    <div id="batch-preview-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Batch Preview</h3>
+                <button class="close-btn" onclick="closeModal('batch-preview-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="batch-preview-content">
+                    <!-- Preview content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('batch-preview-modal')">Close</button>
+                <button class="btn btn-primary" onclick="confirmBatchGeneration()">Start Generation</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Status Modal -->
+    <div id="live-status-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Live Status</h3>
+                <button class="close-btn" onclick="closeModal('live-status-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="live-status-content" style="font-family:monospace; font-size:0.95rem; max-height:400px; overflow-y:auto;">
+                    <!-- Live status events will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('live-status-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Config from Analysis Modal -->
+    <div id="create-config-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Config from Analysis</h3>
+                <button class="close-btn" onclick="closeModal('create-config-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="new-config-name">Config Name:</label>
+                    <input type="text" id="new-config-name" placeholder="Enter config name">
+                </div>
+                <div class="input-group">
+                    <label for="new-config-description">Description:</label>
+                    <textarea id="new-config-description" placeholder="Enter description"></textarea>
+                </div>
+                <div class="analysis-summary">
+                    <h5>Analysis Summary:</h5>
+                    <div id="create-config-summary">
+                        <!-- Analysis summary will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('create-config-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCreateConfig()">Create Config</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
