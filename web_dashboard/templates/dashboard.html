@@ -349,14 +349,60 @@
                 </div>
             </section>
 
-            <!-- Right Sidebar - Queue & Outputs -->
+            <!-- Right Sidebar - Queue, Outputs, etc. -->
             <aside class="sidebar queue-sidebar resizable">
                 <div class="sidebar-resizer" id="queue-resizer"></div>
                 
+                <!-- Server Configuration Section -->
+                <div class="server-config-section">
+                    <div class="sidebar-header">
+                        <h2><i class="fas fa-server"></i> Server Configuration</h2>
+                    </div>
+                    
+                    <div class="server-config-content">
+                        <div class="api-toggle">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="rundiffusion-toggle" onchange="toggleRunDiffusion()">
+                                <span class="toggle-switch"></span>
+                                Use RunDiffusion API
+                            </label>
+                        </div>
+                        
+                        <div id="rundiffusion-config" style="display: none;">
+                            <div class="input-group">
+                                <label for="rundiffusion-url">Server URL:</label>
+                                <input type="url" id="rundiffusion-url" placeholder="https://your-instance.rundiffusion.com">
+                            </div>
+                            <div class="input-group">
+                                <label for="rundiffusion-username">Username:</label>
+                                <input type="text" id="rundiffusion-username" placeholder="rduser">
+                            </div>
+                            <div class="input-group">
+                                <label for="rundiffusion-password">Password:</label>
+                                <input type="password" id="rundiffusion-password" placeholder="rdpass">
+                            </div>
+                            
+                            <div class="api-actions">
+                                <button class="btn btn-sm btn-primary" onclick="saveRunDiffusionConfig()">
+                                    <i class="fas fa-save"></i> Save & Connect
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="testRunDiffusionConnection()">
+                                    <i class="fas fa-plug"></i> Test Connection
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="api-info" id="api-info" style="display: none;">
+                            <i class="fas fa-info-circle"></i>
+                            <span id="api-info-text">Connected to local Forge API</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Image Analysis Section -->
                 <div class="image-analysis-section">
                     <div class="sidebar-header">
-                        <h2><i class="fas fa-microscope"></i> Image Analysis</h2>
+                        <h2><i class="fas fa-search"></i> Image Analysis</h2>
                         <div class="sidebar-actions">
                             <button class="btn btn-sm btn-info" onclick="showAnalysisSummary()" title="Show Analysis Summary">
                                 <i class="fas fa-list"></i>
