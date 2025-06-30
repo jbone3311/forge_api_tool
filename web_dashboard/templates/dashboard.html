@@ -38,6 +38,21 @@
 
         <!-- Main Content -->
         <main class="dashboard-main">
+            <!-- Image Analysis Drop Zone -->
+            <div class="image-analysis-dropzone" id="image-analysis-dropzone">
+                <div class="dropzone-content">
+                    <i class="fas fa-cloud-upload-alt dropzone-icon"></i>
+                    <h3>Image Analysis</h3>
+                    <p>Drag & drop an image here to analyze its generation settings</p>
+                    <p class="dropzone-hint">or click to browse files</p>
+                    <input type="file" id="image-analysis-input" accept="image/*" style="display: none;">
+                </div>
+                <div class="dropzone-overlay" id="dropzone-overlay">
+                    <i class="fas fa-search-plus"></i>
+                    <span>Drop image to analyze</span>
+                </div>
+            </div>
+
             <!-- Left Sidebar - Templates -->
             <aside class="sidebar templates-sidebar resizable">
                 <div class="sidebar-resizer" id="sidebar-resizer"></div>

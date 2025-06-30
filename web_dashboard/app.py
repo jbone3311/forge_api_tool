@@ -1690,6 +1690,119 @@ def create_config_from_image():
         logger.log_error(f"Unexpected error creating config from image: {e}")
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
+@app.route('/api/models')
+def get_models():
+    """Get available models from the API."""
+    try:
+        models = forge_api_client.get_models()
+        return jsonify({
+            'success': True,
+            'models': models
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to get models: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/samplers')
+def get_samplers():
+    """Get available samplers from the API."""
+    try:
+        samplers = forge_api_client.get_samplers()
+        return jsonify({
+            'success': True,
+            'samplers': samplers
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to get samplers: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/options')
+def get_options():
+    """Get server options including VAE and upscalers."""
+    try:
+        options = forge_api_client.get_options()
+        
+        # Extract VAE and upscalers from options
+        vae_list = []
+        upscalers_list = []
+        
+        if 'sd_vae' in options:
+            vae_list = options['sd_vae']
+        if 'upscaler_for_img2img' in options:
+            upscalers_list = options['upscaler_for_img2img']
+        
+        return jsonify({
+            'success': True,
+            'vae': vae_list,
+            'upscalers': upscalers_list,
+            'options': options
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to get options: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/configs/<config_name>/thumbnail')
+def get_config_thumbnail(config_name):
+    """Get thumbnail for a config if it exists."""
+    try:
+        config = config_handler.get_config(config_name)
+        thumbnail = config.get('thumbnail')
+        
+        if thumbnail:
+            return jsonify({
+                'success': True,
+                'thumbnail': thumbnail
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No thumbnail found'
+            }), 404
+    except Exception as e:
+        logger.log_error(f"Failed to get thumbnail for {config_name}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/configs/<config_name>/thumbnail', methods=['POST'])
+def save_config_thumbnail(config_name):
+    """Save thumbnail for a config."""
+    try:
+        data = request.get_json()
+        thumbnail = data.get('thumbnail')
+        
+        if not thumbnail:
+            return jsonify({
+                'success': False,
+                'error': 'No thumbnail data provided'
+            }), 400
+        
+        # Update config with thumbnail
+        config = config_handler.get_config(config_name)
+        config['thumbnail'] = thumbnail
+        config_handler.save_config(config_name, config)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Thumbnail saved successfully'
+        })
+    except Exception as e:
+        logger.log_error(f"Failed to save thumbnail for {config_name}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     # Start background processor
     start_background_processor()

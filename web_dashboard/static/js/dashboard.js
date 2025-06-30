@@ -8,6 +8,15 @@ let currentAnalysisResult = null;
 let currentEditingConfig = null;
 let analyzedImages = []; // Array to store multiple analyzed images
 let selectedAnalysisIndex = 0; // Index of currently selected analysis
+let serverInfo = {
+    models: [],
+    loras: [],
+    vae: [],
+    samplers: [],
+    upscalers: []
+};
+let currentJob = null;
+let progressInterval = null;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -19,6 +28,14 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCurrentAPIState();
     initializeImageDropZone();
     initializeResizableElements();
+    initializeDropZone();
+    initializeProgressTracking();
+    initializeServerInfo();
+    updateStatusIndicators();
+    
+    // Start periodic updates
+    setInterval(updateStatusIndicators, 5000);
+    setInterval(updateProgress, 1000);
 });
 
 // Socket.IO initialization
@@ -298,30 +315,41 @@ function updateOutputStats(outputData) {
 
 // Template Management
 function selectTemplate(configName) {
-    const configSelect = document.getElementById('config-select');
-    if (configSelect) configSelect.value = configName;
-    
-    // Fetch the template's base prompt and populate the prompt input
     fetch(`/api/configs/${configName}`)
         .then(response => response.json())
         .then(data => {
-            const promptInput = document.getElementById('prompt-input');
-            if (promptInput && data.prompt_settings && data.prompt_settings.base_prompt) {
-                promptInput.value = data.prompt_settings.base_prompt;
-                console.log('Populated prompt with template base prompt:', data.prompt_settings.base_prompt);
-                
-                // Show helpful notification
-                const hasWildcards = data.prompt_settings.base_prompt.includes('__');
-                if (hasWildcards) {
-                    updateNotification(`Template "${configName}" loaded with wildcards. Edit the prompt to customize or generate as-is.`, 'info');
-                } else {
-                    updateNotification(`Template "${configName}" loaded. You can edit the prompt or generate as-is.`, 'info');
-                }
+            if (data.success && data.config) {
+                const config = data.config;
+                // Basic
+                document.getElementById('prompt-input').value = config.prompt_settings?.base_prompt || '';
+                document.getElementById('negative-prompt-input').value = config.prompt_settings?.negative_prompt || '';
+                document.getElementById('seed-input').value = config.generation_settings?.seed ?? '';
+                // Image
+                document.getElementById('width-input').value = config.generation_settings?.width || 512;
+                document.getElementById('height-input').value = config.generation_settings?.height || 512;
+                document.getElementById('steps-input').value = config.generation_settings?.steps || 20;
+                document.getElementById('cfg-scale-input').value = config.generation_settings?.cfg_scale || 7.0;
+                document.getElementById('sampler-input').value = config.generation_settings?.sampler || 'Euler a';
+                document.getElementById('batch-size-input').value = config.generation_settings?.batch_size || 1;
+                document.getElementById('num-batches').value = config.generation_settings?.num_batches || 1;
+                // Advanced
+                document.getElementById('denoising-strength-input').value = config.generation_settings?.denoising_strength || 0.7;
+                document.getElementById('clip-skip-input').value = config.generation_settings?.clip_skip || 1;
+                document.getElementById('restore-faces-input').checked = !!config.generation_settings?.restore_faces;
+                document.getElementById('tiling-input').checked = !!config.generation_settings?.tiling;
+                // Hires
+                document.getElementById('hires-fix-input').checked = !!config.generation_settings?.hires_fix;
+                document.getElementById('hires-upscaler-input').value = config.generation_settings?.hires_upscaler || 'Latent';
+                document.getElementById('hires-steps-input').value = config.generation_settings?.hires_steps || 20;
+                document.getElementById('hires-denoising-input').value = config.generation_settings?.hires_denoising || 0.5;
+                // Set config select dropdown
+                const configSelect = document.getElementById('config-select');
+                if (configSelect) configSelect.value = configName;
+                updateNotification('Template loaded!', 'success');
             }
         })
         .catch(error => {
-            console.error('Failed to fetch template details:', error);
-            updateNotification(`Failed to load template "${configName}" details`, 'error');
+            updateNotification('Failed to load template: ' + error.message, 'error');
         });
 }
 
@@ -2948,4 +2976,636 @@ function startBatchGeneration() {
         console.error('Error:', error);
         updateNotification('Failed to start batch generation', 'error');
     });
+}
+
+// Image Analysis Drop Zone
+function initializeDropZone() {
+    const dropzone = document.getElementById('image-analysis-dropzone');
+    const fileInput = document.getElementById('image-analysis-input');
+    
+    if (!dropzone || !fileInput) return;
+    
+    // Click to select file
+    dropzone.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            handleImageFile(file);
+        }
+    });
+    
+    // Drag and drop events
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+    
+    dropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type.startsWith('image/')) {
+            handleImageFile(files[0]);
+        } else {
+            updateNotification('Please drop an image file', 'error');
+        }
+    });
+}
+
+function handleImageFile(file) {
+    if (!file.type.startsWith('image/')) {
+        updateNotification('Please select an image file', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imageData = e.target.result;
+        analyzeImage(imageData);
+    };
+    reader.readAsDataURL(file);
+}
+
+// Enhanced Button Feedback
+function setButtonLoading(button, loading = true) {
+    if (!button) return;
+    
+    if (loading) {
+        button.classList.add('loading');
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.setAttribute('data-original-text', originalText);
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    } else {
+        button.classList.remove('loading');
+        button.disabled = false;
+        const originalText = button.getAttribute('data-original-text');
+        if (originalText) {
+            button.innerHTML = originalText;
+        }
+    }
+}
+
+// Progress Tracking
+function initializeProgressTracking() {
+    // Initialize progress section
+    const progressSection = document.getElementById('progress-section');
+    if (progressSection) {
+        progressSection.style.display = 'none';
+    }
+}
+
+function updateProgress() {
+    if (!currentJob) return;
+    
+    fetch('/api/queue/jobs/' + currentJob.id)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateProgressDisplay(data.job);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating progress:', error);
+        });
+}
+
+function updateProgressDisplay(job) {
+    const progressSection = document.getElementById('progress-section');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const progressPercentage = document.getElementById('progress-percentage');
+    const progressConfig = document.getElementById('progress-config');
+    const progressTime = document.getElementById('progress-time');
+    const progressEta = document.getElementById('progress-eta');
+    
+    if (!progressSection || !job) return;
+    
+    const completed = job.completed || 0;
+    const total = job.total || 1;
+    const percentage = Math.round((completed / total) * 100);
+    
+    // Show progress section
+    progressSection.style.display = 'block';
+    
+    // Update progress bar
+    if (progressFill) {
+        progressFill.style.width = percentage + '%';
+    }
+    
+    // Update text
+    if (progressText) {
+        progressText.textContent = `${completed} of ${total} images`;
+    }
+    
+    if (progressPercentage) {
+        progressPercentage.textContent = `${percentage}%`;
+    }
+    
+    if (progressConfig) {
+        progressConfig.textContent = job.config_name || 'Unknown Config';
+    }
+    
+    // Update time info
+    if (job.start_time) {
+        const elapsed = Math.floor((Date.now() - new Date(job.start_time)) / 1000);
+        if (progressTime) {
+            progressTime.textContent = `Elapsed: ${formatTime(elapsed)}`;
+        }
+        
+        // Calculate ETA
+        if (completed > 0 && elapsed > 0) {
+            const rate = completed / elapsed;
+            const remaining = total - completed;
+            const eta = Math.floor(remaining / rate);
+            if (progressEta) {
+                progressEta.textContent = `ETA: ${formatTime(eta)}`;
+            }
+        }
+    }
+    
+    // Hide progress when complete
+    if (completed >= total) {
+        setTimeout(() => {
+            progressSection.style.display = 'none';
+            currentJob = null;
+        }, 3000);
+    }
+}
+
+function formatTime(seconds) {
+    if (seconds < 60) {
+        return `${seconds}s`;
+    } else if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${minutes}m ${secs}s`;
+    } else {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return `${hours}h ${minutes}m`;
+    }
+}
+
+// Server Info Management
+function initializeServerInfo() {
+    // Get server info on connection
+    fetch('/api/status/api')
+        .then(response => response.json())
+        .then(data => {
+            if (data.connected) {
+                fetchServerInfo();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking API status:', error);
+        });
+}
+
+function fetchServerInfo() {
+    setButtonLoading(document.getElementById('api-connect-btn'), true);
+    
+    Promise.all([
+        fetch('/api/models').then(r => r.json()),
+        fetch('/api/samplers').then(r => r.json()),
+        fetch('/api/options').then(r => r.json())
+    ])
+    .then(([modelsData, samplersData, optionsData]) => {
+        if (modelsData.success) {
+            serverInfo.models = modelsData.models || [];
+        }
+        if (samplersData.success) {
+            serverInfo.samplers = samplersData.samplers || [];
+        }
+        if (optionsData.success) {
+            serverInfo.vae = optionsData.vae || [];
+            serverInfo.upscalers = optionsData.upscalers || [];
+        }
+        
+        updateModelCompatibility();
+        setButtonLoading(document.getElementById('api-connect-btn'), false);
+    })
+    .catch(error => {
+        console.error('Error fetching server info:', error);
+        setButtonLoading(document.getElementById('api-connect-btn'), false);
+    });
+}
+
+function updateModelCompatibility() {
+    // Check current config against available models
+    const configSelect = document.getElementById('config-select');
+    if (!configSelect || !configSelect.value) return;
+    
+    const configName = configSelect.value;
+    fetch(`/api/configs/${configName}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                checkConfigCompatibility(data.config);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking config compatibility:', error);
+        });
+}
+
+function checkConfigCompatibility(config) {
+    const warnings = [];
+    
+    // Check model
+    const modelName = config.model_settings?.checkpoint;
+    if (modelName && !serverInfo.models.some(m => m.title === modelName)) {
+        warnings.push(`Model "${modelName}" not available on server`);
+    }
+    
+    // Check VAE
+    const vaeName = config.model_settings?.vae;
+    if (vaeName && !serverInfo.vae.some(v => v.title === vaeName)) {
+        warnings.push(`VAE "${vaeName}" not available on server`);
+    }
+    
+    // Display warnings
+    displayModelWarnings(warnings);
+}
+
+function displayModelWarnings(warnings) {
+    // Remove existing warnings
+    const existingWarnings = document.querySelectorAll('.model-warning');
+    existingWarnings.forEach(w => w.remove());
+    
+    // Add new warnings
+    const settingsSection = document.querySelector('.generation-settings');
+    if (settingsSection && warnings.length > 0) {
+        warnings.forEach(warning => {
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'model-warning';
+            warningDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>${warning}</span>
+            `;
+            settingsSection.insertBefore(warningDiv, settingsSection.firstChild);
+        });
+    }
+}
+
+// Status Indicators
+function updateStatusIndicators() {
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            updateApiStatus(data.api_connected);
+            updateGenerationStatus(data.generation_status);
+            updateQueueStatus(data.queue_size);
+        })
+        .catch(error => {
+            console.error('Error updating status:', error);
+        });
+}
+
+function updateApiStatus(connected) {
+    const statusItem = document.getElementById('api-status');
+    const icon = statusItem?.querySelector('.status-icon');
+    const text = statusItem?.querySelector('.status-text');
+    
+    if (statusItem && icon && text) {
+        if (connected) {
+            icon.className = 'fas fa-circle status-icon connected';
+            text.textContent = 'API: Connected';
+        } else {
+            icon.className = 'fas fa-circle status-icon disconnected';
+            text.textContent = 'API: Disconnected';
+        }
+    }
+}
+
+function updateGenerationStatus(status) {
+    const statusItem = document.getElementById('generation-status');
+    const icon = statusItem?.querySelector('.status-icon');
+    const text = statusItem?.querySelector('.status-text');
+    
+    if (statusItem && icon && text) {
+        if (status === 'generating') {
+            icon.className = 'fas fa-spinner fa-spin status-icon processing';
+            text.textContent = 'Generation: Active';
+        } else {
+            icon.className = 'fas fa-check-circle status-icon connected';
+            text.textContent = 'Generation: Idle';
+        }
+    }
+}
+
+function updateQueueStatus(queueSize) {
+    const statusItem = document.getElementById('queue-status');
+    const text = statusItem?.querySelector('.status-text');
+    
+    if (statusItem && text) {
+        text.textContent = `Queue: ${queueSize} jobs`;
+    }
+}
+
+// Enhanced Image Analysis
+function analyzeImage(imageData) {
+    setButtonLoading(document.querySelector('.image-analysis-dropzone'), true);
+    updateNotification('Analyzing image...', 'info');
+    
+    fetch('/api/analyze-image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            image_data: imageData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        setButtonLoading(document.querySelector('.image-analysis-dropzone'), false);
+        
+        if (data.success) {
+            displayAnalysisResults(data.analysis);
+            updateNotification('Image analyzed successfully!', 'success');
+        } else {
+            updateNotification(data.error || 'Analysis failed', 'error');
+        }
+    })
+    .catch(error => {
+        setButtonLoading(document.querySelector('.image-analysis-dropzone'), false);
+        updateNotification('Analysis failed: ' + error.message, 'error');
+    });
+}
+
+function displayAnalysisResults(analysis) {
+    // Create analysis results display
+    const resultsDisplay = document.createElement('div');
+    resultsDisplay.className = 'analysis-results-display';
+    resultsDisplay.innerHTML = `
+        <div class="analysis-summary">
+            <img src="${analysis.image_data}" alt="Analyzed Image" class="analysis-thumbnail">
+            <div class="analysis-summary-info">
+                <h4>Analysis Complete</h4>
+                <p><strong>Dimensions:</strong> ${analysis.width} × ${analysis.height}</p>
+                <p><strong>Model:</strong> ${analysis.parameters?.model || 'Unknown'}</p>
+                <p><strong>Sampler:</strong> ${analysis.parameters?.sampler || 'Unknown'}</p>
+            </div>
+        </div>
+        <div class="analysis-actions">
+            <button class="analysis-action-btn success" onclick="populateSettingsFromAnalysis()">
+                <i class="fas fa-magic"></i> Populate Settings
+            </button>
+            <button class="analysis-action-btn primary" onclick="createConfigFromAnalysis()">
+                <i class="fas fa-save"></i> Create Config
+            </button>
+            <button class="analysis-action-btn secondary" onclick="clearAnalysisResults()">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+    `;
+    
+    // Insert after dropzone
+    const dropzone = document.getElementById('image-analysis-dropzone');
+    if (dropzone && dropzone.parentNode) {
+        dropzone.parentNode.insertBefore(resultsDisplay, dropzone.nextSibling);
+        
+        // Show with animation
+        setTimeout(() => {
+            resultsDisplay.classList.add('show');
+        }, 10);
+    }
+    
+    // Store analysis data
+    analyzedImages.push(analysis);
+    selectedAnalysisIndex = analyzedImages.length - 1;
+}
+
+function clearAnalysisResults() {
+    const resultsDisplay = document.querySelector('.analysis-results-display');
+    if (resultsDisplay) {
+        resultsDisplay.remove();
+    }
+    analyzedImages = [];
+    selectedAnalysisIndex = -1;
+}
+
+// Enhanced populate settings function
+function populateSettingsFromAnalysis() {
+    if (analyzedImages.length === 0 || selectedAnalysisIndex < 0) {
+        updateNotification('No analysis data available', 'error');
+        return;
+    }
+    
+    const analysis = analyzedImages[selectedAnalysisIndex];
+    const params = analysis.parameters || {};
+    
+    // Populate all settings
+    populateField('prompt-input', params.prompt || '');
+    populateField('negative-prompt-input', params.negative_prompt || '');
+    populateField('seed-input', params.seed || '');
+    populateField('width-input', params.width || 512);
+    populateField('height-input', params.height || 512);
+    populateField('steps-input', params.steps || 20);
+    populateField('cfg-scale-input', params.cfg_scale || 7.0);
+    populateField('sampler-input', params.sampler || 'Euler a');
+    populateField('batch-size-input', params.batch_size || 1);
+    populateField('num-batches', params.num_batches || 1);
+    populateField('denoising-strength-input', params.denoising_strength || 0.7);
+    populateField('clip-skip-input', params.clip_skip || 1);
+    populateField('restore-faces-input', params.restore_faces ? 'Yes' : 'No');
+    populateField('tiling-input', params.tiling ? 'Yes' : 'No');
+    populateField('hires-fix-input', params.hires_fix ? 'Yes' : 'No');
+    populateField('hires-upscaler-input', params.hires_upscaler || 'Latent');
+    populateField('hires-steps-input', params.hires_steps || 20);
+    populateField('hires-denoising-input', params.hires_denoising || 0.5);
+    
+    updateNotification('Settings populated from analysis!', 'success');
+    
+    // Scroll to settings
+    const settingsSection = document.querySelector('.generation-settings');
+    if (settingsSection) {
+        settingsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function populateField(fieldId, value) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.value = value;
+        // Trigger change event for any listeners
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+}
+
+function createConfigFromAnalysis() {
+    if (analyzedImages.length === 0 || selectedAnalysisIndex < 0) {
+        updateNotification('No analysis data available', 'error');
+        return;
+    }
+    
+    const analysis = analyzedImages[selectedAnalysisIndex];
+    const params = analysis.parameters || {};
+    
+    // Create config data
+    const configData = {
+        name: `Config from ${analysis.filename || 'Image'}`,
+        description: `Generated from image analysis on ${new Date().toLocaleDateString()}`,
+        model_type: 'sd',
+        prompt_settings: {
+            base_prompt: params.prompt || '',
+            negative_prompt: params.negative_prompt || ''
+        },
+        generation_settings: {
+            width: params.width || 512,
+            height: params.height || 512,
+            steps: params.steps || 20,
+            cfg_scale: params.cfg_scale || 7.0,
+            sampler: params.sampler || 'Euler a',
+            batch_size: params.batch_size || 1,
+            num_batches: params.num_batches || 1,
+            denoising_strength: params.denoising_strength || 0.7,
+            clip_skip: params.clip_skip || 1,
+            restore_faces: params.restore_faces || false,
+            tiling: params.tiling || false,
+            hires_fix: params.hires_fix || false,
+            hires_upscaler: params.hires_upscaler || 'Latent',
+            hires_steps: params.hires_steps || 20,
+            hires_denoising: params.hires_denoising || 0.5
+        },
+        model_settings: {
+            checkpoint: params.model || '',
+            vae: params.vae || ''
+        },
+        thumbnail: analysis.image_data // Add thumbnail
+    };
+    
+    // Save config
+    fetch('/api/configs', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateNotification('Config created successfully!', 'success');
+            // Refresh templates
+            location.reload();
+        } else {
+            updateNotification(data.error || 'Failed to create config', 'error');
+        }
+    })
+    .catch(error => {
+        updateNotification('Failed to create config: ' + error.message, 'error');
+    });
+}
+
+// Enhanced generation functions with better feedback
+function generateSingle(configName) {
+    const button = event.target.closest('.btn');
+    setButtonLoading(button, true);
+    
+    // Get current settings
+    const settings = getCurrentSettings();
+    
+    fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            config_name: configName,
+            ...settings
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        setButtonLoading(button, false);
+        
+        if (data.success) {
+            updateNotification('Image generated successfully!', 'success');
+            // Update outputs display
+            updateOutputsDisplay();
+        } else {
+            updateNotification(data.error || 'Generation failed', 'error');
+        }
+    })
+    .catch(error => {
+        setButtonLoading(button, false);
+        updateNotification('Generation failed: ' + error.message, 'error');
+    });
+}
+
+function startBatch(configName) {
+    const button = event.target.closest('.btn');
+    setButtonLoading(button, true);
+    
+    // Get current settings
+    const settings = getCurrentSettings();
+    
+    fetch('/api/batch', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            config_name: configName,
+            ...settings
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        setButtonLoading(button, false);
+        
+        if (data.success) {
+            currentJob = { id: data.job_id, config_name: configName };
+            updateNotification(`Batch job started: ${data.total_images} images`, 'success');
+            updateProgress();
+        } else {
+            updateNotification(data.error || 'Batch failed', 'error');
+        }
+    })
+    .catch(error => {
+        setButtonLoading(button, false);
+        updateNotification('Batch failed: ' + error.message, 'error');
+    });
+}
+
+function getCurrentSettings() {
+    return {
+        prompt: document.getElementById('prompt-input')?.value || '',
+        negative_prompt: document.getElementById('negative-prompt-input')?.value || '',
+        seed: document.getElementById('seed-input')?.value || '',
+        width: parseInt(document.getElementById('width-input')?.value) || 512,
+        height: parseInt(document.getElementById('height-input')?.value) || 512,
+        steps: parseInt(document.getElementById('steps-input')?.value) || 20,
+        cfg_scale: parseFloat(document.getElementById('cfg-scale-input')?.value) || 7.0,
+        sampler: document.getElementById('sampler-input')?.value || 'Euler a',
+        batch_size: parseInt(document.getElementById('batch-size-input')?.value) || 1,
+        num_batches: parseInt(document.getElementById('num-batches')?.value) || 1
+    };
+}
+
+function updateOutputsDisplay() {
+    // Refresh outputs section
+    fetch('/api/outputs')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update outputs display (implement based on your UI)
+                console.log('Outputs updated:', data.outputs);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating outputs:', error);
+        });
 }

@@ -67,33 +67,81 @@ class OutputManager:
             filename = f"{timestamp}_{seed_int:08d}.png"
             filepath = os.path.join(output_dir, filename)
             
-            # Prepare metadata for embedding
+            # Prepare metadata in Automatic1111 format
             metadata = {
+                # Core generation parameters (exactly like A1111)
                 'prompt': prompt,
                 'negative_prompt': generation_settings.get('negative_prompt', '') if generation_settings else '',
                 'seed': int(seed) if seed is not None else -1,
-                'steps': generation_settings.get('steps', 20) if generation_settings else 20,
-                'sampler_name': generation_settings.get('sampler', 'Euler a') if generation_settings else 'Euler a',
-                'cfg_scale': generation_settings.get('cfg_scale', 7.0) if generation_settings else 7.0,
+                'subseed': generation_settings.get('subseed', -1) if generation_settings else -1,
+                'subseed_strength': generation_settings.get('subseed_strength', 0.0) if generation_settings else 0.0,
                 'width': generation_settings.get('width', 512) if generation_settings else 512,
                 'height': generation_settings.get('height', 512) if generation_settings else 512,
-                'model_name': model_settings.get('checkpoint', '') if model_settings else '',
-                'model_hash': model_settings.get('model_hash', '') if model_settings else '',
-                'vae_name': model_settings.get('vae', '') if model_settings else '',
-                'vae_hash': model_settings.get('vae_hash', '') if model_settings else '',
+                'sampler_name': generation_settings.get('sampler', 'Euler a') if generation_settings else 'Euler a',
+                'cfg_scale': generation_settings.get('cfg_scale', 7.0) if generation_settings else 7.0,
+                'steps': generation_settings.get('steps', 20) if generation_settings else 20,
+                'batch_size': generation_settings.get('batch_size', 1) if generation_settings else 1,
+                'restore_faces': generation_settings.get('restore_faces', False) if generation_settings else False,
+                'face_restoration_model': generation_settings.get('face_restoration_model', 'CodeFormer') if generation_settings else 'CodeFormer',
+                'sd_model_name': model_settings.get('checkpoint', '') if model_settings else '',
+                'sd_model_hash': model_settings.get('model_hash', '') if model_settings else '',
+                'sd_vae_name': model_settings.get('vae', '') if model_settings else '',
+                'sd_vae_hash': model_settings.get('vae_hash', '') if model_settings else '',
+                'clip_skip': generation_settings.get('clip_skip', 1) if generation_settings else 1,
+                'is_using_inpainting_conditioning': generation_settings.get('is_using_inpainting_conditioning', False) if generation_settings else False,
+                
+                # Hires fix parameters
+                'hires_fix': generation_settings.get('hires_fix', False) if generation_settings else False,
+                'hires_upscaler': generation_settings.get('hires_upscaler', 'Latent') if generation_settings else 'Latent',
+                'hires_steps': generation_settings.get('hires_steps', 20) if generation_settings else 20,
+                'hires_denoising': generation_settings.get('hires_denoising', 0.5) if generation_settings else 0.5,
+                'hires_resize_x': generation_settings.get('hires_resize_x', 0) if generation_settings else 0,
+                'hires_resize_y': generation_settings.get('hires_resize_y', 0) if generation_settings else 0,
+                
+                # Denoising strength (for img2img)
+                'denoising_strength': generation_settings.get('denoising_strength', 0.7) if generation_settings else 0.7,
+                
+                # Tiling
+                'tiling': generation_settings.get('tiling', False) if generation_settings else False,
+                
+                # Additional generation settings
+                'eta': generation_settings.get('eta', 0.0) if generation_settings else 0.0,
+                's_churn': generation_settings.get('s_churn', 0.0) if generation_settings else 0.0,
+                's_tmin': generation_settings.get('s_tmin', 0.0) if generation_settings else 0.0,
+                's_tmax': generation_settings.get('s_tmax', 1.0) if generation_settings else 1.0,
+                's_noise': generation_settings.get('s_noise', 1.0) if generation_settings else 1.0,
+                
+                # ControlNet settings (if present)
+                'controlnet_0_model': generation_settings.get('controlnet_0_model', '') if generation_settings else '',
+                'controlnet_0_preprocessor': generation_settings.get('controlnet_0_preprocessor', '') if generation_settings else '',
+                'controlnet_0_guidance_start': generation_settings.get('controlnet_0_guidance_start', 0.0) if generation_settings else 0.0,
+                'controlnet_0_guidance_end': generation_settings.get('controlnet_0_guidance_end', 1.0) if generation_settings else 1.0,
+                'controlnet_0_control_mode': generation_settings.get('controlnet_0_control_mode', 'Balanced') if generation_settings else 'Balanced',
+                'controlnet_0_pixel_perfect': generation_settings.get('controlnet_0_pixel_perfect', False) if generation_settings else False,
+                
+                # LoRA settings (if present)
+                'lora_hashes': generation_settings.get('lora_hashes', '') if generation_settings else '',
+                'lora_weights': generation_settings.get('lora_weights', '') if generation_settings else '',
+                
+                # Script settings (if present)
+                'script_name': generation_settings.get('script_name', '') if generation_settings else '',
+                'script_args': generation_settings.get('script_args', []) if generation_settings else [],
+                
+                # Forge API Tool specific metadata
                 'config_name': config_name,
                 'generation_time': datetime.now().isoformat(),
                 'software': 'Forge API Tool',
-                'version': '1.0.0'
+                'version': '1.0.0',
+                'api_type': 'forge'
             }
             
-            # Add any additional generation settings
+            # Add any additional generation settings not covered above
             if generation_settings:
                 for key, value in generation_settings.items():
                     if key not in metadata:
                         metadata[f'gen_{key}'] = value
             
-            # Add any additional model settings
+            # Add any additional model settings not covered above
             if model_settings:
                 for key, value in model_settings.items():
                     if key not in metadata:
@@ -102,7 +150,7 @@ class OutputManager:
             # Embed metadata in PNG
             pnginfo = PngImagePlugin.PngInfo()
             
-            # Add all metadata as text chunks
+            # Add all metadata as text chunks (exactly like A1111)
             for key, value in metadata.items():
                 if isinstance(value, (dict, list)):
                     # Convert complex objects to JSON strings
