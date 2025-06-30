@@ -339,14 +339,20 @@ function selectTemplate(configName) {
                 document.getElementById('batch-size-input').value = config.generation_settings?.batch_size || 1;
                 document.getElementById('num-batches').value = config.generation_settings?.num_batches || 1;
                 
-                // Advanced Settings
-                document.getElementById('restore-faces-input').value = config.generation_settings?.restore_faces || false;
-                document.getElementById('tiling-input').value = config.generation_settings?.tiling || false;
+                // Advanced Settings - handle boolean values properly
+                const restoreFaces = config.generation_settings?.restore_faces;
+                document.getElementById('restore-faces-input').value = restoreFaces === true ? 'true' : 'false';
+                
+                const tiling = config.generation_settings?.tiling;
+                document.getElementById('tiling-input').value = tiling === true ? 'true' : 'false';
+                
                 document.getElementById('clip-skip-input').value = config.generation_settings?.clip_skip || 1;
                 document.getElementById('denoising-strength-input').value = config.generation_settings?.denoising_strength || 0.7;
                 
-                // Hires Fix Settings
-                document.getElementById('hires-fix-input').value = config.generation_settings?.hires_fix || false;
+                // Hires Fix Settings - handle boolean values properly
+                const hiresFix = config.generation_settings?.hires_fix;
+                document.getElementById('hires-fix-input').value = hiresFix === true ? 'true' : 'false';
+                
                 document.getElementById('hires-upscaler-input').value = config.generation_settings?.hires_upscaler || 'Latent';
                 document.getElementById('hires-steps-input').value = config.generation_settings?.hires_steps || 20;
                 document.getElementById('hires-denoising-input').value = config.generation_settings?.hires_denoising || 0.7;
@@ -1582,7 +1588,12 @@ function analyzeImage(imageData) {
         displayAnalysisResults(data);
         updateAnalysisSelector();
         
-        updateNotification(`Image analysis completed (${analyzedImages.length} total)`, 'success');
+        // Automatically populate settings from analysis
+        setTimeout(() => {
+            populateSettingsFromAnalysis();
+        }, 500);
+        
+        updateNotification(`Image analysis completed and settings populated!`, 'success');
     })
     .catch(error => {
         console.error('Error analyzing image:', error);
@@ -1997,7 +2008,7 @@ function populateSettingsFromAnalysis() {
     }
     
     if (hiresDenoisingInput) {
-        hiresDenoisingInput.value = params.hires_denoising || 0.5;
+        hiresDenoisingInput.value = params.hires_denoising || 0.7;
     }
     
     // Show success notification
@@ -3433,7 +3444,7 @@ function populateSettingsFromAnalysis() {
     populateField('hires-fix-input', params.hires_fix ? 'Yes' : 'No');
     populateField('hires-upscaler-input', params.hires_upscaler || 'Latent');
     populateField('hires-steps-input', params.hires_steps || 20);
-    populateField('hires-denoising-input', params.hires_denoising || 0.5);
+    populateField('hires-denoising-input', params.hires_denoising || 0.7);
     
     updateNotification('Settings populated from analysis!', 'success');
     
@@ -3486,7 +3497,7 @@ function createConfigFromAnalysis() {
             hires_fix: params.hires_fix || false,
             hires_upscaler: params.hires_upscaler || 'Latent',
             hires_steps: params.hires_steps || 20,
-            hires_denoising: params.hires_denoising || 0.5
+            hires_denoising: params.hires_denoising || 0.7
         },
         model_settings: {
             checkpoint: params.model || '',
