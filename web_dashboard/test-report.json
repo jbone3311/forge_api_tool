@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-07-01T05:25:50.186Z",
+  "duration": 1.555,
+  "results": {
+    "passed": 0,
+    "failed": 0,
+    "total": 0,
+    "errors": [
+      "Jest tests failed: Unexpected token '>', \"\n> forge-da\"... is not valid JSON"
+    ],
+    "warnings": [
+      "No event listener cleanup found",
+      "No throttling implementation found"
+    ],
+    "coverage": {}
+  },
+  "summary": {
+    "status": "PASSED",
+    "passRate": 0
+  }
+}

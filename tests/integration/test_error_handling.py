@@ -34,7 +34,7 @@ class TestErrorHandling(unittest.TestCase):
         """Test handling of missing wildcard files."""
         try:
             r = requests.post(f"{self.BASE}/api/batch/preview", json={
-                "config_name": "test_config",
+                "config_name": "Quick Start",
                 "prompt": "a beautiful __NONEXISTENT_WILDCARD__ landscape"
             }, timeout=self.timeout)
             # Should handle missing wildcard gracefully

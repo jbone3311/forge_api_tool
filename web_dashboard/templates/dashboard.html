@@ -32,6 +32,9 @@
                     <button class="btn btn-sm btn-primary" id="api-connect-btn" onclick="toggleApiConnection()" style="margin-left:0.5rem;">
                         <i class="fas fa-plug"></i> Connect
                     </button>
+                    <button class="btn btn-sm btn-secondary" onclick="openSettingsModal()" style="margin-left:0.5rem;" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
                 </div>
             </div>
         </header>
@@ -353,52 +356,6 @@
             <aside class="sidebar queue-sidebar resizable">
                 <div class="sidebar-resizer" id="queue-resizer"></div>
                 
-                <!-- Server Configuration Section -->
-                <div class="server-config-section">
-                    <div class="sidebar-header">
-                        <h2><i class="fas fa-server"></i> Server Configuration</h2>
-                    </div>
-                    
-                    <div class="server-config-content">
-                        <div class="api-toggle">
-                            <label class="toggle-label">
-                                <input type="checkbox" id="rundiffusion-toggle" onchange="toggleRunDiffusion()">
-                                <span class="toggle-switch"></span>
-                                Use RunDiffusion API
-                            </label>
-                        </div>
-                        
-                        <div id="rundiffusion-config" style="display: none;">
-                            <div class="input-group">
-                                <label for="rundiffusion-url">Server URL:</label>
-                                <input type="url" id="rundiffusion-url" placeholder="https://your-instance.rundiffusion.com">
-                            </div>
-                            <div class="input-group">
-                                <label for="rundiffusion-username">Username:</label>
-                                <input type="text" id="rundiffusion-username" placeholder="rduser">
-                            </div>
-                            <div class="input-group">
-                                <label for="rundiffusion-password">Password:</label>
-                                <input type="password" id="rundiffusion-password" placeholder="rdpass">
-                            </div>
-                            
-                            <div class="api-actions">
-                                <button class="btn btn-sm btn-primary" onclick="saveRunDiffusionConfig()">
-                                    <i class="fas fa-save"></i> Save & Connect
-                                </button>
-                                <button class="btn btn-sm btn-secondary" onclick="testRunDiffusionConnection()">
-                                    <i class="fas fa-plug"></i> Test Connection
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="api-info" id="api-info" style="display: none;">
-                            <i class="fas fa-info-circle"></i>
-                            <span id="api-info-text">Connected to local Forge API</span>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Image Analysis Section -->
                 <div class="image-analysis-section">
                     <div class="sidebar-header">
@@ -414,7 +371,7 @@
                     </div>
                     
                     <!-- Image Drop Zone -->
-                    <div class="image-drop-zone" id="image-drop-zone">
+                    <div class="image-drop-zone dropzone" id="image-drop-zone">
                         <div class="drop-zone-content">
                             <i class="fas fa-cloud-upload-alt"></i>
                             <h4>Drop an image here to analyze</h4>
@@ -606,11 +563,332 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3><i class="fas fa-cog"></i> Settings</h3>
+                <button class="close-btn" onclick="closeModal('settings-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-tabs">
+                    <button class="tab-btn active" onclick="switchSettingsTab('api')">API Configuration</button>
+                    <button class="tab-btn" onclick="switchSettingsTab('output')">Output Settings</button>
+                    <button class="tab-btn" onclick="switchSettingsTab('logs')">Logs & Maintenance</button>
+                    <button class="tab-btn" onclick="switchSettingsTab('advanced')">Advanced</button>
+                </div>
+
+                <!-- API Configuration Tab -->
+                <div id="api-settings-tab" class="settings-tab active">
+                    <div class="settings-section">
+                        <h4><i class="fas fa-server"></i> API Configuration</h4>
+                        
+                        <div class="api-type-selector">
+                            <label class="radio-label">
+                                <input type="radio" name="api-type" value="local" id="api-local">
+                                <span class="radio-custom"></span>
+                                Local Forge API
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="api-type" value="rundiffusion" id="api-rundiffusion">
+                                <span class="radio-custom"></span>
+                                RunDiffusion API
+                            </label>
+                        </div>
+
+                        <!-- Local API Settings -->
+                        <div id="local-api-settings" class="api-settings-panel">
+                            <div class="input-group">
+                                <label for="local-api-url">Local API URL:</label>
+                                <input type="url" id="local-api-url" placeholder="http://localhost:3000" value="http://localhost:3000">
+                            </div>
+                            <div class="input-group">
+                                <label for="local-api-timeout">Timeout (seconds):</label>
+                                <input type="number" id="local-api-timeout" value="30" min="5" max="300">
+                            </div>
+                        </div>
+
+                        <!-- RunDiffusion API Settings -->
+                        <div id="rundiffusion-api-settings" class="api-settings-panel" style="display: none;">
+                            <div class="input-group">
+                                <label for="rundiffusion-url-settings">Server URL:</label>
+                                <input type="url" id="rundiffusion-url-settings" placeholder="https://your-instance.rundiffusion.com">
+                            </div>
+                            <div class="input-group">
+                                <label for="rundiffusion-username-settings">Username:</label>
+                                <input type="text" id="rundiffusion-username-settings" placeholder="rduser">
+                            </div>
+                            <div class="input-group">
+                                <label for="rundiffusion-password-settings">Password:</label>
+                                <input type="password" id="rundiffusion-password-settings" placeholder="rdpass">
+                            </div>
+                            <div class="input-group">
+                                <label for="rundiffusion-timeout-settings">Timeout (seconds):</label>
+                                <input type="number" id="rundiffusion-timeout-settings" value="60" min="10" max="300">
+                            </div>
+                        </div>
+
+                        <div class="api-actions">
+                            <button class="btn btn-sm btn-primary" onclick="saveApiSettings()">
+                                <i class="fas fa-save"></i> Save API Settings
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="testApiConnection()">
+                                <i class="fas fa-plug"></i> Test Connection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Settings Tab -->
+                <div id="output-settings-tab" class="settings-tab">
+                    <div class="settings-section">
+                        <h4><i class="fas fa-folder-open"></i> Output Directory Settings</h4>
+                        
+                        <div class="input-group">
+                            <label for="output-base-directory">Base Output Directory:</label>
+                            <div class="input-with-button">
+                                <input type="text" id="output-base-directory" placeholder="/path/to/outputs" readonly>
+                                <button class="btn btn-sm btn-secondary" onclick="selectOutputDirectory()">
+                                    <i class="fas fa-folder-open"></i> Browse
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="output-naming-pattern">File Naming Pattern:</label>
+                            <select id="output-naming-pattern">
+                                <option value="timestamp">Timestamp (YYYY-MM-DD_HH-MM-SS)</option>
+                                <option value="config_timestamp">Config_Timestamp</option>
+                                <option value="prompt_hash">Prompt Hash</option>
+                                <option value="custom">Custom Pattern</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" id="custom-pattern-group" style="display: none;">
+                            <label for="custom-naming-pattern">Custom Pattern:</label>
+                            <input type="text" id="custom-naming-pattern" placeholder="{config}_{timestamp}_{seed}">
+                            <small class="help-text">Available variables: {config}, {timestamp}, {seed}, {prompt_hash}</small>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="auto-open-outputs">Auto-open output folder after generation:</label>
+                            <select id="auto-open-outputs">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="max-outputs-display">Max outputs to display in gallery:</label>
+                            <input type="number" id="max-outputs-display" value="50" min="10" max="200">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs & Maintenance Tab -->
+                <div id="logs-settings-tab" class="settings-tab">
+                    <div class="settings-section">
+                        <h4><i class="fas fa-file-alt"></i> Log Management</h4>
+                        
+                        <div class="log-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Application Logs:</span>
+                                <span class="stat-value" id="app-logs-size">--</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Error Logs:</span>
+                                <span class="stat-value" id="error-logs-size">--</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Performance Logs:</span>
+                                <span class="stat-value" id="perf-logs-size">--</span>
+                            </div>
+                        </div>
+
+                        <div class="log-actions">
+                            <button class="btn btn-sm btn-info" onclick="viewLogs()">
+                                <i class="fas fa-eye"></i> View Logs
+                            </button>
+                            <button class="btn btn-sm btn-warning" onclick="downloadLogs()">
+                                <i class="fas fa-download"></i> Download Logs
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="clearLogs()">
+                                <i class="fas fa-trash"></i> Clear All Logs
+                            </button>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="log-retention-days">Log Retention (days):</label>
+                            <input type="number" id="log-retention-days" value="30" min="1" max="365">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="auto-cleanup-logs">Auto-cleanup old logs:</label>
+                            <select id="auto-cleanup-logs">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h4><i class="fas fa-database"></i> Cache Management</h4>
+                        
+                        <div class="cache-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Cache Size:</span>
+                                <span class="stat-value" id="cache-size">--</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Cache Items:</span>
+                                <span class="stat-value" id="cache-items">--</span>
+                            </div>
+                        </div>
+
+                        <div class="cache-actions">
+                            <button class="btn btn-sm btn-warning" onclick="clearCache()">
+                                <i class="fas fa-broom"></i> Clear Cache
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings Tab -->
+                <div id="advanced-settings-tab" class="settings-tab">
+                    <div class="settings-section">
+                        <h4><i class="fas fa-sliders-h"></i> Performance Settings</h4>
+                        
+                        <div class="input-group">
+                            <label for="max-concurrent-jobs">Max Concurrent Jobs:</label>
+                            <input type="number" id="max-concurrent-jobs" value="2" min="1" max="10">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="job-timeout">Job Timeout (minutes):</label>
+                            <input type="number" id="job-timeout" value="30" min="5" max="120">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="auto-refresh-interval">Auto-refresh Interval (seconds):</label>
+                            <input type="number" id="auto-refresh-interval" value="5" min="1" max="60">
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h4><i class="fas fa-shield-alt"></i> Security Settings</h4>
+                        
+                        <div class="input-group">
+                            <label for="enable-cors">Enable CORS:</label>
+                            <select id="enable-cors">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="max-upload-size">Max Upload Size (MB):</label>
+                            <input type="number" id="max-upload-size" value="10" min="1" max="100">
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h4><i class="fas fa-palette"></i> UI Settings</h4>
+                        
+                        <div class="input-group">
+                            <label for="theme">Theme:</label>
+                            <select id="theme">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="auto">Auto (System)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="sidebar-width">Default Sidebar Width (px):</label>
+                            <input type="number" id="sidebar-width" value="300" min="200" max="500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAllSettings()">
+                    <i class="fas fa-save"></i> Save All Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs Modal -->
+    <div id="logs-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-alt"></i> Application Logs</h3>
+                <button class="close-btn" onclick="closeModal('logs-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="logs-tabs">
+                    <button class="tab-btn active" onclick="switchLogsTab('application')">Application</button>
+                    <button class="tab-btn" onclick="switchLogsTab('errors')">Errors</button>
+                    <button class="tab-btn" onclick="switchLogsTab('performance')">Performance</button>
+                </div>
+                <div class="logs-content">
+                    <div id="application-logs" class="log-content active">
+                        <pre id="app-logs-content"></pre>
+                    </div>
+                    <div id="error-logs" class="log-content">
+                        <pre id="error-logs-content"></pre>
+                    </div>
+                    <div id="performance-logs" class="log-content">
+                        <pre id="perf-logs-content"></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('logs-modal')">Close</button>
+                <button class="btn btn-info" onclick="refreshLogs()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notification Container -->
     <div id="notification-container"></div>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/dashboard-modular.js') }}"></script>
+    <script>
+        // Simple test to verify JavaScript is working
+        console.log('Dashboard HTML loaded');
+        console.log('User Agent:', navigator.userAgent);
+        
+        // Safari-specific error handling
+        if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
+            console.log('Safari detected - using Safari-specific handling');
+        }
+        
+        // Test if modules are loading
+        setTimeout(() => {
+            console.log('Checking modules...');
+            const modules = ['notificationManager', 'modalManager', 'templateManager', 'generationManager', 'queueManager', 'outputManager', 'settingsManager', 'analysisManager', 'utilsManager'];
+            let loadedCount = 0;
+            modules.forEach(moduleName => {
+                if (window[moduleName]) {
+                    console.log(`✓ ${moduleName} loaded`);
+                    loadedCount++;
+                } else {
+                    console.error(`✗ ${moduleName} NOT loaded`);
+                }
+            });
+            
+            if (loadedCount === modules.length) {
+                console.log('🎉 All modules loaded successfully!');
+            } else {
+                console.error(`⚠️ Only ${loadedCount}/${modules.length} modules loaded`);
+            }
+        }, 2000); // Increased timeout for Safari
+    </script>
 </body>
 </html> 

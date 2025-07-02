@@ -1,0 +1,62 @@
+{
+  "name": "forge-dashboard",
+  "version": "1.0.0",
+  "description": "Forge API Tool Web Dashboard",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "jest __tests__/",
+    "test:watch": "jest __tests__/ --watch",
+    "test:coverage": "jest __tests__/ --coverage",
+    "test:e2e": "npx playwright test e2e/",
+    "test:e2e:ui": "npx playwright test e2e/ --ui",
+    "test:e2e:headed": "npx playwright test e2e/ --headed",
+    "test:all": "npm run test && npm run test:e2e",
+    "test:organize": "node test-organizer.js organize",
+    "test:setup": "node test-organizer.js setup",
+    "test:report": "node test-organizer.js report",
+    "test:run-complete": "node test-organizer.js run",
+    "test:api": "node test-api.js",
+    "test:dashboard": "open test-dashboard.html",
+    "test:reports": "open test-reports/index.html",
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.27.2",
+    "@playwright/test": "^1.53.2",
+    "babel-jest": "^29.7.0",
+    "jest": "^29.0.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "jsdom": "^22.0.0",
+    "playwright": "^1.53.2",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/__tests__/setupTests.js"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/static/js/$1"
+    },
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    },
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "e2e/",
+      "tests/",
+      "__tests__/run-all-tests.js",
+      "__tests__/setupTests.js"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "static/js/**/*.js",
+      "!static/js/**/*.test.js"
+    ]
+  }
+}

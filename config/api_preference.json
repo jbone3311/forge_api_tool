@@ -1,0 +1,8 @@
+{
+  "api_type": "rundiffusion",
+  "rundiffusion_config": {
+    "url": "https://sdotf5s7b3t.east5.rundiffusion.com",
+    "username": "rduser",
+    "password": "rdpass"
+  }
+}

@@ -22,7 +22,7 @@ from core.config_handler import ConfigHandler
 from core.wildcard_manager import WildcardManagerFactory
 from core.prompt_builder import PromptBuilder
 from core.batch_runner import BatchRunner
-from core.logger import logger
+from core.centralized_logger import logger
 
 class DirectForgeAPITester:
     def __init__(self, forge_url: str = "http://127.0.0.1:7860"):

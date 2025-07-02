@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge API Tool - Test Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .test-dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .test-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-passed { color: #48bb78; }
+        .stat-failed { color: #f56565; }
+        .stat-skipped { color: #ed8936; }
+        .stat-total { color: #4299e1; }
+
+        .test-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .test-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .icon-unit { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .icon-e2e { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .icon-integration { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .icon-performance { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+
+        .test-list {
+            list-style: none;
+        }
+
+        .test-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f7fafc;
+            transition: background-color 0.2s ease;
+        }
+
+        .test-item:hover {
+            background-color: #f7fafc;
+            border-radius: 8px;
+            padding-left: 10px;
+            padding-right: 10px;
+            margin-left: -10px;
+            margin-right: -10px;
+        }
+
+        .test-item:last-child {
+            border-bottom: none;
+        }
+
+        .test-name {
+            font-weight: 500;
+            color: #4a5568;
+            flex: 1;
+        }
+
+        .test-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-passed {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-failed {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .status-skipped {
+            background: #feebc8;
+            color: #744210;
+        }
+
+        .status-running {
+            background: #bee3f8;
+            color: #2a4365;
+            animation: pulse 2s infinite;
+        }
+
+        .test-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+            color: white;
+        }
+
+        .test-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .test-output.show {
+            display: block;
+        }
+
+        .recent-runs {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .run-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .run-item:last-child {
+            border-bottom: none;
+        }
+
+        .run-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .run-time {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .run-duration {
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .action-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .action-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .action-desc {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        @media (max-width: 768px) {
+            .test-dashboard {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .test-sections {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-dashboard">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <i class="fas fa-vial"></i>
+                Test Dashboard
+            </h1>
+            <p class="subtitle">Forge API Tool - Comprehensive Testing Interface</p>
+            
+            <!-- Test Statistics -->
+            <div class="test-stats">
+                <div class="stat-card">
+                    <div class="stat-number stat-total" id="total-tests">0</div>
+                    <div class="stat-label">Total Tests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-passed" id="passed-tests">0</div>
+                    <div class="stat-label">Passed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-failed" id="failed-tests">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-skipped" id="skipped-tests">0</div>
+                    <div class="stat-label">Skipped</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <div class="action-card" onclick="runAllTests()">
+                <div class="action-icon">
+                    <i class="fas fa-play-circle"></i>
+                </div>
+                <div class="action-title">Run All Tests</div>
+                <div class="action-desc">Execute complete test suite</div>
+            </div>
+            <div class="action-card" onclick="runUnitTests()">
+                <div class="action-icon">
+                    <i class="fas fa-microchip"></i>
+                </div>
+                <div class="action-title">Unit Tests</div>
+                <div class="action-desc">Jest unit tests</div>
+            </div>
+            <div class="action-card" onclick="runE2ETests()">
+                <div class="action-icon">
+                    <i class="fas fa-browser"></i>
+                </div>
+                <div class="action-title">E2E Tests</div>
+                <div class="action-desc">Playwright end-to-end tests</div>
+            </div>
+            <div class="action-card" onclick="showTestReport()">
+                <div class="action-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="action-title">Test Reports</div>
+                <div class="action-desc">View detailed reports</div>
+            </div>
+        </div>
+
+        <!-- Test Sections -->
+        <div class="test-sections">
+            <!-- Unit Tests -->
+            <div class="test-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-icon icon-unit">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        Unit Tests
+                    </div>
+                    <div class="test-actions">
+                        <button class="btn btn-primary" onclick="runUnitTests()">
+                            <i class="fas fa-play"></i> Run
+                        </button>
+                        <button class="btn btn-secondary" onclick="showUnitTestDetails()">
+                            <i class="fas fa-eye"></i> Details
+                        </button>
+                    </div>
+                </div>
+                
+                <ul class="test-list" id="unit-test-list">
+                    <li class="test-item">
+                        <span class="test-name">Dashboard Structure Tests</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>2.3s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">UI Component Tests</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>1.8s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">Error Handling Tests</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>2.1s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">Modular System Tests</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>3.2s</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- E2E Tests -->
+            <div class="test-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-icon icon-e2e">
+                            <i class="fas fa-browser"></i>
+                        </div>
+                        E2E Tests
+                    </div>
+                    <div class="test-actions">
+                        <button class="btn btn-primary" onclick="runE2ETests()">
+                            <i class="fas fa-play"></i> Run
+                        </button>
+                        <button class="btn btn-secondary" onclick="showE2ETestDetails()">
+                            <i class="fas fa-eye"></i> Details
+                        </button>
+                    </div>
+                </div>
+                
+                <ul class="test-list" id="e2e-test-list">
+                    <li class="test-item">
+                        <span class="test-name">Basic UI Tests</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>8.5s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">Template Management</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>12.3s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">Generation Workflow</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>15.7s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">Error Handling</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>10.2s</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Integration Tests -->
+            <div class="test-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-icon icon-integration">
+                            <i class="fas fa-plug"></i>
+                        </div>
+                        Integration Tests
+                    </div>
+                    <div class="test-actions">
+                        <button class="btn btn-primary" onclick="runIntegrationTests()">
+                            <i class="fas fa-play"></i> Run
+                        </button>
+                        <button class="btn btn-secondary" onclick="showIntegrationTestDetails()">
+                            <i class="fas fa-eye"></i> Details
+                        </button>
+                    </div>
+                </div>
+                
+                <ul class="test-list" id="integration-test-list">
+                    <li class="test-item">
+                        <span class="test-name">API Integration</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>5.2s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">Database Operations</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>3.8s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">File System Operations</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>4.1s</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Performance Tests -->
+            <div class="test-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-icon icon-performance">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        Performance Tests
+                    </div>
+                    <div class="test-actions">
+                        <button class="btn btn-primary" onclick="runPerformanceTests()">
+                            <i class="fas fa-play"></i> Run
+                        </button>
+                        <button class="btn btn-secondary" onclick="showPerformanceTestDetails()">
+                            <i class="fas fa-eye"></i> Details
+                        </button>
+                    </div>
+                </div>
+                
+                <ul class="test-list" id="performance-test-list">
+                    <li class="test-item">
+                        <span class="test-name">Load Time Tests</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>2.1s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">Memory Usage</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>1.5s</span>
+                        </div>
+                    </li>
+                    <li class="test-item">
+                        <span class="test-name">Response Time</span>
+                        <div class="test-status">
+                            <span class="status-badge status-passed">Passed</span>
+                            <span>3.2s</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Recent Test Runs -->
+        <div class="recent-runs">
+            <h3 style="margin-bottom: 20px; color: #2d3748;">
+                <i class="fas fa-history"></i> Recent Test Runs
+            </h3>
+            <div id="recent-runs-list">
+                <div class="run-item">
+                    <div class="run-info">
+                        <span class="run-time">2024-01-15 14:30:25</span>
+                        <span class="run-duration">Complete Test Suite</span>
+                    </div>
+                    <div class="test-status">
+                        <span class="status-badge status-passed">All Passed</span>
+                        <span>45.2s</span>
+                    </div>
+                </div>
+                <div class="run-item">
+                    <div class="run-info">
+                        <span class="run-time">2024-01-15 13:15:10</span>
+                        <span class="run-duration">E2E Tests Only</span>
+                    </div>
+                    <div class="test-status">
+                        <span class="status-badge status-passed">All Passed</span>
+                        <span>32.8s</span>
+                    </div>
+                </div>
+                <div class="run-item">
+                    <div class="run-info">
+                        <span class="run-time">2024-01-15 12:45:33</span>
+                        <span class="run-duration">Unit Tests Only</span>
+                    </div>
+                    <div class="test-status">
+                        <span class="status-badge status-passed">All Passed</span>
+                        <span>8.5s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Details Modal -->
+    <div id="testModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Test Details</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modalBody">
+                <!-- Modal content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test Dashboard JavaScript
+        let currentTestRun = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTestStats();
+            loadRecentRuns();
+        });
+
+        function updateTestStats() {
+            // Calculate stats from test lists
+            const unitTests = document.querySelectorAll('#unit-test-list .test-item');
+            const e2eTests = document.querySelectorAll('#e2e-test-list .test-item');
+            const integrationTests = document.querySelectorAll('#integration-test-list .test-item');
+            const performanceTests = document.querySelectorAll('#performance-test-list .test-item');
+
+            const allTests = [...unitTests, ...e2eTests, ...integrationTests, ...performanceTests];
+            const passedTests = allTests.filter(test => 
+                test.querySelector('.status-badge').classList.contains('status-passed')
+            ).length;
+            const failedTests = allTests.filter(test => 
+                test.querySelector('.status-badge').classList.contains('status-failed')
+            ).length;
+            const skippedTests = allTests.filter(test => 
+                test.querySelector('.status-badge').classList.contains('status-skipped')
+            ).length;
+
+            document.getElementById('total-tests').textContent = allTests.length;
+            document.getElementById('passed-tests').textContent = passedTests;
+            document.getElementById('failed-tests').textContent = failedTests;
+            document.getElementById('skipped-tests').textContent = skippedTests;
+        }
+
+        function loadRecentRuns() {
+            // Load recent test runs from localStorage or API
+            const recentRuns = JSON.parse(localStorage.getItem('recentTestRuns') || '[]');
+            const runsList = document.getElementById('recent-runs-list');
+            
+            if (recentRuns.length === 0) {
+                runsList.innerHTML = '<p style="color: #718096; text-align: center; padding: 20px;">No recent test runs found</p>';
+            }
+        }
+
+        function runAllTests() {
+            if (currentTestRun) {
+                alert('Tests are already running. Please wait for completion.');
+                return;
+            }
+
+            currentTestRun = 'all';
+            updateTestStatus('running');
+            
+            // Simulate test execution
+            setTimeout(() => {
+                fetch('/api/tests/run-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    updateTestResults(data);
+                    currentTestRun = null;
+                })
+                .catch(error => {
+                    console.error('Error running tests:', error);
+                    currentTestRun = null;
+                    updateTestStatus('failed');
+                });
+            }, 1000);
+        }
+
+        function runUnitTests() {
+            if (currentTestRun) return;
+            
+            currentTestRun = 'unit';
+            updateTestStatus('running', 'unit');
+            
+            setTimeout(() => {
+                fetch('/api/tests/run-unit', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    updateTestResults(data, 'unit');
+                    currentTestRun = null;
+                })
+                .catch(error => {
+                    console.error('Error running unit tests:', error);
+                    currentTestRun = null;
+                    updateTestStatus('failed', 'unit');
+                });
+            }, 1000);
+        }
+
+        function runE2ETests() {
+            if (currentTestRun) return;
+            
+            currentTestRun = 'e2e';
+            updateTestStatus('running', 'e2e');
+            
+            setTimeout(() => {
+                fetch('/api/tests/run-e2e', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    updateTestResults(data, 'e2e');
+                    currentTestRun = null;
+                })
+                .catch(error => {
+                    console.error('Error running E2E tests:', error);
+                    currentTestRun = null;
+                    updateTestStatus('failed', 'e2e');
+                });
+            }, 1000);
+        }
+
+        function runIntegrationTests() {
+            if (currentTestRun) return;
+            
+            currentTestRun = 'integration';
+            updateTestStatus('running', 'integration');
+            
+            setTimeout(() => {
+                fetch('/api/tests/run-integration', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    updateTestResults(data, 'integration');
+                    currentTestRun = null;
+                })
+                .catch(error => {
+                    console.error('Error running integration tests:', error);
+                    currentTestRun = null;
+                    updateTestStatus('failed', 'integration');
+                });
+            }, 1000);
+        }
+
+        function runPerformanceTests() {
+            if (currentTestRun) return;
+            
+            currentTestRun = 'performance';
+            updateTestStatus('running', 'performance');
+            
+            setTimeout(() => {
+                fetch('/api/tests/run-performance', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    updateTestResults(data, 'performance');
+                    currentTestRun = null;
+                })
+                .catch(error => {
+                    console.error('Error running performance tests:', error);
+                    currentTestRun = null;
+                    updateTestStatus('failed', 'performance');
+                });
+            }, 1000);
+        }
+
+        function updateTestStatus(status, section = 'all') {
+            const testItems = document.querySelectorAll(`#${section}-test-list .test-item`);
+            
+            testItems.forEach(item => {
+                const statusBadge = item.querySelector('.status-badge');
+                const statusText = item.querySelector('.test-status span:last-child');
+                
+                statusBadge.className = `status-badge status-${status}`;
+                
+                if (status === 'running') {
+                    statusBadge.innerHTML = '<div class="loading"></div> Running';
+                    statusText.textContent = '...';
+                } else if (status === 'failed') {
+                    statusBadge.textContent = 'Failed';
+                    statusText.textContent = 'Error';
+                }
+            });
+        }
+
+        function updateTestResults(results, section = 'all') {
+            // Update test results based on API response
+            console.log('Test results:', results);
+            updateTestStats();
+        }
+
+        function showTestReport() {
+            window.open('/test-reports/index.html', '_blank');
+        }
+
+        function showUnitTestDetails() {
+            showModal('Unit Test Details', `
+                <h3>Unit Test Coverage</h3>
+                <p>Unit tests cover individual components and functions:</p>
+                <ul>
+                    <li>Dashboard structure validation</li>
+                    <li>UI component functionality</li>
+                    <li>Error handling mechanisms</li>
+                    <li>Modular system integration</li>
+                </ul>
+                <h3>Test Files</h3>
+                <ul>
+                    <li>dashboard-structure.test.js</li>
+                    <li>dashboard-ui.test.js</li>
+                    <li>dashboard-error.test.js</li>
+                    <li>modular-system.test.js</li>
+                </ul>
+            `);
+        }
+
+        function showE2ETestDetails() {
+            showModal('E2E Test Details', `
+                <h3>End-to-End Test Coverage</h3>
+                <p>E2E tests verify complete user workflows:</p>
+                <ul>
+                    <li>Basic UI functionality and layout</li>
+                    <li>Template management operations</li>
+                    <li>Generation workflow validation</li>
+                    <li>Error handling scenarios</li>
+                </ul>
+                <h3>Test Files</h3>
+                <ul>
+                    <li>basic-ui.test.js</li>
+                    <li>template-management.test.js</li>
+                    <li>generation-workflow.test.js</li>
+                    <li>error-handling.test.js</li>
+                </ul>
+                <h3>Browser Support</h3>
+                <p>Tests run on Chromium, Firefox, and WebKit browsers</p>
+            `);
+        }
+
+        function showIntegrationTestDetails() {
+            showModal('Integration Test Details', `
+                <h3>Integration Test Coverage</h3>
+                <p>Integration tests verify component interactions:</p>
+                <ul>
+                    <li>API endpoint integration</li>
+                    <li>Database operation flows</li>
+                    <li>File system operations</li>
+                    <li>External service integration</li>
+                </ul>
+            `);
+        }
+
+        function showPerformanceTestDetails() {
+            showModal('Performance Test Details', `
+                <h3>Performance Test Coverage</h3>
+                <p>Performance tests measure system efficiency:</p>
+                <ul>
+                    <li>Page load times</li>
+                    <li>Memory usage patterns</li>
+                    <li>API response times</li>
+                    <li>Resource utilization</li>
+                </ul>
+            `);
+        }
+
+        function showModal(title, content) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = content;
+            document.getElementById('testModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('testModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('testModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html> 

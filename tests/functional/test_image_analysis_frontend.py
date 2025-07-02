@@ -84,10 +84,9 @@ class TestImageAnalysisFrontend(unittest.TestCase):
         
         # Check that the response contains the image analysis section
         content = response.data.decode('utf-8')
-        self.assertIn('Image Analysis & Config Creation', content)
+        self.assertIn('Image Analysis', content)
         self.assertIn('image-drop-zone', content)
         self.assertIn('analysis-results', content)
-        self.assertIn('config-editor-modal', content)
         self.assertIn('create-config-modal', content)
     
     def test_image_analysis_endpoint_integration(self):

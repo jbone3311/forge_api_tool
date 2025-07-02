@@ -27,7 +27,7 @@ class TestPerformance(unittest.TestCase):
         try:
             start_time = time.time()
             r = requests.post(f"{self.BASE}/api/batch/preview", json={
-                "config_name": "test_config",
+                "config_name": "Quick Start",
                 "prompt": "a beautiful landscape",
                 "batch_size": 100
             }, timeout=self.timeout)

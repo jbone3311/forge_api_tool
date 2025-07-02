@@ -23,7 +23,7 @@ from core.prompt_builder import PromptBuilder
 from core.batch_runner import BatchRunner
 from core.image_analyzer import ImageAnalyzer
 from core.output_manager import OutputManager
-from core.logger import logger
+from core.centralized_logger import logger
 
 class ComprehensiveAPITester:
     def __init__(self):
