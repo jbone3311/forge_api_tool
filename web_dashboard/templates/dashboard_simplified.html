@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge API Tool Dashboard - Simplified</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .dashboard-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #2c3e50;
+            color: white;
+            padding: 1rem 2rem;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header-content h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .status-indicators {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .status-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+        
+        .status-icon.error {
+            background: #dc3545;
+        }
+        
+        .status-icon.warning {
+            background: #ffc107;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        /* Main Content */
+        .dashboard-main {
+            display: flex;
+            margin-top: 80px;
+            flex: 1;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 350px;
+            background: white;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            height: calc(100vh - 80px);
+        }
+        
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+        
+        .sidebar-header h2 {
+            margin: 0 0 1rem 0;
+            font-size: 1.2rem;
+        }
+        
+        .sidebar-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .templates-container {
+            padding: 1rem;
+        }
+        
+        .template-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .template-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .template-name {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+            color: #333;
+        }
+        
+        .template-info {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .template-field {
+            margin-bottom: 0.25rem;
+        }
+        
+        .field-label {
+            font-weight: bold;
+        }
+        
+        .template-actions-bar {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+        
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        .generation-settings {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .settings-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .settings-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .settings-section {
+            margin-bottom: 2rem;
+        }
+        
+        .settings-section h4 {
+            margin: 0 0 1rem 0;
+            color: #555;
+        }
+        
+        .settings-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .prompt-group textarea {
+            min-height: 120px;
+        }
+        
+        /* Popup/Modal Styles */
+        .popup {
+            display: none;
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+        
+        .popup.show {
+            display: block;
+        }
+        
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .popup-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .popup-close:hover {
+            color: #333;
+        }
+        
+        .log-entry {
+            background: #f8f9fa;
+            border-left: 3px solid #007bff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .log-timestamp {
+            color: #666;
+            font-size: 10px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        
+        /* Progress Section */
+        .progress-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .progress-bar-container {
+            margin-bottom: 1rem;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .progress-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1><i class="fas fa-magic"></i> Forge API Tool - Simplified</h1>
+                <div class="status-indicators">
+                    <div class="status-item" id="api-status">
+                        <div class="status-icon"></div>
+                        <span class="status-text">API: Connected</span>
+                    </div>
+                    <div class="status-item" id="queue-status">
+                        <div class="status-icon"></div>
+                        <span class="status-text">Queue: {{ queue_status.total_jobs }} jobs</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="showLogs()">
+                        <i class="fas fa-terminal"></i> Logs
+                    </button>
+                    <button class="btn" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- Left Sidebar - Templates -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2><i class="fas fa-layer-group"></i> Templates</h2>
+                    <div class="sidebar-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="refreshTemplates()">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="templates-container">
+                    {% if configs|length == 0 %}
+                    <div class="error">
+                        <strong>No templates found.</strong><br>
+                        Please add configurations in the configs/ directory.
+                        {% if error %}
+                        <br><br>Error: {{ error }}
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="success">
+                        Found {{ configs|length }} template(s)
+                    </div>
+                    {% endif %}
+                    
+                    {% for config_name, config in configs.items() %}
+                    <div class="template-card" onclick="selectTemplate('{{ config_name }}')">
+                        <h3 class="template-name">{{ config.get('name', config_name) }}</h3>
+                        <div class="template-info">
+                            <div class="template-field">
+                                <span class="field-label">Model:</span>
+                                <span class="field-value">{{ config.get('model_type', 'Unknown').upper() }}</span>
+                            </div>
+                            <div class="template-field">
+                                <span class="field-label">Steps:</span>
+                                <span class="field-value">{{ config.get('steps', 'Unknown') }}</span>
+                            </div>
+                            <div class="template-field">
+                                <span class="field-label">CFG Scale:</span>
+                                <span class="field-value">{{ config.get('cfg_scale', 'Unknown') }}</span>
+                            </div>
+                        </div>
+                        <div class="template-actions-bar">
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); generateSingle('{{ config_name }}')">
+                                <i class="fas fa-play"></i> Generate
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); showTemplateDetails('{{ config_name }}')">
+                                <i class="fas fa-info"></i> Details
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <section class="main-content">
+                <!-- Generation Progress -->
+                <div class="progress-section" id="progress-section" style="display: none;">
+                    <div class="progress-header">
+                        <h3><i class="fas fa-cogs"></i> Generation Progress</h3>
+                        <div class="progress-controls">
+                            <span class="progress-config" id="progress-config"></span>
+                            <button class="btn btn-sm btn-secondary" onclick="stopGeneration()" id="stop-generation-btn">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span id="progress-text">0 / 0 images</span>
+                            <span id="progress-percentage">0%</span>
+                        </div>
+                    </div>
+                    <div class="progress-details">
+                        <span id="progress-time">Elapsed: 0s</span>
+                        <span id="progress-eta">ETA: --</span>
+                    </div>
+                </div>
+
+                <!-- Generation Settings -->
+                <div class="generation-settings">
+                    <div class="settings-header">
+                        <h3><i class="fas fa-cog"></i> Generation Settings</h3>
+                        <div class="settings-actions">
+                            <button class="btn btn-sm btn-secondary" onclick="loadDefaultSettings()">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                            <button class="btn btn-sm" onclick="startGeneration()">
+                                <i class="fas fa-play"></i> Generate
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Basic Settings -->
+                    <div class="settings-section">
+                        <h4><i class="fas fa-magic"></i> Basic Settings</h4>
+                        <div class="settings-grid">
+                            <div class="input-group prompt-group">
+                                <label for="prompt-input">Prompt:</label>
+                                <textarea id="prompt-input" placeholder="Enter your prompt here..."></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label for="negative-prompt-input">Negative Prompt:</label>
+                                <textarea id="negative-prompt-input" placeholder="Enter negative prompt..."></textarea>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="config-select">Template:</label>
+                                    <select id="config-select">
+                                        <option value="">Select a template...</option>
+                                        {% for config_name in configs.keys() %}
+                                        <option value="{{ config_name }}">{{ config_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="seed-input">Seed:</label>
+                                    <input type="number" id="seed-input" placeholder="Random" min="-1" step="1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div class="settings-section">
+                        <h4><i class="fas fa-sliders-h"></i> Advanced Settings</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="steps-input">Steps:</label>
+                                <input type="number" id="steps-input" value="20" min="1" max="150">
+                            </div>
+                            <div class="input-group">
+                                <label for="cfg-scale-input">CFG Scale:</label>
+                                <input type="number" id="cfg-scale-input" value="7.0" min="1" max="30" step="0.5">
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="width-input">Width:</label>
+                                <input type="number" id="width-input" value="512" min="64" max="2048" step="64">
+                            </div>
+                            <div class="input-group">
+                                <label for="height-input">Height:</label>
+                                <input type="number" id="height-input" value="512" min="64" max="2048" step="64">
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="batch-size-input">Batch Size:</label>
+                                <input type="number" id="batch-size-input" value="1" min="1" max="10">
+                            </div>
+                            <div class="input-group">
+                                <label for="batch-count-input">Batch Count:</label>
+                                <input type="number" id="batch-count-input" value="1" min="1" max="50">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Popup for results and logs -->
+    <div id="popup" class="popup">
+        <div class="popup-header">
+            <h3 id="popup-title">Results</h3>
+            <button class="popup-close" onclick="closePopup()">&times;</button>
+        </div>
+        <div id="popup-content">
+            <!-- Content will be inserted here -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        // Simple JavaScript - no complex modules
+        let logEntries = [];
+        let socket = io();
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = {
+                timestamp: timestamp,
+                message: message,
+                type: type
+            };
+            logEntries.push(logEntry);
+            
+            // Keep only last 50 entries
+            if (logEntries.length > 50) {
+                logEntries.shift();
+            }
+            
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function selectTemplate(configName) {
+            log(`Selecting template: ${configName}`);
+            document.getElementById('config-select').value = configName;
+            showPopup(`Template Selected: ${configName}`, `<p>Template "${configName}" has been selected for generation.</p>`);
+        }
+        
+        function showTemplateDetails(configName) {
+            log(`Showing details for template: ${configName}`);
+            
+            fetch(`/api/configs/${encodeURIComponent(configName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showPopup(`Template Details: ${configName}`, `<pre>${JSON.stringify(data.config, null, 2)}</pre>`);
+                    } else {
+                        showPopup(`Error: ${configName}`, `<div class="error">Error: ${data.error}</div>`);
+                    }
+                })
+                .catch(error => {
+                    showPopup(`Network Error: ${configName}`, `<div class="error">Network Error: ${error}</div>`);
+                });
+        }
+        
+        function generateSingle(configName) {
+            log(`Starting single generation for: ${configName}`);
+            showPopup(`Generation Started`, `<p>Starting generation for template "${configName}"...</p>`);
+            // In a real implementation, this would start the generation process
+        }
+        
+        function startGeneration() {
+            const configName = document.getElementById('config-select').value;
+            const prompt = document.getElementById('prompt-input').value;
+            
+            if (!configName) {
+                showPopup('Error', '<div class="error">Please select a template first.</div>');
+                return;
+            }
+            
+            if (!prompt.trim()) {
+                showPopup('Error', '<div class="error">Please enter a prompt.</div>');
+                return;
+            }
+            
+            log(`Starting generation with template: ${configName}`);
+            
+            const generationData = {
+                config_name: configName,
+                prompt: prompt,
+                negative_prompt: document.getElementById('negative-prompt-input').value,
+                seed: document.getElementById('seed-input').value || -1,
+                steps: parseInt(document.getElementById('steps-input').value),
+                cfg_scale: parseFloat(document.getElementById('cfg-scale-input').value),
+                width: parseInt(document.getElementById('width-input').value),
+                height: parseInt(document.getElementById('height-input').value),
+                batch_size: parseInt(document.getElementById('batch-size-input').value),
+                batch_count: parseInt(document.getElementById('batch-count-input').value)
+            };
+            
+            showPopup('Generation Started', `<p>Starting generation with the following settings:</p><pre>${JSON.stringify(generationData, null, 2)}</pre>`);
+            
+            // In a real implementation, this would send the generation request
+            fetch('/api/queue/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(generationData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log(`Job added to queue with ID: ${data.job_id}`);
+                    showPopup('Job Added', `<p>Job has been added to the queue with ID: ${data.job_id}</p>`);
+                } else {
+                    showPopup('Error', `<div class="error">Error: ${data.error}</div>`);
+                }
+            })
+            .catch(error => {
+                showPopup('Network Error', `<div class="error">Network Error: ${error}</div>`);
+            });
+        }
+        
+        function stopGeneration() {
+            log('Stopping generation');
+            showPopup('Generation Stopped', '<p>Generation has been stopped.</p>');
+            document.getElementById('progress-section').style.display = 'none';
+        }
+        
+        function loadDefaultSettings() {
+            log('Loading default settings');
+            document.getElementById('steps-input').value = '20';
+            document.getElementById('cfg-scale-input').value = '7.0';
+            document.getElementById('width-input').value = '512';
+            document.getElementById('height-input').value = '512';
+            document.getElementById('batch-size-input').value = '1';
+            document.getElementById('batch-count-input').value = '1';
+            showPopup('Settings Reset', '<p>Settings have been reset to defaults.</p>');
+        }
+        
+        function refreshTemplates() {
+            log('Refreshing templates');
+            location.reload();
+        }
+        
+        function refreshData() {
+            log('Refreshing data');
+            location.reload();
+        }
+        
+        function showLogs() {
+            const logContent = logEntries.map(entry => 
+                `<div class="log-entry">
+                    <div class="log-timestamp">[${entry.timestamp}]</div>
+                    <div>${entry.message}</div>
+                </div>`
+            ).join('');
+            
+            showPopup('Application Logs', logContent || '<p>No log entries yet.</p>');
+        }
+        
+        function showPopup(title, content) {
+            document.getElementById('popup-title').textContent = title;
+            document.getElementById('popup-content').innerHTML = content;
+            document.getElementById('popup').classList.add('show');
+        }
+        
+        function closePopup() {
+            document.getElementById('popup').classList.remove('show');
+        }
+        
+        // Close popup when clicking outside
+        document.addEventListener('click', function(event) {
+            const popup = document.getElementById('popup');
+            if (event.target === popup) {
+                closePopup();
+            }
+        });
+        
+        // Socket.IO event handlers
+        socket.on('connect', function() {
+            log('Connected to server');
+        });
+        
+        socket.on('disconnect', function() {
+            log('Disconnected from server');
+        });
+        
+        socket.on('status_update', function(data) {
+            log(`Status update: ${JSON.stringify(data)}`);
+        });
+        
+        socket.on('error', function(data) {
+            log(`Server error: ${data.message}`, 'error');
+        });
+        
+        // Initial log entry
+        log('Simplified Forge API Tool Dashboard loaded successfully');
+    </script>
+</body>
+</html> 

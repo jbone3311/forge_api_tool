@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Forge API Tool</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+        
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .tab:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .card h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .log-entry {
+            background: #f8f9fa;
+            border-left: 3px solid #007bff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .log-timestamp {
+            color: #666;
+            font-size: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-online {
+            background: #28a745;
+        }
+        
+        .status-offline {
+            background: #dc3545;
+        }
+        
+        .status-warning {
+            background: #ffc107;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+        
+        .file-upload:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        
+        .file-upload input[type="file"] {
+            display: none;
+        }
+        
+        .wildcard-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 5px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .wildcard-item:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .tab {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Enhanced Forge API Tool</h1>
+            <p>Complete feature set without external dependencies</p>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <h3>Configurations</h3>
+                <div class="number" id="config-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Outputs</h3>
+                <div class="number" id="output-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Queue</h3>
+                <div class="number" id="queue-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Status</h3>
+                <div class="number">
+                    <span class="status-indicator status-online"></span>Online
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
+            <button class="tab" onclick="showTab('generation')">🎨 Generation</button>
+            <button class="tab" onclick="showTab('configs')">⚙️ Configurations</button>
+            <button class="tab" onclick="showTab('queue')">📋 Queue</button>
+            <button class="tab" onclick="showTab('outputs')">📁 Outputs</button>
+            <button class="tab" onclick="showTab('analysis')">🔍 Analysis</button>
+            <button class="tab" onclick="showTab('settings')">🔧 Settings</button>
+            <button class="tab" onclick="showTab('logs')">📝 Logs</button>
+            <button class="tab" onclick="showTab('tests')">🧪 Tests</button>
+            <button class="tab" onclick="showTab('wildcards')">🎲 Wildcards</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="section">
+                <h2>📊 System Overview</h2>
+                <div class="grid">
+                    <div class="card">
+                        <h3>Quick Actions</h3>
+                        <button class="btn" onclick="refreshAllData()">🔄 Refresh All</button>
+                        <button class="btn" onclick="showSystemStatus()">📊 System Status</button>
+                        <button class="btn" onclick="clearQueue()">🗑️ Clear Queue</button>
+                    </div>
+                    <div class="card">
+                        <h3>Recent Activity</h3>
+                        <div id="recent-activity">
+                            <p>Loading recent activity...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generation Tab -->
+        <div id="generation" class="tab-content">
+            <div class="section">
+                <h2>🎨 Image Generation</h2>
+                <div class="card">
+                    <form id="generation-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="prompt">Prompt:</label>
+                                <textarea id="prompt" placeholder="Enter your prompt here..." required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="negative-prompt">Negative Prompt:</label>
+                                <textarea id="negative-prompt" placeholder="Enter negative prompt..."></textarea>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="config-select">Template:</label>
+                                <select id="config-select" required>
+                                    <option value="">Select a template...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="steps">Steps:</label>
+                                <input type="number" id="steps" value="20" min="1" max="150">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cfg-scale">CFG Scale:</label>
+                                <input type="number" id="cfg-scale" value="7.0" min="1" max="30" step="0.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="seed">Seed:</label>
+                                <input type="number" id="seed" placeholder="Random (-1)" value="-1">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">🚀 Generate Image</button>
+                        <button type="button" class="btn" onclick="clearGenerationForm()">🗑️ Clear</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configurations Tab -->
+        <div id="configs" class="tab-content">
+            <div class="section">
+                <h2>⚙️ Configuration Management</h2>
+                <button class="btn btn-success" onclick="showCreateConfigModal()">➕ Create New Config</button>
+                <div class="grid" id="configs-grid">
+                    <!-- Configs will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Queue Tab -->
+        <div id="queue" class="tab-content">
+            <div class="section">
+                <h2>📋 Job Queue</h2>
+                <button class="btn btn-warning" onclick="clearQueue()">🗑️ Clear Queue</button>
+                <div id="queue-jobs">
+                    <!-- Queue jobs will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Outputs Tab -->
+        <div id="outputs" class="tab-content">
+            <div class="section">
+                <h2>📁 Output Management</h2>
+                <button class="btn" onclick="refreshOutputs()">🔄 Refresh</button>
+                <div id="outputs-list">
+                    <!-- Outputs will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Tab -->
+        <div id="analysis" class="tab-content">
+            <div class="section">
+                <h2>🔍 Image Analysis</h2>
+                <div class="card">
+                    <div class="file-upload" onclick="document.getElementById('image-file').click()">
+                        <p>📁 Click to upload an image for analysis</p>
+                        <input type="file" id="image-file" accept="image/*" onchange="analyzeImage(this)">
+                    </div>
+                    <div id="analysis-results">
+                        <!-- Analysis results will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="section">
+                <h2>🔧 System Settings</h2>
+                <div class="card">
+                    <form id="settings-form">
+                        <div class="form-group">
+                            <label for="api-type">API Type:</label>
+                            <select id="api-type">
+                                <option value="local">Local</option>
+                                <option value="rundiffusion">RunDiffusion</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="api-url">API URL:</label>
+                                <input type="url" id="api-url" placeholder="http://localhost:3000">
+                            </div>
+                            <div class="form-group">
+                                <label for="api-timeout">Timeout (seconds):</label>
+                                <input type="number" id="api-timeout" value="30" min="1" max="300">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">💾 Save Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs" class="tab-content">
+            <div class="section">
+                <h2>📝 Application Logs</h2>
+                <button class="btn" onclick="refreshLogs()">🔄 Refresh</button>
+                <button class="btn btn-warning" onclick="clearLogs()">🗑️ Clear Logs</button>
+                <div id="logs-content">
+                    <!-- Logs will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tests Tab -->
+        <div id="tests" class="tab-content">
+            <div class="section">
+                <h2>🧪 Test Results</h2>
+                <div class="grid">
+                    <div class="card">
+                        <h3>Unit Tests</h3>
+                        <button class="btn" onclick="loadUnitTests()">📊 View Results</button>
+                    </div>
+                    <div class="card">
+                        <h3>Integration Tests</h3>
+                        <button class="btn" onclick="loadIntegrationTests()">📊 View Results</button>
+                    </div>
+                    <div class="card">
+                        <h3>E2E Tests</h3>
+                        <button class="btn" onclick="loadE2ETests()">📊 View Results</button>
+                    </div>
+                    <div class="card">
+                        <h3>Coverage</h3>
+                        <button class="btn" onclick="loadCoverage()">📊 View Coverage</button>
+                    </div>
+                </div>
+                <div id="test-results">
+                    <!-- Test results will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Wildcards Tab -->
+        <div id="wildcards" class="tab-content">
+            <div class="section">
+                <h2>🎲 Wildcard Management</h2>
+                <div class="form-group">
+                    <label for="wildcard-prompt">Test Prompt with Wildcards:</label>
+                    <textarea id="wildcard-prompt" placeholder="Enter a prompt with {wildcards}..."></textarea>
+                    <button class="btn" onclick="processWildcards()">🔄 Process Wildcards</button>
+                </div>
+                <div id="wildcards-list">
+                    <!-- Wildcards will be loaded here -->
+                </div>
+                <div id="wildcard-results">
+                    <!-- Processed wildcard results will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating/editing configs -->
+    <div id="config-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="config-modal-title">Create Configuration</h3>
+                <span class="close" onclick="closeConfigModal()">&times;</span>
+            </div>
+            <form id="config-form">
+                <div class="form-group">
+                    <label for="config-name">Name:</label>
+                    <input type="text" id="config-name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="config-model-type">Model Type:</label>
+                        <input type="text" id="config-model-type" value="stable-diffusion">
+                    </div>
+                    <div class="form-group">
+                        <label for="config-steps">Steps:</label>
+                        <input type="number" id="config-steps" value="20" min="1" max="150">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="config-cfg-scale">CFG Scale:</label>
+                        <input type="number" id="config-cfg-scale" value="7.0" min="1" max="30" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="config-width">Width:</label>
+                        <input type="number" id="config-width" value="512" min="64" max="2048" step="64">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="config-height">Height:</label>
+                    <input type="number" id="config-height" value="512" min="64" max="2048" step="64">
+                </div>
+                <button type="submit" class="btn btn-success">💾 Save Configuration</button>
+                <button type="button" class="btn" onclick="closeConfigModal()">❌ Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentData = {
+            configs: {},
+            outputs: {},
+            queue: {},
+            logs: [],
+            settings: {},
+            wildcards: []
+        };
+
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            // Load data for the tab
+            loadTabData(tabName);
+        }
+
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'configs':
+                    loadConfigs();
+                    break;
+                case 'queue':
+                    loadQueue();
+                    break;
+                case 'outputs':
+                    loadOutputs();
+                    break;
+                case 'settings':
+                    loadSettings();
+                    break;
+                case 'logs':
+                    loadLogs();
+                    break;
+                case 'tests':
+                    loadTests();
+                    break;
+                case 'wildcards':
+                    loadWildcards();
+                    break;
+            }
+        }
+
+        // API functions
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                return await response.json();
+            } catch (error) {
+                console.error(`API call failed for ${endpoint}:`, error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Dashboard functions
+        async function loadDashboardData() {
+            const [configsRes, outputsRes, queueRes, statusRes] = await Promise.all([
+                apiCall('/api/configs'),
+                apiCall('/api/outputs/list'),
+                apiCall('/api/queue/status'),
+                apiCall('/api/status')
+            ]);
+
+            if (configsRes.success) {
+                currentData.configs = configsRes.configs;
+                document.getElementById('config-count').textContent = Object.keys(configsRes.configs).length;
+            }
+
+            if (outputsRes.success) {
+                currentData.outputs = outputsRes.outputs;
+                document.getElementById('output-count').textContent = outputsRes.outputs.total_outputs || 0;
+            }
+
+            if (queueRes.success) {
+                currentData.queue = queueRes.status;
+                document.getElementById('queue-count').textContent = queueRes.status.total_jobs;
+            }
+
+            updateRecentActivity();
+        }
+
+        function updateRecentActivity() {
+            const activityDiv = document.getElementById('recent-activity');
+            const activities = [];
+
+            // Add recent queue jobs
+            if (currentData.queue.jobs) {
+                currentData.queue.jobs.slice(-3).forEach(job => {
+                    activities.push({
+                        time: new Date(job.created_at).toLocaleString(),
+                        text: `Job ${job.id}: ${job.config_name}`,
+                        type: 'queue'
+                    });
+                });
+            }
+
+            // Add recent logs
+            if (currentData.logs) {
+                currentData.logs.slice(-3).forEach(log => {
+                    activities.push({
+                        time: new Date(log.timestamp).toLocaleString(),
+                        text: log.message,
+                        type: 'log'
+                    });
+                });
+            }
+
+            if (activities.length === 0) {
+                activityDiv.innerHTML = '<p>No recent activity</p>';
+            } else {
+                activityDiv.innerHTML = activities.map(activity => 
+                    `<div class="log-entry">
+                        <div class="log-timestamp">[${activity.time}]</div>
+                        <div>${activity.text}</div>
+                    </div>`
+                ).join('');
+            }
+        }
+
+        // Generation functions
+        document.getElementById('generation-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                config_name: document.getElementById('config-select').value,
+                prompt: document.getElementById('prompt').value,
+                negative_prompt: document.getElementById('negative-prompt').value,
+                steps: parseInt(document.getElementById('steps').value),
+                cfg_scale: parseFloat(document.getElementById('cfg-scale').value),
+                seed: parseInt(document.getElementById('seed').value),
+                width: 512,
+                height: 512,
+                batch_size: 1,
+                batch_count: 1
+            };
+
+            const result = await apiCall('/api/queue/add', {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+
+            if (result.success) {
+                showMessage('Job added to queue successfully!', 'success');
+                loadQueue();
+                clearGenerationForm();
+            } else {
+                showMessage(`Error: ${result.error}`, 'error');
+            }
+        });
+
+        function clearGenerationForm() {
+            document.getElementById('generation-form').reset();
+            document.getElementById('steps').value = '20';
+            document.getElementById('cfg-scale').value = '7.0';
+            document.getElementById('seed').value = '-1';
+        }
+
+        // Configuration functions
+        async function loadConfigs() {
+            const result = await apiCall('/api/configs');
+            if (result.success) {
+                currentData.configs = result.configs;
+                displayConfigs();
+                populateConfigSelect();
+            }
+        }
+
+        function displayConfigs() {
+            const grid = document.getElementById('configs-grid');
+            const configs = currentData.configs;
+            
+            if (Object.keys(configs).length === 0) {
+                grid.innerHTML = '<p>No configurations found.</p>';
+                return;
+            }
+
+            grid.innerHTML = Object.entries(configs).map(([name, config]) => `
+                <div class="card">
+                    <h3>${config.name || name}</h3>
+                    <p><strong>Type:</strong> ${config.model_type || 'Unknown'}</p>
+                    <p><strong>Steps:</strong> ${config.steps || 'Unknown'}</p>
+                    <p><strong>CFG Scale:</strong> ${config.cfg_scale || 'Unknown'}</p>
+                    <div>
+                        <button class="btn btn-sm" onclick="editConfig('${name}')">✏️ Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteConfig('${name}')">🗑️ Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateConfigSelect() {
+            const select = document.getElementById('config-select');
+            select.innerHTML = '<option value="">Select a template...</option>';
+            
+            Object.keys(currentData.configs).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            });
+        }
+
+        function showCreateConfigModal() {
+            document.getElementById('config-modal-title').textContent = 'Create Configuration';
+            document.getElementById('config-modal').style.display = 'block';
+            document.getElementById('config-form').reset();
+        }
+
+        function closeConfigModal() {
+            document.getElementById('config-modal').style.display = 'none';
+        }
+
+        document.getElementById('config-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const configData = {
+                name: document.getElementById('config-name').value,
+                model_type: document.getElementById('config-model-type').value,
+                steps: parseInt(document.getElementById('config-steps').value),
+                cfg_scale: parseFloat(document.getElementById('config-cfg-scale').value),
+                width: parseInt(document.getElementById('config-width').value),
+                height: parseInt(document.getElementById('config-height').value)
+            };
+
+            const result = await apiCall('/api/configs', {
+                method: 'POST',
+                body: JSON.stringify(configData)
+            });
+
+            if (result.success) {
+                showMessage('Configuration created successfully!', 'success');
+                closeConfigModal();
+                loadConfigs();
+            } else {
+                showMessage(`Error: ${result.error}`, 'error');
+            }
+        });
+
+        async function deleteConfig(name) {
+            if (!confirm(`Are you sure you want to delete configuration "${name}"?`)) {
+                return;
+            }
+
+            const result = await apiCall(`/api/configs/${encodeURIComponent(name)}`, {
+                method: 'DELETE'
+            });
+
+            if (result.success) {
+                showMessage('Configuration deleted successfully!', 'success');
+                loadConfigs();
+            } else {
+                showMessage(`Error: ${result.error}`, 'error');
+            }
+        }
+
+        // Queue functions
+        async function loadQueue() {
+            const result = await apiCall('/api/queue/status');
+            if (result.success) {
+                currentData.queue = result.status;
+                displayQueue();
+            }
+        }
+
+        function displayQueue() {
+            const container = document.getElementById('queue-jobs');
+            const jobs = currentData.queue.jobs || [];
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<p>No jobs in queue.</p>';
+                return;
+            }
+
+            container.innerHTML = jobs.map(job => `
+                <div class="card">
+                    <h3>Job ${job.id}</h3>
+                    <p><strong>Config:</strong> ${job.config_name}</p>
+                    <p><strong>Status:</strong> ${job.status}</p>
+                    <p><strong>Prompt:</strong> ${job.prompt.substring(0, 100)}${job.prompt.length > 100 ? '...' : ''}</p>
+                    <p><strong>Created:</strong> ${new Date(job.created_at).toLocaleString()}</p>
+                    ${job.status === 'pending' || job.status === 'running' ? 
+                        `<button class="btn btn-warning btn-sm" onclick="cancelJob(${job.id})">❌ Cancel</button>` : 
+                        ''
+                    }
+                </div>
+            `).join('');
+        }
+
+        async function cancelJob(jobId) {
+            const result = await apiCall(`/api/queue/job/${jobId}/cancel`, {
+                method: 'POST'
+            });
+
+            if (result.success) {
+                showMessage('Job cancelled successfully!', 'success');
+                loadQueue();
+            } else {
+                showMessage(`Error: ${result.error}`, 'error');
+            }
+        }
+
+        async function clearQueue() {
+            if (!confirm('Are you sure you want to clear the entire queue?')) {
+                return;
+            }
+
+            const result = await apiCall('/api/queue/clear', {
+                method: 'POST'
+            });
+
+            if (result.success) {
+                showMessage('Queue cleared successfully!', 'success');
+                loadQueue();
+            } else {
+                showMessage(`Error: ${result.error}`, 'error');
+            }
+        }
+
+        // Output functions
+        async function loadOutputs() {
+            const result = await apiCall('/api/outputs/list');
+            if (result.success) {
+                currentData.outputs = result.outputs;
+                displayOutputs();
+            }
+        }
+
+        function displayOutputs() {
+            const container = document.getElementById('outputs-list');
+            const outputs = currentData.outputs;
+            
+            container.innerHTML = `
+                <div class="card">
+                    <h3>Output Statistics</h3>
+                    <p><strong>Total Outputs:</strong> ${outputs.total_outputs || 0}</p>
+                    <p><strong>Today's Outputs:</strong> ${outputs.today_outputs || 0}</p>
+                    <p><strong>This Week:</strong> ${outputs.week_outputs || 0}</p>
+                    <p><strong>This Month:</strong> ${outputs.month_outputs || 0}</p>
+                </div>
+            `;
+        }
+
+        function refreshOutputs() {
+            loadOutputs();
+        }
+
+        // Analysis functions
+        async function analyzeImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const result = await apiCall('/api/analyze-image', {
+                method: 'POST',
+                body: formData,
+                headers: {} // Let browser set content-type for FormData
+            });
+
+            if (result.success) {
+                displayAnalysisResults(result.analysis);
+            } else {
+                showMessage(`Analysis error: ${result.error}`, 'error');
+            }
+        }
+
+        function displayAnalysisResults(analysis) {
+            const container = document.getElementById('analysis-results');
+            container.innerHTML = `
+                <div class="card">
+                    <h3>Analysis Results</h3>
+                    <p><strong>Filename:</strong> ${analysis.filename}</p>
+                    <p><strong>File Size:</strong> ${(analysis.file_size / 1024).toFixed(2)} KB</p>
+                    <p><strong>File Type:</strong> ${analysis.file_type}</p>
+                    <p><strong>Dimensions:</strong> ${analysis.dimensions}</p>
+                    <p><strong>Colors:</strong> ${analysis.colors}</p>
+                    <p><strong>Objects:</strong> ${analysis.objects}</p>
+                    <p><strong>Text:</strong> ${analysis.text}</p>
+                    <p><strong>Upload Time:</strong> ${new Date(analysis.upload_time).toLocaleString()}</p>
+                </div>
+            `;
+        }
+
+        // Settings functions
+        async function loadSettings() {
+            const result = await apiCall('/api/settings');
+            if (result.success) {
+                currentData.settings = result.settings;
+                displaySettings();
+            }
+        }
+
+        function displaySettings() {
+            const settings = currentData.settings;
+            document.getElementById('api-type').value = settings.api_type || 'local';
+            document.getElementById('api-url').value = settings.local_config?.url || '';
+            document.getElementById('api-timeout').value = settings.local_config?.timeout || 30;
+        }
+
+        document.getElementById('settings-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const settingsData = {
+                api_type: document.getElementById('api-type').value,
+                local_config: {
+                    url: document.getElementById('api-url').value,
+                    timeout: parseInt(document.getElementById('api-timeout').value)
+                }
+            };
+
+            const result = await apiCall('/api/settings', {
+                method: 'PUT',
+                body: JSON.stringify(settingsData)
+            });
+
+            if (result.success) {
+                showMessage('Settings saved successfully!', 'success');
+                loadSettings();
+            } else {
+                showMessage(`Error: ${result.error}`, 'error');
+            }
+        });
+
+        // Logs functions
+        async function loadLogs() {
+            const result = await apiCall('/api/logs');
+            if (result.success) {
+                currentData.logs = result.logs;
+                displayLogs();
+            }
+        }
+
+        function displayLogs() {
+            const container = document.getElementById('logs-content');
+            const logs = currentData.logs;
+            
+            if (logs.length === 0) {
+                container.innerHTML = '<p>No logs available.</p>';
+                return;
+            }
+
+            container.innerHTML = logs.map(log => `
+                <div class="log-entry">
+                    <div class="log-timestamp">[${new Date(log.timestamp).toLocaleString()}]</div>
+                    <div><strong>${log.level}:</strong> ${log.message}</div>
+                    ${log.module ? `<div><em>Module: ${log.module}</em></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function clearLogs() {
+            if (!confirm('Are you sure you want to clear all logs?')) {
+                return;
+            }
+
+            const result = await apiCall('/api/logs/clear', {
+                method: 'POST'
+            });
+
+            if (result.success) {
+                showMessage('Logs cleared successfully!', 'success');
+                loadLogs();
+            } else {
+                showMessage(`Error: ${result.error}`, 'error');
+            }
+        }
+
+        function refreshLogs() {
+            loadLogs();
+        }
+
+        // Test functions
+        async function loadTests() {
+            // Load test results overview
+            const result = await apiCall('/api/test-results');
+            if (result.success) {
+                currentData.tests = result.results;
+            }
+        }
+
+        async function loadUnitTests() {
+            const result = await apiCall('/api/test-results/unit');
+            displayTestResults('Unit Tests', result.results || []);
+        }
+
+        async function loadIntegrationTests() {
+            const result = await apiCall('/api/test-results/integration');
+            displayTestResults('Integration Tests', result.results || []);
+        }
+
+        async function loadE2ETests() {
+            const result = await apiCall('/api/test-results/e2e');
+            displayTestResults('E2E Tests', result.results || []);
+        }
+
+        async function loadCoverage() {
+            const result = await apiCall('/api/test-results/coverage');
+            displayCoverage(result.coverage || {});
+        }
+
+        function displayTestResults(title, results) {
+            const container = document.getElementById('test-results');
+            if (results.length === 0) {
+                container.innerHTML = `<h3>${title}</h3><p>No test results available.</p>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <h3>${title}</h3>
+                <div class="grid">
+                    ${results.map(test => `
+                        <div class="card">
+                            <h4>${test.name || 'Unknown Test'}</h4>
+                            <p><strong>Status:</strong> ${test.status || 'Unknown'}</p>
+                            <p><strong>Duration:</strong> ${test.duration || 'Unknown'}</p>
+                            ${test.error ? `<p><strong>Error:</strong> ${test.error}</p>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function displayCoverage(coverage) {
+            const container = document.getElementById('test-results');
+            container.innerHTML = `
+                <h3>Test Coverage</h3>
+                <div class="card">
+                    <p><strong>Overall Coverage:</strong> ${coverage.overall || 'Unknown'}%</p>
+                    <p><strong>Lines Covered:</strong> ${coverage.lines_covered || 'Unknown'}</p>
+                    <p><strong>Total Lines:</strong> ${coverage.total_lines || 'Unknown'}</p>
+                </div>
+            `;
+        }
+
+        // Wildcard functions
+        async function loadWildcards() {
+            const result = await apiCall('/api/wildcards');
+            if (result.success) {
+                currentData.wildcards = result.wildcards;
+                displayWildcards();
+            }
+        }
+
+        function displayWildcards() {
+            const container = document.getElementById('wildcards-list');
+            const wildcards = currentData.wildcards;
+            
+            if (wildcards.length === 0) {
+                container.innerHTML = '<p>No wildcards available.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <h3>Available Wildcards</h3>
+                <div class="grid">
+                    ${wildcards.map(wildcard => `
+                        <div class="wildcard-item" onclick="viewWildcard('${wildcard}')">
+                            <strong>{${wildcard}}</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function viewWildcard(name) {
+            const result = await apiCall(`/api/wildcards/${encodeURIComponent(name)}`);
+            if (result.success) {
+                showMessage(`Wildcard {${name}}: ${result.content}`, 'success');
+            } else {
+                showMessage(`Error loading wildcard: ${result.error}`, 'error');
+            }
+        }
+
+        async function processWildcards() {
+            const prompt = document.getElementById('wildcard-prompt').value;
+            if (!prompt) {
+                showMessage('Please enter a prompt with wildcards.', 'error');
+                return;
+            }
+
+            const result = await apiCall('/api/wildcards/process', {
+                method: 'POST',
+                body: JSON.stringify({ prompt })
+            });
+
+            if (result.success) {
+                document.getElementById('wildcard-results').innerHTML = `
+                    <div class="card">
+                        <h3>Processed Prompt</h3>
+                        <p><strong>Original:</strong> ${prompt}</p>
+                        <p><strong>Processed:</strong> ${result.processed_prompt}</p>
+                    </div>
+                `;
+            } else {
+                showMessage(`Error processing wildcards: ${result.error}`, 'error');
+            }
+        }
+
+        // Utility functions
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            messageDiv.style.position = 'fixed';
+            messageDiv.style.top = '20px';
+            messageDiv.style.right = '20px';
+            messageDiv.style.zIndex = '1001';
+            messageDiv.style.maxWidth = '300px';
+            
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        function refreshAllData() {
+            loadDashboardData();
+            showMessage('All data refreshed!', 'success');
+        }
+
+        function showSystemStatus() {
+            apiCall('/api/status').then(result => {
+                if (result.success) {
+                    showMessage(`System Status: ${JSON.stringify(result.status, null, 2)}`, 'success');
+                } else {
+                    showMessage(`Status Error: ${result.error}`, 'error');
+                }
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            
+            // Set up periodic updates
+            setInterval(() => {
+                if (document.querySelector('.tab-content.active').id === 'dashboard') {
+                    loadDashboardData();
+                }
+            }, 30000); // Update every 30 seconds
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('config-modal');
+            if (event.target === modal) {
+                closeConfigModal();
+            }
+        }
+    </script>
+</body>
+</html> 
