@@ -1,0 +1,164 @@
+<!-- Batch Generation Modal -->
+<div class="modal fade" id="batchModal" tabindex="-1" aria-labelledby="batchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="batchModalLabel">
+                    <i class="bi bi-collection"></i> Batch Generation
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="batch-form">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="batch-config" class="form-label">Template</label>
+                            <select class="form-select" id="batch-config" required>
+                                <option value="">Select a template...</option>
+                                {% for config_name in configs.keys() %}
+                                <option value="{{ config_name }}">{{ config_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="batch-size" class="form-label">Batch Size</label>
+                            <input type="number" class="form-control" id="batch-size" value="4" min="1" max="10" required>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="batch-prompt" class="form-label">Prompt</label>
+                            <textarea class="form-control" id="batch-prompt" rows="3" 
+                                      placeholder="Enter your prompt here..." required></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="batch-negative-prompt" class="form-label">Negative Prompt</label>
+                            <textarea class="form-control" id="batch-negative-prompt" rows="2" 
+                                      placeholder="Enter negative prompt..."></textarea>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="batch-seed" class="form-label">Seed</label>
+                            <input type="number" class="form-control" id="batch-seed" 
+                                   placeholder="Random" min="-1" step="1">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="batch-steps" class="form-label">Steps</label>
+                            <input type="number" class="form-control" id="batch-steps" 
+                                   value="20" min="1" max="100">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="batch-cfg-scale" class="form-label">CFG Scale</label>
+                            <input type="number" class="form-control" id="batch-cfg-scale" 
+                                   value="7.0" min="1" max="20" step="0.1">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="batch-width" class="form-label">Width</label>
+                            <input type="number" class="form-control" id="batch-width" 
+                                   value="512" min="64" max="2048" step="64">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="batch-height" class="form-label">Height</label>
+                            <input type="number" class="form-control" id="batch-height" 
+                                   value="512" min="64" max="2048" step="64">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="batch-priority" class="form-label">Priority</label>
+                            <select class="form-select" id="batch-priority">
+                                <option value="low">Low</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Batch Preview -->
+                    <div class="mt-4">
+                        <h6>Batch Preview</h6>
+                        <div class="alert alert-info">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Estimated Time:</strong> <span id="batch-estimated-time">--</span><br>
+                                    <strong>Total Images:</strong> <span id="batch-total-images">--</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Memory Usage:</strong> <span id="batch-memory-usage">--</span><br>
+                                    <strong>Queue Position:</strong> <span id="batch-queue-position">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="startBatchGeneration()">
+                    <i class="bi bi-play"></i> Start Batch Generation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function startBatchGeneration() {
+    const form = document.getElementById('batch-form');
+    const formData = new FormData(form);
+    
+    // Validate form
+    if (!formData.get('batch-config') || !formData.get('batch-prompt')) {
+        window.dashboard?.showToast('Please fill in all required fields', 'warning');
+        return;
+    }
+    
+    const batchData = {
+        config_name: document.getElementById('batch-config').value,
+        prompt: document.getElementById('batch-prompt').value,
+        negative_prompt: document.getElementById('batch-negative-prompt').value,
+        batch_size: parseInt(document.getElementById('batch-size').value),
+        seed: parseInt(document.getElementById('batch-seed').value) || -1,
+        steps: parseInt(document.getElementById('batch-steps').value),
+        cfg_scale: parseFloat(document.getElementById('batch-cfg-scale').value),
+        width: parseInt(document.getElementById('batch-width').value),
+        height: parseInt(document.getElementById('batch-height').value),
+        priority: document.getElementById('batch-priority').value
+    };
+    
+    // Start batch generation
+    window.dashboard?.startBatchGeneration(batchData);
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('batchModal'));
+    modal.hide();
+}
+
+// Update batch preview when form changes
+document.addEventListener('DOMContentLoaded', () => {
+    const batchForm = document.getElementById('batch-form');
+    if (batchForm) {
+        batchForm.addEventListener('change', updateBatchPreview);
+        batchForm.addEventListener('input', updateBatchPreview);
+    }
+});
+
+function updateBatchPreview() {
+    const batchSize = parseInt(document.getElementById('batch-size')?.value) || 0;
+    const steps = parseInt(document.getElementById('batch-steps')?.value) || 20;
+    
+    // Calculate estimates
+    const estimatedTime = Math.round(batchSize * steps * 0.1); // Mock calculation
+    const memoryUsage = Math.round(batchSize * 2.5); // Mock calculation
+    
+    // Update preview
+    document.getElementById('batch-estimated-time').textContent = `${estimatedTime}s`;
+    document.getElementById('batch-total-images').textContent = batchSize;
+    document.getElementById('batch-memory-usage').textContent = `${memoryUsage}MB`;
+    document.getElementById('batch-queue-position').textContent = 'Next';
+}
+</script> 

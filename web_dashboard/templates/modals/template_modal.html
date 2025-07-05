@@ -1,0 +1,294 @@
+<!-- Template Modal -->
+<div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="templateModalLabel">
+                    <i class="bi bi-plus-circle"></i> Create New Template
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="template-form">
+                    <div class="row g-3">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <label for="template-name" class="form-label">Template Name</label>
+                            <input type="text" class="form-control" id="template-name" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="template-type" class="form-label">Model Type</label>
+                            <select class="form-select" id="template-type" required>
+                                <option value="">Select model type...</option>
+                                <option value="stable_diffusion">Stable Diffusion</option>
+                                <option value="midjourney">Midjourney</option>
+                                <option value="dalle">DALL-E</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="template-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="template-description" rows="2" 
+                                      placeholder="Describe what this template is for..."></textarea>
+                        </div>
+                        
+                        <!-- Model Settings -->
+                        <div class="col-12">
+                            <h6><i class="bi bi-gear"></i> Model Settings</h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="model-checkpoint" class="form-label">Checkpoint</label>
+                            <input type="text" class="form-control" id="model-checkpoint" 
+                                   placeholder="e.g., v1-5-pruned.ckpt">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="model-vae" class="form-label">VAE</label>
+                            <input type="text" class="form-control" id="model-vae" 
+                                   placeholder="e.g., vae-ft-mse-840000-ema-pruned.ckpt">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="model-scheduler" class="form-label">Scheduler</label>
+                            <select class="form-select" id="model-scheduler">
+                                <option value="ddim">DDIM</option>
+                                <option value="euler">Euler</option>
+                                <option value="euler_a">Euler Ancestral</option>
+                                <option value="dpm++">DPM++ 2M</option>
+                                <option value="dpm++_karras">DPM++ 2M Karras</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="model-clip-skip" class="form-label">CLIP Skip</label>
+                            <input type="number" class="form-control" id="model-clip-skip" 
+                                   value="1" min="1" max="12">
+                        </div>
+                        
+                        <!-- Generation Settings -->
+                        <div class="col-12">
+                            <h6><i class="bi bi-magic"></i> Generation Settings</h6>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="gen-steps" class="form-label">Steps</label>
+                            <input type="number" class="form-control" id="gen-steps" 
+                                   value="20" min="1" max="100">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="gen-cfg-scale" class="form-label">CFG Scale</label>
+                            <input type="number" class="form-control" id="gen-cfg-scale" 
+                                   value="7.0" min="1" max="20" step="0.1">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="gen-width" class="form-label">Width</label>
+                            <input type="number" class="form-control" id="gen-width" 
+                                   value="512" min="64" max="2048" step="64">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="gen-height" class="form-label">Height</label>
+                            <input type="number" class="form-control" id="gen-height" 
+                                   value="512" min="64" max="2048" step="64">
+                        </div>
+                        
+                        <!-- Prompt Templates -->
+                        <div class="col-12">
+                            <h6><i class="bi bi-chat-quote"></i> Prompt Templates</h6>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="default-prompt" class="form-label">Default Prompt</label>
+                            <textarea class="form-control" id="default-prompt" rows="3" 
+                                      placeholder="Enter a default prompt template..."></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="default-negative-prompt" class="form-label">Default Negative Prompt</label>
+                            <textarea class="form-control" id="default-negative-prompt" rows="2" 
+                                      placeholder="Enter a default negative prompt..."></textarea>
+                        </div>
+                        
+                        <!-- Advanced Settings -->
+                        <div class="col-12">
+                            <h6><i class="bi bi-sliders"></i> Advanced Settings</h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="advanced-sampler" class="form-label">Sampler</label>
+                            <select class="form-select" id="advanced-sampler">
+                                <option value="euler">Euler</option>
+                                <option value="euler_a">Euler Ancestral</option>
+                                <option value="heun">Heun</option>
+                                <option value="dpm_2">DPM2</option>
+                                <option value="dpm_2_a">DPM2 Ancestral</option>
+                                <option value="lms">LMS</option>
+                                <option value="dpm_fast">DPM Fast</option>
+                                <option value="dpm_adaptive">DPM Adaptive</option>
+                                <option value="dpmpp_2s">DPM++ 2S</option>
+                                <option value="dpmpp_2m">DPM++ 2M</option>
+                                <option value="dpmpp_2m_karras">DPM++ 2M Karras</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="advanced-restore-faces" class="form-label">Restore Faces</label>
+                            <select class="form-select" id="advanced-restore-faces">
+                                <option value="false">Disabled</option>
+                                <option value="true">Enabled</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="advanced-tiling" class="form-label">Tiling</label>
+                            <select class="form-select" id="advanced-tiling">
+                                <option value="false">Disabled</option>
+                                <option value="true">Enabled</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="advanced-hires-fix" class="form-label">Hires Fix</label>
+                            <select class="form-select" id="advanced-hires-fix">
+                                <option value="false">Disabled</option>
+                                <option value="true">Enabled</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="advanced-hires-steps" class="form-label">Hires Steps</label>
+                            <input type="number" class="form-control" id="advanced-hires-steps" 
+                                   value="20" min="1" max="100">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="advanced-hires-upscaler" class="form-label">Hires Upscaler</label>
+                            <select class="form-select" id="advanced-hires-upscaler">
+                                <option value="Latent">Latent</option>
+                                <option value="Latent (antialiased)">Latent (antialiased)</option>
+                                <option value="Latent (bicubic)">Latent (bicubic)</option>
+                                <option value="Latent (bicubic antialiased)">Latent (bicubic antialiased)</option>
+                                <option value="Latent (nearest)">Latent (nearest)</option>
+                                <option value="Latent (nearest-exact)">Latent (nearest-exact)</option>
+                                <option value="None">None</option>
+                                <option value="R-ESRGAN 4x+">R-ESRGAN 4x+</option>
+                                <option value="R-ESRGAN 4x+ Anime6B">R-ESRGAN 4x+ Anime6B</option>
+                                <option value="ScuNET GAN">ScuNET GAN</option>
+                                <option value="ScuNET PSNR">ScuNET PSNR</option>
+                                <option value="SwinIR 4x">SwinIR 4x</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" onclick="testTemplate()">
+                    <i class="bi bi-play"></i> Test Template
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveTemplate()">
+                    <i class="bi bi-save"></i> Save Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function saveTemplate() {
+    const form = document.getElementById('template-form');
+    const formData = new FormData(form);
+    
+    // Validate required fields
+    if (!formData.get('template-name') || !formData.get('template-type')) {
+        window.dashboard?.showToast('Please fill in all required fields', 'warning');
+        return;
+    }
+    
+    const templateData = {
+        name: document.getElementById('template-name').value,
+        type: document.getElementById('template-type').value,
+        description: document.getElementById('template-description').value,
+        model_type: document.getElementById('template-type').value,
+        model_settings: {
+            checkpoint: document.getElementById('model-checkpoint').value,
+            vae: document.getElementById('model-vae').value,
+            scheduler: document.getElementById('model-scheduler').value,
+            clip_skip: parseInt(document.getElementById('model-clip-skip').value)
+        },
+        generation_settings: {
+            steps: parseInt(document.getElementById('gen-steps').value),
+            cfg_scale: parseFloat(document.getElementById('gen-cfg-scale').value),
+            width: parseInt(document.getElementById('gen-width').value),
+            height: parseInt(document.getElementById('gen-height').value),
+            sampler: document.getElementById('advanced-sampler').value,
+            restore_faces: document.getElementById('advanced-restore-faces').value === 'true',
+            tiling: document.getElementById('advanced-tiling').value === 'true',
+            hires_fix: document.getElementById('advanced-hires-fix').value === 'true',
+            hires_steps: parseInt(document.getElementById('advanced-hires-steps').value),
+            hires_upscaler: document.getElementById('advanced-hires-upscaler').value
+        },
+        prompt_templates: {
+            default_prompt: document.getElementById('default-prompt').value,
+            default_negative_prompt: document.getElementById('default-negative-prompt').value
+        }
+    };
+    
+    // Check if this is an edit or create operation
+    const originalName = form.dataset.originalName;
+    const isEdit = originalName && originalName !== templateData.name;
+    
+    if (isEdit) {
+        // Update existing template
+        window.dashboard?.updateTemplate(originalName, templateData);
+    } else {
+        // Create new template
+        window.dashboard?.saveTemplate(templateData);
+    }
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('templateModal'));
+    modal.hide();
+}
+
+function testTemplate() {
+    const templateName = document.getElementById('template-name').value;
+    if (!templateName) {
+        window.dashboard?.showToast('Please enter a template name first', 'warning');
+        return;
+    }
+    
+    // Load template into main form
+    const templateData = {
+        config_name: templateName,
+        prompt: document.getElementById('default-prompt').value,
+        negative_prompt: document.getElementById('default-negative-prompt').value,
+        steps: parseInt(document.getElementById('gen-steps').value),
+        cfg_scale: parseFloat(document.getElementById('gen-cfg-scale').value),
+        width: parseInt(document.getElementById('gen-width').value),
+        height: parseInt(document.getElementById('gen-height').value)
+    };
+    
+    // Close modal and load template
+    const modal = bootstrap.Modal.getInstance(document.getElementById('templateModal'));
+    modal.hide();
+    
+    // Load template into main form
+    window.dashboard?.loadTemplateIntoForm(templateData);
+}
+
+// Reset form when modal is hidden
+document.addEventListener('DOMContentLoaded', () => {
+    const templateModal = document.getElementById('templateModal');
+    if (templateModal) {
+        templateModal.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('template-form').reset();
+        });
+    }
+});
+</script> 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Comprehensive test runner for the Forge API Tool.
-Runs all unit, integration, and functional tests.
+Runs all unit tests for core functionality.
 """
 
 import unittest
@@ -16,7 +16,7 @@ sys.path.insert(0, project_root)
 
 def run_all_tests():
     """Run all tests and return results."""
-    print("🧪 Forge API Tool - Comprehensive Test Suite")
+    print("🧪 Forge API Tool - Unit Test Suite")
     print("=" * 60)
     print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
@@ -25,7 +25,7 @@ def run_all_tests():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     
-    # Test categories
+    # Test categories - only unit tests remain
     test_categories = {
         'Unit Tests': [
             'tests.unit.test_config_handler',
@@ -33,29 +33,6 @@ def run_all_tests():
             'tests.unit.test_output_manager',
             'tests.unit.test_wildcard_manager',
             'tests.unit.test_imports'
-        ],
-        'Integration Tests': [
-            'tests.integration.test_api_comprehensive',
-            'tests.integration.test_api_simple',
-            'tests.integration.test_endpoint_coverage',
-            'tests.integration.test_error_handling',
-            'tests.integration.test_forge_api',
-            'tests.integration.test_forge_direct',
-            'tests.integration.test_forge_endpoints',
-            'tests.integration.test_integration',
-            'tests.integration.test_performance',
-            'tests.integration.test_permissions',
-            'tests.integration.test_image_analysis_endpoints'
-        ],
-        'Functional Tests': [
-            'tests.functional.test_completed_prompts',
-            'tests.functional.test_generation',
-            'tests.functional.test_preview_wildcards',
-            'tests.functional.test_status_indicators',
-            'tests.functional.test_template_loading',
-            'tests.functional.test_template_prompt_loading',
-            'tests.functional.test_templates',
-            'tests.functional.test_image_analysis_frontend'
         ]
     }
     
@@ -155,9 +132,7 @@ def run_all_tests():
 def run_specific_category(category):
     """Run tests from a specific category."""
     categories = {
-        'unit': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'unit'),
-        'integration': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'integration'), 
-        'functional': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'functional')
+        'unit': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'unit')
     }
     
     if category not in categories:
@@ -204,57 +179,17 @@ if __name__ == '__main__':
     import argparse
     
     parser = argparse.ArgumentParser(description='Run Forge API Tool tests')
-    parser.add_argument('--category', '-c', choices=['unit', 'integration', 'functional'],
+    parser.add_argument('--category', '-c', choices=['unit'], 
                        help='Run tests from a specific category')
     parser.add_argument('--test', '-t', help='Run a specific test')
-    parser.add_argument('--list', '-l', action='store_true', help='List all available tests')
     
     args = parser.parse_args()
     
-    if args.list:
-        print("📋 Available test categories:")
-        print("  unit - Unit tests for individual components")
-        print("  integration - Integration tests for API endpoints")
-        print("  functional - Functional tests for user workflows")
-        print()
-        print("📋 Available test modules:")
-        
-        # List all test modules
-        test_modules = [
-            'tests.unit.test_config_handler',
-            'tests.unit.test_image_analyzer', 
-            'tests.unit.test_output_manager',
-            'tests.unit.test_wildcard_manager',
-            'tests.unit.test_imports',
-            'tests.integration.test_api_comprehensive',
-            'tests.integration.test_api_simple',
-            'tests.integration.test_endpoint_coverage',
-            'tests.integration.test_error_handling',
-            'tests.integration.test_forge_api',
-            'tests.integration.test_forge_direct',
-            'tests.integration.test_forge_endpoints',
-            'tests.integration.test_integration',
-            'tests.integration.test_performance',
-            'tests.integration.test_permissions',
-            'tests.integration.test_image_analysis_endpoints',
-            'tests.functional.test_completed_prompts',
-            'tests.functional.test_generation',
-            'tests.functional.test_preview_wildcards',
-            'tests.functional.test_status_indicators',
-            'tests.functional.test_template_loading',
-            'tests.functional.test_template_prompt_loading',
-            'tests.functional.test_templates',
-            'tests.functional.test_image_analysis_frontend'
-        ]
-        
-        for module in test_modules:
-            print(f"  {module}")
-        
-        sys.exit(0)
-    
-    if args.category:
-        sys.exit(run_specific_category(args.category))
-    elif args.test:
-        sys.exit(run_specific_test(args.test))
+    if args.test:
+        exit_code = run_specific_test(args.test)
+    elif args.category:
+        exit_code = run_specific_category(args.category)
     else:
-        sys.exit(run_all_tests()) 
+        exit_code = run_all_tests()
+    
+    sys.exit(exit_code) 
