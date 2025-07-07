@@ -14,6 +14,7 @@ import sys
 import shutil
 import json
 import subprocess
+import platform
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -22,6 +23,7 @@ class UniversalSetup:
         self.project_name = project_name or "new-project"
         self.current_dir = Path.cwd()
         self.universal_dir = self.current_dir / ".universal"
+        self.platform = platform.system().lower()
         
     def setup_directory_structure(self) -> None:
         """Create the .universal directory structure"""
@@ -35,33 +37,62 @@ class UniversalSetup:
             ".universal/memory/main",
             ".universal/memory/tasks",
             ".universal/memory/docs-cache",
-            ".universal/extensions"
+            ".universal/extensions",
+            ".universal/hooks"
         ]
         
         for directory in directories:
-            Path(directory).mkdir(parents=True, exist_ok=True)
-            print(f"  ✅ Created {directory}")
+            dir_path = Path(directory)
+            if dir_path.exists():
+                print(f"  ⚠️  {directory} already exists, skipping...")
+            else:
+                dir_path.mkdir(parents=True, exist_ok=True)
+                print(f"  ✅ Created {directory}")
     
     def create_cursor_rules(self) -> None:
         """Create enhanced .cursorrules file"""
         print("🎯 Creating Cursor AI rules...")
         
-        cursor_rules = {
-            "terminal": {
+        # Platform-specific terminal configuration
+        if self.platform == "windows":
+            terminal_config = {
                 "shell": "powershell.exe",
                 "args": [
                     "-NoProfile",
                     "-ExecutionPolicy", "Bypass", 
                     "-Command", "& { . $PROFILE; Clear-Host }"
                 ]
-            },
-            "terminal.integrated.shell.windows": "powershell.exe",
-            "terminal.integrated.shellArgs.windows": [
+            }
+            terminal_integrated = "powershell.exe"
+            terminal_args = [
                 "-NoProfile",
                 "-ExecutionPolicy", "Bypass",
                 "-Command",
                 "& { . $PROFILE; Clear-Host }"
-            ],
+            ]
+        elif self.platform == "darwin":  # macOS
+            terminal_config = {
+                "shell": "/bin/zsh",
+                "args": ["-l"]
+            }
+            terminal_integrated = "/bin/zsh"
+            terminal_args = ["-l"]
+        else:  # Linux and others
+            terminal_config = {
+                "shell": "/bin/bash",
+                "args": ["-l"]
+            }
+            terminal_integrated = "/bin/bash"
+            terminal_args = ["-l"]
+        
+        cursor_rules = {
+            "terminal": terminal_config,
+            "terminal.integrated.shell.windows": terminal_integrated if self.platform == "windows" else None,
+            "terminal.integrated.shellArgs.windows": terminal_args if self.platform == "windows" else None,
+            "terminal.integrated.shell.osx": terminal_integrated if self.platform == "darwin" else None,
+            "terminal.integrated.shellArgs.osx": terminal_args if self.platform == "darwin" else None,
+            "terminal.integrated.shell.linux": terminal_integrated if self.platform == "linux" else None,
+            "terminal.integrated.shellArgs.linux": terminal_args if self.platform == "linux" else None,
             "rules": [
                 {
                     "name": "AI-Native Development",
@@ -96,7 +127,10 @@ class UniversalSetup:
             ]
         }
         
-        with open(".cursorrules", "w") as f:
+        # Remove None values for cleaner JSON
+        cursor_rules = {k: v for k, v in cursor_rules.items() if v is not None}
+        
+        with open(".cursorrules", "w", encoding="utf-8") as f:
             json.dump(cursor_rules, f, indent=2)
         
         print("  ✅ Created .cursorrules")
@@ -110,14 +144,14 @@ class UniversalSetup:
                 "memory-bank": {
                     "command": "npx",
                     "args": [
-                        "-y", "mcp-memory-bank",
+                        "-y", "@modelcontextprotocol/server-memory-bank",
                         "--path", ".universal/memory/${GIT_BRANCH}"
                     ]
                 },
                 "knowledge-graph": {
                     "command": "npx", 
                     "args": [
-                        "-y", "mcp-knowledge-graph",
+                        "-y", "@modelcontextprotocol/server-knowledge-graph",
                         "--port", "4280",
                         "--store-path", ".universal/memory/${GIT_BRANCH}/graph"
                     ]
@@ -125,7 +159,7 @@ class UniversalSetup:
                 "docs-provider": {
                     "command": "npx",
                     "args": [
-                        "-y", "mcp-docs-provider", "docs",
+                        "-y", "@modelcontextprotocol/server-docs-provider", "docs",
                         "--port", "5050", "--watch",
                         "--cache-dir", ".universal/memory/docs-cache"
                     ]
@@ -133,17 +167,100 @@ class UniversalSetup:
                 "sequential-thinking": {
                     "command": "npx",
                     "args": [
-                        "-y", "mcp-sequential-thinking", 
+                        "-y", "@modelcontextprotocol/server-sequential-thinking", 
                         "--log-dir", ".universal/memory/tasks"
                     ]
                 }
             }
         }
         
-        with open(".universal/mcp/mcp.json", "w") as f:
+        with open(".universal/mcp/mcp.json", "w", encoding="utf-8") as f:
             json.dump(mcp_config, f, indent=2)
         
         print("  ✅ Created .universal/mcp/mcp.json")
+    
+    def copy_universal_templates(self) -> None:
+        """Copy universal templates to the new project"""
+        print("📋 Copying universal templates...")
+        
+        # Define source template directory (this script's location)
+        script_dir = Path(__file__).parent
+        source_templates_dir = script_dir / "templates"
+        
+        if not source_templates_dir.exists():
+            print(f"  ⚠️  Source templates directory not found: {source_templates_dir}")
+            print("  📝 Creating basic templates...")
+            self.create_basic_templates()
+            return
+        
+        # Copy templates
+        target_templates_dir = Path(".universal/templates")
+        try:
+            if target_templates_dir.exists():
+                shutil.rmtree(target_templates_dir)
+            shutil.copytree(source_templates_dir, target_templates_dir)
+            print("  ✅ Copied universal templates")
+        except Exception as e:
+            print(f"  ⚠️  Failed to copy templates: {e}")
+            print("  📝 Creating basic templates...")
+            self.create_basic_templates()
+    
+    def create_basic_templates(self) -> None:
+        """Create basic templates if copying fails"""
+        templates_dir = Path(".universal/templates")
+        templates_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create a basic AI development workflow template
+        workflow_template = """# AI Development Workflow Template
+
+## Feature Development Process
+
+### 1. Planning Phase
+- [ ] Define feature requirements
+- [ ] Check project memory for similar features
+- [ ] Create sequential thinking plan
+- [ ] Document architectural decisions
+
+### 2. Implementation Phase
+- [ ] Create feature branch
+- [ ] Implement step by step
+- [ ] Use knowledge graph for dependency analysis
+- [ ] Document code changes
+
+### 3. Testing Phase
+- [ ] Write tests for new functionality
+- [ ] Run existing test suite
+- [ ] Document test results
+
+### 4. Documentation Phase
+- [ ] Update API documentation
+- [ ] Update README if needed
+- [ ] Document lessons learned
+
+### 5. Review Phase
+- [ ] Code review
+- [ ] Update project memory
+- [ ] Merge to main branch
+
+## Memory Commands
+- `memory-bank: "Record decision: [description]"`
+- `memory-bank: "Update progress: [status]"`
+- `memory-bank: "Document lesson: [insight]"`
+
+## Knowledge Graph Commands
+- `knowledge-graph: "Show dependencies for [component]"`
+- `knowledge-graph: "Find files using [functionality]"`
+
+## Sequential Thinking Commands
+- `sequential-thinking: "Create plan for [task]"`
+- `sequential-thinking: "Generate code for step [N]"`
+- `sequential-thinking: done [N]`
+"""
+        
+        with open(templates_dir / "ai-development-workflow.md", "w", encoding="utf-8") as f:
+            f.write(workflow_template)
+        
+        print("  ✅ Created basic templates")
     
     def create_initial_memory(self) -> None:
         """Create initial project memory"""
@@ -238,7 +355,7 @@ docs/               # Legacy documentation (to be cleaned)
 ### Initial Setup
 ```bash
 # Install MCP tools
-npm install -g mcp-memory-bank mcp-knowledge-graph mcp-docs-provider mcp-sequential-thinking
+npm install -g @modelcontextprotocol/server-memory-bank @modelcontextprotocol/server-knowledge-graph @modelcontextprotocol/server-docs-provider @modelcontextprotocol/server-sequential-thinking
 
 # Initialize git (if not already done)
 git init
@@ -386,13 +503,19 @@ node_modules/
         
         gitignore_path = Path(".gitignore")
         if gitignore_path.exists():
-            with open(gitignore_path, "a", encoding="utf-8") as f:
-                f.write(gitignore_additions)
+            # Check if already contains universal entries
+            with open(gitignore_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                if "Universal AI Development Environment" not in content:
+                    with open(gitignore_path, "a", encoding="utf-8") as f:
+                        f.write(gitignore_additions)
+                    print("  ✅ Updated .gitignore")
+                else:
+                    print("  ⚠️  .gitignore already contains universal entries")
         else:
             with open(gitignore_path, "w", encoding="utf-8") as f:
                 f.write(gitignore_additions)
-        
-        print("  ✅ Updated .gitignore")
+            print("  ✅ Created .gitignore")
     
     def get_current_date(self) -> str:
         """Get current date in YYYY-MM-DD format"""
@@ -408,6 +531,7 @@ node_modules/
             self.setup_directory_structure()
             self.create_cursor_rules()
             self.create_mcp_config()
+            self.copy_universal_templates()
             self.create_initial_memory()
             self.create_quick_start_guide()
             self.create_gitignore_updates()
@@ -416,12 +540,14 @@ node_modules/
             print("✅ Setup complete! Your AI-enhanced development environment is ready.")
             print("\n📖 Next steps:")
             print("1. Read QUICK_START.md for usage instructions")
-            print("2. Install MCP tools: npm install -g mcp-memory-bank mcp-knowledge-graph mcp-docs-provider mcp-sequential-thinking")
+            print("2. Install MCP tools: npm install -g @modelcontextprotocol/server-memory-bank @modelcontextprotocol/server-knowledge-graph @modelcontextprotocol/server-docs-provider @modelcontextprotocol/server-sequential-thinking")
             print("3. Initialize git: git init && git add . && git commit -m 'Initial setup'")
             print("4. Start developing with AI assistance!")
             
         except Exception as e:
             print(f"❌ Setup failed: {e}")
+            import traceback
+            traceback.print_exc()
             sys.exit(1)
 
 def main():
