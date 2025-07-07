@@ -1,0 +1,145 @@
+# Security-First Development Principles
+- Always validate and sanitize all user inputs
+- Never trust external data without validation
+- Use principle of least privilege for all operations
+- Implement defense in depth with multiple security layers
+- Follow OWASP Top 10 guidelines for web applications
+- Regular security audits and vulnerability assessments
+
+# Input Validation and Sanitization
+- Validate all user inputs for type, length, and format
+- Sanitize all inputs to prevent injection attacks
+- Use parameterized queries for any database operations
+- Implement proper input encoding and decoding
+- Validate file uploads for type, size, and content
+- Use allowlists instead of blocklists for validation
+
+# Authentication and Authorization
+- Implement secure authentication mechanisms
+- Use strong password policies and hashing
+- Implement proper session management
+- Use role-based access control (RBAC)
+- Implement proper logout and session cleanup
+- Use multi-factor authentication where appropriate
+- Store sensitive data encrypted at rest
+
+# API Security
+- Use HTTPS for all API communications
+- Implement proper API authentication
+- Use API keys with appropriate scopes
+- Implement rate limiting to prevent abuse
+- Validate all API inputs and outputs
+- Use proper HTTP status codes
+- Implement proper error handling without information disclosure
+
+# Data Protection
+- Encrypt sensitive data at rest and in transit
+- Implement proper data retention policies
+- Use secure key management practices
+- Implement data backup and recovery procedures
+- Follow GDPR and other privacy regulations
+- Minimize data collection to necessary information
+- Implement proper data disposal procedures
+
+# Web Security
+- Implement proper CORS configuration
+- Use Content Security Policy (CSP) headers
+- Implement CSRF protection for all forms
+- Use secure session management
+- Implement proper error handling
+- Use HTTPS for all communications
+- Implement proper logging without sensitive data
+
+# Dependency Security
+- Regularly update dependencies
+- Use dependency vulnerability scanning
+- Pin dependency versions in requirements files
+- Monitor for security advisories
+- Use trusted package sources only
+- Implement dependency approval process
+- Regular security audits of dependencies
+
+# Configuration Security
+- Use environment variables for sensitive configuration
+- Never commit secrets to version control
+- Use secure configuration management
+- Implement proper access controls for configuration
+- Use configuration validation
+- Implement configuration encryption where appropriate
+- Regular configuration security reviews
+
+# Logging and Monitoring Security
+- Log security events appropriately
+- Implement proper log retention policies
+- Use secure log storage and transmission
+- Implement log integrity monitoring
+- Avoid logging sensitive information
+- Use structured logging for security events
+- Implement security event alerting
+
+# Error Handling Security
+- Never expose sensitive information in error messages
+- Implement proper error logging
+- Use generic error messages for users
+- Implement proper exception handling
+- Avoid information disclosure in stack traces
+- Use secure error reporting mechanisms
+- Implement proper error recovery procedures
+
+# Code Security Best Practices
+- Use secure coding practices
+- Implement proper input validation
+- Use secure libraries and frameworks
+- Avoid common security vulnerabilities
+- Implement proper access controls
+- Use secure communication protocols
+- Regular security code reviews
+
+# AI/ML Specific Security
+- Validate all model inputs thoroughly
+- Implement proper model access controls
+- Use secure model storage and transmission
+- Implement model versioning and tracking
+- Monitor for model bias and fairness
+- Implement proper model deployment security
+- Regular model security assessments
+
+# Security Testing
+- Implement security unit tests
+- Use automated security scanning tools
+- Perform regular penetration testing
+- Implement security integration tests
+- Use security linting tools
+- Regular security code reviews
+- Implement security regression testing
+
+# Incident Response
+- Document incident response procedures
+- Implement security monitoring and alerting
+- Have incident response team identified
+- Implement proper communication procedures
+- Have rollback procedures documented
+- Regular incident response drills
+- Post-incident analysis and lessons learned
+
+# Compliance and Auditing
+- Follow relevant security standards
+- Implement proper audit logging
+- Regular compliance assessments
+- Document security policies and procedures
+- Implement security training programs
+- Regular security policy reviews
+- Maintain security documentation
+
+# Project-Specific Security Considerations
+- Secure API key management for Forge API
+- Validate all image generation inputs
+- Implement proper file upload security
+- Secure configuration file handling
+- Implement proper logging without sensitive data
+- Secure web dashboard access
+- Implement proper session management for web interface
+description:
+globs:
+alwaysApply: false
+---

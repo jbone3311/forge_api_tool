@@ -1,0 +1,221 @@
+# Core Development Principles
+- Follow the universal/project-specific documentation separation strictly
+- Always update both code and documentation together
+- Use the CLI interface for all operations when possible
+- Maintain comprehensive test coverage (>80%)
+- Follow the established error handling patterns
+- Never modify files in docs/universal/ - they are copy-friendly templates
+
+# Code Quality Standards
+- Use type hints for all function parameters and return values
+- Implement comprehensive error handling with specific exception types from core.exceptions
+- Add docstrings to all public functions and classes following Google style
+- Follow PEP 8 style guidelines with 4-space indentation
+- Use the centralized_logger for all logging operations
+- Keep functions under 50 lines and classes under 300 lines
+- Use meaningful variable and function names
+- Implement proper resource cleanup in all operations
+
+# Testing Requirements
+- Write unit tests for all new functionality in tests/unit/
+- Write integration tests for component interactions in tests/functional/
+- Write stress tests for performance-critical operations in tests/stress/
+- Include both CLI commands and direct script execution methods
+- Test error conditions and edge cases comprehensively
+- Use isolated test environments with proper cleanup
+- Maintain test coverage reports and update docs/project-specific/test-coverage.md
+- Mock external dependencies appropriately
+- Use fixtures for common test data
+
+# Documentation Standards
+- Update README.md for any new features or significant changes
+- Add entries to CHANGELOG.md for all functional changes
+- Create/update project-specific docs in docs/project-specific/
+- Never modify docs/universal/ files - they are universal templates
+- Include usage examples for all new features
+- Update docs/project-specific/cli-commands.md for new CLI commands
+- Create session summaries in docs/SESSION_SUMMARIES/ for all work sessions
+- Use clear, concise language avoiding jargon
+- Include code examples and screenshots where helpful
+
+# Project-Specific Patterns
+- Use config_handler for all configuration operations
+- Implement proper wildcard validation and processing with WildcardManagerFactory
+- Follow the established API client patterns in core/forge_api.py
+- Use the job queue for batch operations with JobQueue
+- Implement proper output management with OutputManager
+- Use PromptBuilder for all prompt generation and wildcard substitution
+- Use ImageAnalyzer for image analysis operations
+- Use BatchRunner for batch image generation
+- Follow the established CLI patterns in cli.py
+
+# Error Handling Patterns
+- Use custom exceptions from core.exceptions (ForgeAPIError, ConfigError, etc.)
+- Log errors with appropriate levels using centralized_logger
+- Provide user-friendly error messages for CLI users
+- Include context information in error logs
+- Implement graceful degradation where possible
+- Use try/except blocks with specific exception types
+- Never use bare except clauses
+- Return meaningful error codes for CLI operations
+
+# Security Considerations
+- Validate all user inputs thoroughly
+- Use environment variables for sensitive configuration (API keys, etc.)
+- Implement proper authentication for API calls
+- Follow the security checklist in docs/universal/templates/security-checklist.md
+- Regular dependency vulnerability scanning with safety
+- Use bandit for static security analysis
+- Implement proper CORS configuration for web endpoints
+- Sanitize all outputs to prevent XSS
+- Use parameterized queries for any database operations
+
+# Performance Guidelines
+- Use async operations where appropriate (especially for API calls)
+- Implement proper caching strategies for frequently accessed data
+- Monitor memory usage in batch operations
+- Use the performance logging features in centralized_logger
+- Optimize API request patterns to minimize latency
+- Use connection pooling for database operations
+- Implement proper timeout handling for external API calls
+- Profile code for bottlenecks using cProfile
+- Use efficient data structures and algorithms
+
+# CLI Development
+- Follow the established CLI patterns in cli.py
+- Use argparse for command-line argument parsing
+- Provide clear help text for all commands
+- Implement proper exit codes (0 for success, 1 for errors, 2 for usage errors)
+- Use the established output formatting patterns with emojis and clear structure
+- Include progress indicators for long-running operations
+- Provide verbose and quiet modes where appropriate
+- Use consistent command naming conventions
+- Include examples in help text
+
+# Web Dashboard Development
+- Follow Flask best practices for web development
+- Use proper route organization and error handling
+- Implement proper CSRF protection for forms
+- Use secure session management
+- Implement proper input validation for all web inputs
+- Use responsive design principles
+- Follow accessibility guidelines
+- Implement proper error pages and user feedback
+- Use WebSocket for real-time updates where appropriate
+
+# Configuration Management
+- Use JSON format for all configuration files
+- Validate configuration structure and values
+- Provide sensible defaults for all configuration options
+- Use environment-specific configuration files
+- Implement configuration versioning
+- Provide configuration migration tools
+- Document all configuration options
+- Use type validation for configuration values
+
+# Logging and Monitoring
+- Use the centralized_logger for all logging operations
+- Log at appropriate levels (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Include context information in log messages
+- Use structured logging for machine-readable logs
+- Implement log rotation and cleanup
+- Monitor application performance and errors
+- Set up alerts for critical errors
+- Use correlation IDs for tracking requests
+
+# File Organization
+- Keep related files together in appropriate directories
+- Use clear, descriptive file names
+- Follow Python package structure conventions
+- Separate concerns into different modules
+- Use __init__.py files for package initialization
+- Keep configuration files in configs/ directory
+- Store test files in tests/ with appropriate subdirectories
+- Use consistent import organization
+
+# Version Control
+- Use meaningful commit messages following conventional commits
+- Create feature branches for new development
+- Use pull requests for code review
+- Keep commits atomic and focused
+- Update CHANGELOG.md for all user-facing changes
+- Tag releases with semantic versioning
+- Use .gitignore to exclude appropriate files
+- Document breaking changes clearly
+
+# API Development
+- Follow RESTful API design principles
+- Use proper HTTP status codes
+- Implement proper error responses
+- Use JSON for request/response bodies
+- Implement proper API versioning
+- Use authentication and authorization
+- Implement rate limiting where appropriate
+- Provide comprehensive API documentation
+- Use OpenAPI/Swagger for API specification
+
+# Testing Best Practices
+- Use pytest as the primary testing framework
+- Write tests that are independent and repeatable
+- Use fixtures for test data and setup
+- Mock external dependencies
+- Test both success and failure cases
+- Use parameterized tests for multiple scenarios
+- Implement proper test cleanup
+- Use test coverage tools
+- Write integration tests for critical workflows
+
+# Documentation Best Practices
+- Write documentation that is clear and concise
+- Include code examples for all features
+- Use consistent formatting and structure
+- Keep documentation up to date with code changes
+- Include troubleshooting sections
+- Provide step-by-step guides for complex operations
+- Use diagrams and screenshots where helpful
+- Include links to related documentation
+- Write documentation for different audiences (users, developers, administrators)
+
+# Project-Specific Details (Forge-API-Tool)
+- Custom directories: wildcards/, web_dashboard/, core/, configs/, outputs/, logs/
+- Custom scripts: cli.py, tests/run_comprehensive_tests.py, tests/run_all_tests.py
+- Test structure: tests/unit/, tests/functional/, tests/stress/, tests/fixtures/
+- CLI commands: python cli.py [command] [subcommand]
+- Direct test execution: python tests/run_all_tests.py
+- Web dashboard: python cli.py web start [type]
+- Configuration files: JSON format in configs/ directory
+- Wildcard files: Text files in wildcards/ directory
+- Output files: Generated images in outputs/ directory
+- Log files: Structured logs in logs/ directory
+
+# Copying/Updating Instructions
+- If copying to another project, update only the Project-Specific Details section
+- Keep universal instructions unchanged
+- Adapt project-specific paths, scripts, and directories
+- Update any references to custom functionality
+- Maintain the same documentation structure
+- Update Cursor AI rules for the new project
+- Ensure all project-specific documentation is updated
+
+# Emergency Procedures
+- If critical errors occur, stop development immediately
+- Document the issue thoroughly
+- Create a rollback plan if necessary
+- Communicate the issue clearly to stakeholders
+- Implement fixes carefully with proper testing
+- Update documentation with lessons learned
+- Review and update procedures to prevent recurrence
+
+# Quality Assurance Checklist
+- [ ] All code follows style guidelines
+- [ ] All functions have proper type hints
+- [ ] All public functions have docstrings
+- [ ] All error conditions are handled
+- [ ] All new functionality has tests
+- [ ] All tests pass
+- [ ] Documentation is updated
+- [ ] CHANGELOG.md is updated
+- [ ] Security considerations are addressed
+- [ ] Performance impact is assessed
+- [ ] Code review is completed
+- [ ] Session summary is created

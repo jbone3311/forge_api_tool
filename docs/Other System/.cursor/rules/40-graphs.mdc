@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+For questions that include “callers”, “callees”, “depends on”, “used by” or
+“dependency”, the assistant should query knowledge-graph first rather than
+searching the entire codebase manually.
+
+@graph  @deps

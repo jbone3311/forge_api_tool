@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "memory-bank": {
+      "command": "npx",
+      "args": [
+        "-y","mcp-memory-bank",
+        "--path",".cursorMEM/${GIT_BRANCH}"
+      ]
+    },
+    "knowledge-graph": {
+      "command": "npx",
+      "args": [
+        "-y","mcp-knowledge-graph",
+        "--port","4280",
+        "--store-path",".cursorMEM/${GIT_BRANCH}/graph"
+      ]
+    },
+    "docs-provider": {
+      "command": "npx",
+      "args": [
+        "-y","mcp-docs-provider","docs",
+        "--port","5050","--watch",
+        "--cache-dir",".cursorMEM/docs-cache"
+      ]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y","mcp-sequential-thinking",
+        "--log-dir",".cursorMEM/tasks"
+      ]
+    }
+  }
+}

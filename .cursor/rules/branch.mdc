@@ -1,0 +1,34 @@
+# Branch Management and Context Switching
+
+## Core Principles
+- Switch memory context when changing branches
+- Maintain branch-specific progress tracking
+- Preserve branch-specific knowledge graphs
+- Update context automatically on branch changes
+
+## Branch Context Switching
+When switching branches, reload Memory Bank if --path includes ${GIT_BRANCH}.
+
+## Branch-Specific Operations
+- Load branch-specific memory context
+- Switch to branch-specific knowledge graph
+- Update sequential thinking context
+- Maintain branch-specific documentation
+
+## Context Preservation
+- Preserve memory across branch switches
+- Maintain separate progress tracking per branch
+- Keep branch-specific design decisions
+- Track branch evolution independently
+
+## Integration with Git
+- Detect branch changes automatically
+- Update MCP tool contexts
+- Maintain branch-specific caches
+- Preserve branch history
+
+@branch @context @git @memory
+description:
+globs:
+alwaysApply: false
+---

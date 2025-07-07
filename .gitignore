@@ -94,3 +94,16 @@ yarn-error.log*
 *.temp
 *.bak
 *.backup 
+
+# Universal AI Development Environment
+.universal/memory/*/graph/
+.universal/memory/docs-cache/
+.universal/memory/tasks/
+.universal/extensions/
+
+# MCP Tool Caches
+.cursorMEM/
+.mcp-cache/
+
+# Node modules for MCP tools (if installed locally)
+node_modules/

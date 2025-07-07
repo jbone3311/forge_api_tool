@@ -1,0 +1,65 @@
+# AI-Assisted Refactoring Framework
+
+## Core Principles
+- Safety-first approach with branch isolation
+- AI-native workflow using MCP tools
+- Cognitive offloading to AI for complexity
+- Knowledge preservation through memory bank
+- Iterative safety with small steps
+
+## Refactoring Triggers
+If the user's prompt contains the words "refactor", "split", "modularise", or "re-organise", the assistant must:
+
+1. Fetch `.universal/templates/ai-assisted-refactoring.md` through docs-provider
+2. Base any plan, checklist, or code generation on that template
+3. Use sequential thinking for step-by-step planning
+4. Update memory bank with design decisions
+
+## Pre-Refactor Setup
+- Create feature branch for isolation
+- Run baseline tests to ensure stability
+- Populate knowledge graph with current codebase
+- Set up memory bank for decision tracking
+- Configure automated documentation updates
+
+## Refactoring Process
+- Use sequential thinking for planning
+- Query knowledge graph for impact analysis
+- Store decisions in memory bank
+- Generate code with AI assistance
+- Validate changes with automated tests
+- Update documentation through docs-provider
+
+## Safety Measures
+- Branch isolation for safe experimentation
+- Baseline tests before starting
+- Incremental commits with clear messages
+- Rollback procedures documented
+- Continuous validation throughout process
+
+## Integration with MCP Tools
+- Use memory bank for decision tracking
+- Query knowledge graph for dependency analysis
+- Use sequential thinking for planning
+- Generate documentation through docs-provider
+- Maintain consistency across all tools
+
+## Quality Assurance
+- Maintain test coverage throughout refactor
+- Validate no circular dependencies
+- Ensure backward compatibility
+- Document all breaking changes
+- Update API documentation
+
+## Post-Refactor Actions
+- Update memory bank with lessons learned
+- Generate final documentation
+- Create pull request with comprehensive description
+- Include dependency analysis in PR
+- Reference design decisions from memory bank
+
+@refactor @planning @safety @ai-assisted
+description:
+globs:
+alwaysApply: false
+---

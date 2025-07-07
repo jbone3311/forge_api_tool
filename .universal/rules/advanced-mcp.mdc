@@ -1,0 +1,54 @@
+# Advanced MCP Tool Integration
+
+## Core Principles
+- Use enhanced MCP tools for specialized tasks
+- Integrate multiple tools for complex workflows
+- Monitor tool performance and effectiveness
+- Create custom tools for project-specific needs
+
+## Enhanced MCP Tools
+- **Playwright**: Browser automation, testing, and debugging
+- **Supabase**: Database operations and analytics
+- **MCP Framework**: Custom tool development
+- **Context7**: Advanced context management
+- **LangChain**: AI framework integration
+
+## Tool Usage Patterns
+- Use Playwright for web testing and automation
+- Use Supabase for database operations and analytics
+- Use MCP Framework for custom tool development
+- Combine tools for complex workflows
+- Monitor tool performance and usage
+
+## Integration Workflows
+- Web Testing + Documentation: Playwright → Memory Bank → Docs Provider
+- Database + Analysis: Supabase → Knowledge Graph → Sequential Thinking
+- Custom Tools + Validation: MCP Framework → Memory Bank → Testing
+
+## Performance Considerations
+- Monitor tool response times
+- Cache frequently accessed data
+- Use appropriate ports for each tool
+- Implement proper error handling
+
+## Security Best Practices
+- Secure sensitive data in memory bank
+- Use environment variables for API keys
+- Implement proper access controls
+- Monitor tool usage for security
+
+## Custom Tool Development
+- Use MCP Framework for custom tools
+- Document tool capabilities in memory bank
+- Test custom tools thoroughly
+- Integrate with existing workflow
+
+@advanced-mcp @enhanced-tools @custom-tools @performance @security
+description: Advanced MCP tool integration and custom tool development
+globs:
+alwaysApply: false
+---
+description:
+globs:
+alwaysApply: false
+---

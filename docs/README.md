@@ -1,59 +1,113 @@
-# Forge API Tool Documentation
+# Documentation Organization System
 
-This directory contains comprehensive documentation for the Forge API Tool project.
+This directory contains an organized documentation system that separates universal templates and instructions from project-specific details. This makes it easy to copy and adapt documentation for other projects.
 
 ## Directory Structure
 
-### Development Documentation (`development/`)
-- **CRITICAL_REFACTORING_NEEDS.md** - Critical refactoring requirements and priorities
-- **COMPREHENSIVE_CODE_REVIEW.md** - Detailed code review findings and recommendations
-- **UPDATED_REFACTORING_PLAN.md** - Current refactoring strategy and implementation plan
-- **CODE_ANALYSIS_SUMMARY.md** - Analysis of codebase structure and quality
+```
+docs/
+├── README.md                    # This file - explains the organization
+├── universal/                   # Universal templates and instructions
+│   ├── templates/               # Reusable documentation templates
+│   │   ├── project-onboarding.md
+│   │   ├── llm-setup-instructions.md
+│   │   ├── printable-quick-sheet.md
+│   │   ├── ci-cd-pipeline.md
+│   │   ├── security-checklist.md
+│   │   ├── quick-reference.md
+│   │   ├── testing-documentation-template.md
+│   │   ├── LLM_ASSISTANT_QUICK_REFERENCE.md
+│   │   ├── COMMUNITY_SOLUTIONS.md
+│   │   └── TERMINAL_FIX_GUIDE.md
+│   └── instructions/            # Universal setup instructions
+│       ├── cursor-ai-setup.md
+│       ├── daily-practices.md
+│       ├── user-setup-guide.md
+│       ├── LLM_ASSISTANT_RULES.md
+│       ├── SESSION_MANAGEMENT.md
+│       ├── DOCUMENTATION_STANDARDS.md
+│       └── LLM_CODING_ASSISTANT_FRAMEWORK.md
+├── project-specific/            # Project-specific documentation
+│   ├── cli-commands.md
+│   ├── test-coverage.md
+│   ├── REFACTORING_PLAN.md
+│   └── FORGE_API_TEST_SUMMARY.md
+├── features/                    # Project-specific feature docs
+├── testing/                     # Project-specific test reports/coverage
+├── cleanup/                     # Project-specific cleanup logs
+├── development/                 # Project-specific development docs
+├── SESSION_SUMMARIES/           # Project-specific session logs
+└── ... (other project-specific docs)
+```
 
-### Feature Documentation (`features/`)
-- **WILDCARD_PREVIEW_FIX.md** - Documentation of wildcard preview functionality fixes
-- **TEMPLATE_PROMPT_LOADING_FIX.md** - Template prompt loading system improvements
-- **TEMPLATE_LOADING_FIXES.md** - Template loading system fixes and enhancements
-- **TEMPLATE_STATUS.md** - Current status and roadmap for template system
-- **DASHBOARD_IMPROVEMENTS.md** - Web dashboard improvements and features
-- **wildcards_instructions.md** - Instructions and guidelines for wildcard usage
+## Quick Start
 
-### Testing Documentation (`testing/`)
-- **COMPREHENSIVE_TEST_REPORT.md** - Complete test coverage and results report
+### For New Projects
+1. Copy `docs/universal/` to your new project
+2. Copy `docs/project-specific/` and update the details
+3. Copy `.cursor/rules/testing.mdc` and update project-specific section
 
-### Cleanup Documentation (`cleanup/`)
-- **IMPORT_FIXES_SUMMARY.md** - Summary of import statement fixes and improvements
-- **CLEANUP_SUMMARY.md** - Code cleanup activities and results
-- **LOGGING_CENTRALIZATION_SUMMARY.md** - Logging system centralization and improvements
+### For Existing Projects
+1. Follow `docs/universal/instructions/user-setup-guide.md`
+2. Set up Cursor AI rules using `docs/universal/instructions/cursor-ai-setup.md`
+3. Organize your existing documentation using the templates
 
-## Quick Navigation
+## Universal vs Project-Specific
 
-### For Developers
-- Start with `development/UPDATED_REFACTORING_PLAN.md` for current development priorities
-- Review `development/COMPREHENSIVE_CODE_REVIEW.md` for code quality insights
-- Check `testing/COMPREHENSIVE_TEST_REPORT.md` for test coverage status
+### Universal (docs/universal/)
+- **Never change these files** - they work for any project
+- Contains templates and instructions that apply to all projects
+- Copy these unchanged to new projects
 
-### For Feature Development
-- Review `features/DASHBOARD_IMPROVEMENTS.md` for web interface roadmap
-- Check `features/TEMPLATE_STATUS.md` for template system status
-- Read `features/wildcards_instructions.md` for wildcard system usage
+#### Universal Templates
+- `project-onboarding.md`, `llm-setup-instructions.md`, `printable-quick-sheet.md`, `ci-cd-pipeline.md`, `security-checklist.md`, `quick-reference.md`, `testing-documentation-template.md`, `LLM_ASSISTANT_QUICK_REFERENCE.md`, `COMMUNITY_SOLUTIONS.md`, `TERMINAL_FIX_GUIDE.md`
 
-### For Code Quality
-- Review `cleanup/` directory for recent improvements
-- Check `development/CRITICAL_REFACTORING_NEEDS.md` for urgent issues
+#### Universal Instructions
+- `cursor-ai-setup.md`, `daily-practices.md`, `user-setup-guide.md`, `LLM_ASSISTANT_RULES.md`, `SESSION_MANAGEMENT.md`, `DOCUMENTATION_STANDARDS.md`, `LLM_CODING_ASSISTANT_FRAMEWORK.md`
 
-## Contributing
+### Project-Specific (docs/project-specific/ and others)
+- **Update these for each project** - contains project-specific details
+- Lists custom directories, scripts, and workflows
+- Adapt these to match your project's structure
 
-When adding new documentation:
-1. Place it in the appropriate subdirectory
-2. Update this README.md with a brief description
-3. Follow the existing naming conventions
-4. Include clear titles and descriptions
+#### Project-Specific Docs
+- `cli-commands.md` - All CLI commands for this project
+- `test-coverage.md` - Test structure and coverage details
+- `REFACTORING_PLAN.md` - Refactoring and cleanup plan
+- `FORGE_API_TEST_SUMMARY.md` - Project test summary
+- `features/`, `testing/`, `cleanup/`, `development/` - Project-specific documentation for features, tests, cleanup, and development
+- `SESSION_SUMMARIES/` - Project-specific session logs
 
-## Maintenance
+#### Optional Project-Specific Docs
+- `DEPLOYMENT.md` - Deployment instructions
+- `INTEGRATION_GUIDES.md` - Integration with other tools/services
+- `TROUBLESHOOTING.md` - Project-specific troubleshooting
+- `SECURITY.md` - Project-specific security practices
+- `CHANGELOG.md` - Project change log (if not in project root)
 
-This documentation should be kept up to date with:
-- Code changes and new features
-- Completed refactoring work
-- Updated test results
-- New development priorities 
+## Cursor AI Integration
+
+The `.cursor/rules/testing.mdc` file contains rules that help Cursor AI understand:
+- Universal testing and documentation practices
+- Project-specific details and workflows
+- How to separate universal from project-specific content
+
+## Benefits
+
+1. **Easy Copying** - Universal templates work for any project
+2. **Better AI Assistance** - Cursor AI understands your project structure
+3. **Maintainable** - Clear separation of universal vs project-specific
+4. **Team Collaboration** - Consistent approach across team members
+
+## Getting Started
+
+1. Read `docs/universal/instructions/user-setup-guide.md` for complete instructions
+2. Set up Cursor AI rules following `docs/universal/instructions/cursor-ai-setup.md`
+3. Use the templates in `docs/universal/templates/` as starting points
+4. Update project-specific documentation in `docs/project-specific/`
+
+## Support
+
+- Check `docs/universal/instructions/` for setup guides
+- Review `docs/project-specific/` for project details
+- Test your setup with `python cli.py tests run all` 

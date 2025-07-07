@@ -1,0 +1,44 @@
+# Memory Management and Context Preservation
+
+## Core Principles
+- Always preserve context and design decisions
+- Use memory bank for project history and rationale
+- Maintain branch-specific context
+- Document all significant decisions and changes
+
+## Memory Bank Usage
+When the assistant needs project history, design rationale, or context that is not present in the current conversation, it must first read `.universal/memory/${GIT_BRANCH}/progress.md` via the memory-bank tool.
+
+The memory bank is the single source of truth for past decisions and project evolution.
+
+## Context Preservation
+- Store design decisions in memory bank
+- Record architectural choices and rationale
+- Track progress and milestones
+- Preserve troubleshooting solutions
+- Document lessons learned
+
+## Branch-Specific Context
+- Each branch maintains its own memory context
+- Switch context when changing branches
+- Preserve branch-specific progress and decisions
+- Maintain separate knowledge graphs per branch
+
+## Memory Operations
+- Read project history before making decisions
+- Update progress after significant changes
+- Store design decisions with rationale
+- Record rollback plans and alternatives
+- Document performance metrics and benchmarks
+
+## Integration with Other Tools
+- Use memory bank with knowledge graph for dependency analysis
+- Combine with sequential thinking for planning
+- Integrate with docs provider for documentation updates
+- Maintain consistency across all MCP tools
+
+@history @design @context @memory
+description:
+globs:
+alwaysApply: false
+---

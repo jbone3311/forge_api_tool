@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+If the users prompt contains the words “refactor”, “split”, “modularise”,
+or “re-organise”, the assistant must:
+
+1. Fetch `docs/templates/refactor-template.md` through docs-provider.
+2. Base any plan, checklist, or code it generates on that template.
+
+@refactor  @planning

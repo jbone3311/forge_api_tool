@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When the assistant needs project history, design rationale, or context that
+is not present in the current conversation, it must first read
+`.cursorMEM/${GIT_BRANCH}/progress.md` via the memory-bank tool.
+The diary is the single source of truth for past decisions.
+
+@history  @design

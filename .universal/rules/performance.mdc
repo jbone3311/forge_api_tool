@@ -1,0 +1,194 @@
+# Performance-First Development Principles
+- Always consider performance implications of code changes
+- Profile code before and after optimizations
+- Set performance benchmarks and monitor against them
+- Use efficient algorithms and data structures
+- Implement proper caching strategies
+- Monitor resource usage (CPU, memory, disk, network)
+- Optimize for the most common use cases
+
+# Code Performance Optimization
+- Use efficient data structures (dicts over lists for lookups)
+- Avoid unnecessary object creation
+- Use list comprehensions over loops where appropriate
+- Implement proper memory management
+- Use generators for large datasets
+- Avoid deep copying when shallow copying suffices
+- Use built-in functions over custom implementations
+- Profile code to identify bottlenecks
+
+# API Performance
+- Implement connection pooling for external APIs
+- Use async operations for I/O-bound tasks
+- Implement proper timeout handling
+- Use caching for frequently accessed data
+- Implement rate limiting to prevent API abuse
+- Use batch operations when possible
+- Monitor API response times
+- Implement retry logic with exponential backoff
+
+# Database Performance
+- Use proper indexing for queries
+- Implement connection pooling
+- Use parameterized queries
+- Avoid N+1 query problems
+- Use appropriate data types
+- Implement query optimization
+- Monitor query performance
+- Use database connection pooling
+
+# Memory Management
+- Monitor memory usage in batch operations
+- Implement proper resource cleanup
+- Use context managers for resource management
+- Avoid memory leaks in long-running processes
+- Use generators for large datasets
+- Implement proper garbage collection
+- Monitor memory allocation patterns
+- Use memory profiling tools
+
+# Caching Strategies
+- Implement appropriate caching layers
+- Use Redis or similar for distributed caching
+- Implement cache invalidation strategies
+- Use memory caching for frequently accessed data
+- Implement cache warming for critical data
+- Monitor cache hit rates
+- Use appropriate cache TTL values
+- Implement cache compression for large data
+
+# Async and Concurrency
+- Use async/await for I/O-bound operations
+- Implement proper thread management
+- Use asyncio for concurrent operations
+- Implement proper synchronization
+- Use thread pools for CPU-bound tasks
+- Monitor thread and process usage
+- Implement proper error handling in async code
+- Use appropriate concurrency limits
+
+# File I/O Performance
+- Use buffered I/O operations
+- Implement proper file handling
+- Use appropriate file formats for data
+- Implement file compression where appropriate
+- Use streaming for large files
+- Monitor disk I/O performance
+- Implement proper file cleanup
+- Use memory-mapped files for large datasets
+
+# Network Performance
+- Implement connection pooling
+- Use appropriate timeout values
+- Implement retry logic
+- Use compression for network transfers
+- Monitor network latency
+- Implement proper error handling
+- Use appropriate protocols
+- Monitor bandwidth usage
+
+# Monitoring and Profiling
+- Use cProfile for Python profiling
+- Implement performance metrics collection
+- Use APM tools for application monitoring
+- Monitor key performance indicators
+- Implement performance alerting
+- Use distributed tracing
+- Monitor resource usage patterns
+- Implement performance dashboards
+
+# Batch Processing Performance
+- Implement proper batch sizes
+- Use parallel processing where appropriate
+- Monitor batch processing times
+- Implement progress tracking
+- Use appropriate data structures for batches
+- Monitor memory usage during batch operations
+- Implement proper error handling for batches
+- Use streaming for large batch operations
+
+# Web Performance
+- Implement proper caching headers
+- Use CDN for static assets
+- Implement lazy loading
+- Use appropriate image formats
+- Implement proper compression
+- Monitor page load times
+- Use efficient JavaScript
+- Implement proper error handling
+
+# Configuration Performance
+- Use efficient configuration loading
+- Implement configuration caching
+- Use appropriate configuration formats
+- Monitor configuration loading times
+- Implement configuration validation
+- Use environment-specific configurations
+- Monitor configuration access patterns
+- Implement configuration optimization
+
+# Logging Performance
+- Use asynchronous logging
+- Implement log buffering
+- Use appropriate log levels
+- Monitor logging performance
+- Implement log rotation
+- Use structured logging
+- Monitor log storage usage
+- Implement log compression
+
+# Testing Performance
+- Implement performance testing
+- Use load testing tools
+- Monitor test execution times
+- Implement performance regression testing
+- Use performance benchmarks
+- Monitor test resource usage
+- Implement performance test automation
+- Use performance test reporting
+
+# Project-Specific Performance Considerations
+- Optimize image generation API calls
+- Implement proper batch processing for image generation
+- Monitor memory usage during image processing
+- Implement efficient wildcard processing
+- Optimize configuration loading and validation
+- Monitor web dashboard performance
+- Implement proper caching for generated images
+- Optimize CLI command execution times
+
+# Performance Monitoring Tools
+- Use cProfile for Python profiling
+- Use memory_profiler for memory analysis
+- Use line_profiler for line-by-line profiling
+- Use py-spy for production profiling
+- Use APM tools like New Relic or DataDog
+- Use monitoring tools like Prometheus and Grafana
+- Use load testing tools like Locust or Apache Bench
+- Use performance testing frameworks
+
+# Performance Best Practices
+- Always measure before optimizing
+- Focus on the most critical performance bottlenecks
+- Implement performance monitoring early
+- Use appropriate performance testing
+- Monitor performance in production
+- Implement performance alerting
+- Document performance characteristics
+- Regular performance reviews and optimization
+
+# Performance Optimization Checklist
+- [ ] Code is profiled for bottlenecks
+- [ ] Efficient algorithms and data structures are used
+- [ ] Proper caching is implemented
+- [ ] Memory usage is optimized
+- [ ] I/O operations are optimized
+- [ ] Network calls are optimized
+- [ ] Database queries are optimized
+- [ ] Performance monitoring is implemented
+- [ ] Performance tests are written
+- [ ] Performance benchmarks are established
+description:
+globs:
+alwaysApply: false
+---

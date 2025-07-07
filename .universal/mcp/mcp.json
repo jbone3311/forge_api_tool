@@ -1,0 +1,64 @@
+{
+  "mcpServers": {
+    "memory-bank": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-memory-bank",
+        "--path",
+        ".universal/memory/${GIT_BRANCH}"
+      ]
+    },
+    "knowledge-graph": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-knowledge-graph",
+        "--port",
+        "4280",
+        "--store-path",
+        ".universal/memory/${GIT_BRANCH}/graph"
+      ]
+    },
+    "docs-provider": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-docs-provider",
+        "docs",
+        "--port",
+        "5050",
+        "--watch",
+        "--cache-dir",
+        ".universal/memory/docs-cache"
+      ]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-sequential-thinking",
+        "--log-dir",
+        ".universal/memory/tasks"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp",
+        "--port",
+        "4281"
+      ]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-utils",
+        "--port",
+        "4282"
+      ]
+    }
+  }
+}

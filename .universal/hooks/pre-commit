@@ -1,0 +1,56 @@
+#!/bin/bash
+# Pre-commit hook for Universal AI Development System
+# Automatically updates progress.md with commit information
+
+set -e
+
+# Get current branch
+BRANCH=$(git branch --show-current)
+
+# Get commit message (first line)
+COMMIT_MSG=$(cat "$1" | head -n 1)
+
+# Get commit hash (will be generated)
+COMMIT_HASH=$(git rev-parse HEAD)
+
+# Get current date
+DATE=$(date +"%Y-%m-%d")
+
+# Path to progress file
+PROGRESS_FILE=".universal/memory/${BRANCH}/progress.md"
+
+# Create directory if it doesn't exist
+mkdir -p ".universal/memory/${BRANCH}"
+
+# If progress file doesn't exist, create it
+if [ ! -f "$PROGRESS_FILE" ]; then
+    cat > "$PROGRESS_FILE" << EOF
+# ${BRANCH} Branch - Project Progress & Decisions
+
+## Project Overview
+**Branch**: ${BRANCH}
+**Created**: ${DATE}
+
+## Recent Decisions & Changes
+
+EOF
+fi
+
+# Add commit entry to progress file
+# Insert after the "Recent Decisions & Changes" line
+sed -i "/## Recent Decisions & Changes/a\\
+\\
+### ${DATE}: ${COMMIT_HASH:0:7} ${COMMIT_MSG}\\
+- **Commit**: ${COMMIT_HASH:0:7} ${COMMIT_MSG}\\
+- **Branch**: ${BRANCH}\\
+- **Date**: ${DATE}\\
+- **Files Changed**: \$(git diff --cached --name-only | wc -l) files\\
+" "$PROGRESS_FILE"
+
+# Add the progress file to the commit
+git add "$PROGRESS_FILE"
+
+echo "✅ Updated progress.md with commit information"
+echo "📝 Branch: ${BRANCH}"
+echo "🔗 Commit: ${COMMIT_HASH:0:7}"
+echo "📄 Progress file: ${PROGRESS_FILE}" 

@@ -1,0 +1,52 @@
+{
+  "terminal": {
+    "shell": "powershell.exe",
+    "args": [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      "& { . $PROFILE; Clear-Host }"
+    ]
+  },
+  "terminal.integrated.shell.windows": "powershell.exe",
+  "terminal.integrated.shellArgs.windows": [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command",
+    "& { . $PROFILE; Clear-Host }"
+  ],
+  "rules": [
+    {
+      "name": "AI-Native Development",
+      "description": "Core AI development workflow with MCP tools",
+      "content": "Always use MCP tools for context, memory, and planning. Check memory-bank for project history, use knowledge-graph for dependencies, sequential-thinking for planning, and docs-provider for documentation."
+    },
+    {
+      "name": "Memory-First Development",
+      "description": "Always check project memory before making decisions",
+      "content": "Before making architectural decisions or significant changes, always read .universal/memory/${GIT_BRANCH}/progress.md via memory-bank to understand project context and previous decisions."
+    },
+    {
+      "name": "Dependency Analysis",
+      "description": "Use knowledge graph for dependency queries",
+      "content": "For questions about 'callers', 'callees', 'depends on', 'used by' or 'dependency', query knowledge-graph first rather than manual codebase searches."
+    },
+    {
+      "name": "Refactoring Safety",
+      "description": "AI-assisted refactoring with safety measures",
+      "content": "When refactoring, splitting, or reorganizing code, use the ai-assisted-refactoring.md template, create feature branches, and document decisions in memory-bank."
+    },
+    {
+      "name": "Documentation Automation",
+      "description": "Use docs-provider for all documentation updates",
+      "content": "Never hand-edit docs/ files directly. Use docs-provider for documentation generation and updates to ensure proper version control and consistency."
+    },
+    {
+      "name": "Sequential Planning",
+      "description": "Use sequential-thinking for complex tasks",
+      "content": "For complex features, debugging, or multi-step processes, use sequential-thinking to break down tasks and track progress systematically."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+The assistant must never hand-edit files under `docs/**`.
+All documentation updates have to be performed by calling docs-provider with
+"Regenerate docs" so the changes appear as a diff in the pull-request.
+
+@docs  @generation

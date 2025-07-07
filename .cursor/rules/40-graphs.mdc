@@ -1,0 +1,55 @@
+# Knowledge Graph and Dependency Analysis
+
+## Core Principles
+- Use knowledge graph for dependency analysis
+- Query relationships before manual searches
+- Maintain accurate dependency mappings
+- Track code evolution and changes
+
+## Knowledge Graph Usage
+For questions that include "callers", "callees", "depends on", "used by" or "dependency", the assistant should query knowledge-graph first rather than searching the entire codebase manually.
+
+## Dependency Analysis
+- Show all files affected by changes
+- Find circular dependencies
+- Analyze import relationships
+- Track component interactions
+- Monitor dependency complexity
+
+## Code Relationship Queries
+- Show all files that import a specific module
+- Find components that use specific functionality
+- Analyze dependency chains and depth
+- Compare dependency complexity before/after changes
+- Track code evolution over time
+
+## Integration with Other Tools
+- Use knowledge graph with memory bank for context
+- Combine with sequential thinking for planning
+- Integrate with docs provider for documentation
+- Maintain consistency across all MCP tools
+
+## Graph Operations
+- Create entities for new components
+- Update relationships when code changes
+- Remove obsolete dependencies
+- Track dependency metrics
+- Generate dependency reports
+
+## Performance Considerations
+- Cache frequently accessed relationships
+- Optimize graph queries for large codebases
+- Monitor graph update performance
+- Maintain graph consistency
+
+## Branch-Specific Graphs
+- Maintain separate graphs per branch
+- Track graph evolution across branches
+- Compare graphs between branches
+- Preserve graph history
+
+@graph @deps @dependencies @analysis
+description:
+globs:
+alwaysApply: false
+---

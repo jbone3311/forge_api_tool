@@ -1,0 +1,54 @@
+# Documentation Management and Generation
+
+## Core Principles
+- Never hand-edit files under `docs/**` directly
+- Use docs-provider for all documentation updates
+- Maintain universal vs project-specific separation
+- Generate documentation changes as diffs
+
+## Documentation Updates
+All documentation updates must be performed by calling docs-provider with "Regenerate docs" so the changes appear as a diff in pull requests.
+
+This ensures:
+- Consistent documentation formatting
+- Proper version control tracking
+- Automated documentation generation
+- Maintainable documentation structure
+
+## Universal vs Project-Specific
+- Universal templates in `.universal/templates/`
+- Project-specific docs in `docs/project-specific/`
+- Never modify universal templates directly
+- Use docs-provider for template updates
+
+## Documentation Generation
+- Use docs-provider for API documentation
+- Generate README updates through docs-provider
+- Create CHANGELOG entries via docs-provider
+- Update session summaries through docs-provider
+
+## Integration with Memory Bank
+- Store documentation decisions in memory bank
+- Track documentation evolution
+- Record documentation standards and guidelines
+- Maintain documentation quality metrics
+
+## Documentation Standards
+- Follow established formatting guidelines
+- Use consistent terminology
+- Include practical examples
+- Maintain comprehensive coverage
+- Update documentation with code changes
+
+## Automated Documentation
+- Use docs-provider for automated updates
+- Generate documentation from code comments
+- Create API documentation automatically
+- Update configuration documentation
+- Maintain documentation consistency
+
+@docs @generation @documentation @automation
+description:
+globs:
+alwaysApply: false
+---

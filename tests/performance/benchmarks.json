@@ -1,0 +1,13 @@
+{
+  "cli_initialization": 0.0010111594200134277,
+  "config_loading": 0.05,
+  "wildcard_processing": 0.1,
+  "file_io": 0.018093109130859375,
+  "concurrent_operations": 0.0019385814666748047,
+  "api_request": 2.1691322326660157e-05,
+  "json_serialization": 0.001834735870361328,
+  "string_processing": 0.005,
+  "memory_usage": -1560576,
+  "cpu_usage": 80.0,
+  "disk_io": 100.0
+}

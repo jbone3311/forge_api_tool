@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+When switching branches, reload Memory Bank if --path includes ${GIT_BRANCH}.
