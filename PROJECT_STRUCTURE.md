@@ -98,7 +98,7 @@ This document outlines the organized structure of the Forge API Tool project.
 
 ### Utilities and Scripts
 - `scripts/` - Utility scripts
-  - `fix_weather_encoding.py` - Weather encoding fix utility
+  - `fix_wildcard_encoding.py` - Comprehensive wildcard encoding fix utility
 
 ### Data and Outputs
 - `outputs/` - Generated images and outputs

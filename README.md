@@ -1,6 +1,6 @@
 # Forge API Tool
 
-A modern web-based client application for managing and automating image generation using external AI image generation APIs (Automatic1111, ComfyUI, etc.). Features a beautiful Bootstrap 5 dashboard, template management, and comprehensive settings.
+A modern web-based client application for managing and automating image generation using external AI image generation APIs (Automatic1111, ComfyUI, etc.). Features a beautiful Bootstrap 5 dashboard, template management, and comprehensive settings. Features advanced wildcard management with encoding fix utilities.
 
 ## 🚀 Features
 
@@ -12,6 +12,8 @@ A modern web-based client application for managing and automating image generati
 - **Real-time Status**: Monitor generation progress and system status
 - **Template Validation**: Built-in validation and caching for templates
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile
+- **Wildcard Management**: Advanced wildcard system with encoding fix utilities
+- **Maintenance Tools**: Built-in utilities for system maintenance and troubleshooting
 
 ## 📋 Requirements
 
@@ -67,6 +69,15 @@ python simple_test.py
 python run_all_tests.py
 ```
 
+### 4. Fix Wildcard Encoding (if needed)
+```bash
+# Check for encoding issues
+python cli.py wildcards fix-encoding --dry-run
+
+# Fix encoding issues
+python cli.py wildcards fix-encoding
+```
+
 ## 📁 Project Structure
 
 ```
@@ -92,6 +103,8 @@ Forge-API-Tool/
 │   └── static/                   # CSS/JS assets
 │       └── js/
 │           └── dashboard_bootstrap.js
+├── scripts/                       # Utility scripts
+│   └── fix_wildcard_encoding.py  # Wildcard encoding fix utility
 ├── configs/                       # Configuration templates
 ├── wildcards/                     # Wildcard files
 ├── outputs/                       # Generated images
@@ -181,6 +194,91 @@ Connect to external image generation APIs:
 4. Click "Generate" to start the process
 5. Monitor progress in real-time
 
+## 🔧 Wildcard Management
+
+### Wildcard System
+The application includes a comprehensive wildcard management system for dynamic prompt generation:
+
+- **Automatic1111 Format**: Uses `__WILDCARD_NAME__` syntax
+- **File-based Wildcards**: Each wildcard is stored in `wildcards/wildcard_name.txt`
+- **Recursive Scanning**: Automatically finds all wildcard files in subdirectories
+- **Encoding Support**: Handles UTF-8, UTF-16, and UTF-16-BE encodings
+
+### Wildcard Encoding Fix Utility
+Built-in utility to fix encoding issues in wildcard files:
+
+#### CLI Usage
+```bash
+# Check for encoding issues (dry run)
+python cli.py wildcards fix-encoding --dry-run
+
+# Fix encoding issues
+python cli.py wildcards fix-encoding
+
+# Use custom wildcards directory
+python cli.py wildcards fix-encoding --wildcards-dir custom_wildcards
+```
+
+#### Web Interface
+1. Open the web dashboard
+2. Click Settings (gear icon)
+3. Navigate to "Wildcard Encoding Fix" section
+4. Use "Check Encoding" to preview issues
+5. Use "Fix Encoding" to apply fixes
+6. View detailed results and statistics
+
+#### Features
+- **Comprehensive Scanning**: Recursively scans all `.txt` files
+- **Multiple Encoding Support**: Detects and fixes UTF-16, UTF-16-BE, and UTF-8
+- **Safety Mode**: Dry-run option to preview changes
+- **Detailed Reporting**: Shows fixed files, skipped files, and errors
+- **Verification**: Confirms files are readable after fixing
+- **Real-time Feedback**: Live progress and results display
+
+### Wildcard File Structure
+```
+wildcards/
+├── actions.txt              # Action wildcards
+├── artistic.txt             # Artistic style wildcards
+├── camera.txt               # Camera and photography wildcards
+├── weather.txt              # Weather condition wildcards
+├── ClipOutput/              # Clip-specific wildcards
+│   ├── Colorful_Photoshoot_best_Prompts.txt
+│   └── ...
+├── Sort/                    # Organized wildcard collections
+│   ├── art_styles/
+│   ├── characters/
+│   ├── emotions/
+│   └── ...
+└── PromptSets/              # Prompt set collections
+    └── RavenSky/
+```
+
+## 🛠️ Maintenance Tools
+
+### System Maintenance
+The application includes several maintenance utilities:
+
+- **Wildcard Encoding Fix**: Fix encoding issues in wildcard files
+- **Cache Management**: Clear and manage application cache
+- **Log Management**: View, download, and clear application logs
+- **System Status**: Monitor system health and performance
+
+### CLI Maintenance Commands
+```bash
+# System status
+python cli.py status
+
+# Clear cache
+python cli.py cleanup
+
+# View logs
+python cli.py logs
+
+# Test API connection
+python cli.py test
+```
+
 ## 🧪 Testing
 
 ### Run All Tests
@@ -207,6 +305,7 @@ python tests/test_integration.py
 - ✅ Output management
 - ✅ Job queue functionality
 - ✅ Web dashboard functionality
+- ✅ Wildcard encoding fix utilities
 
 ## 📊 Logging
 
@@ -217,8 +316,16 @@ The application uses a centralized logging system with structured output:
 - **API Requests**: External API calls and responses
 - **Performance Metrics**: Generation times and throughput
 - **Error Tracking**: Detailed error information
+- **Maintenance Operations**: Wildcard encoding fixes, cache clearing, etc.
 
 ## 🔄 Recent Updates
+
+### Version 2.1 - Wildcard Management & Maintenance
+- **Wildcard Encoding Fix**: Comprehensive utility to fix encoding issues in wildcard files
+- **CLI Integration**: New `wildcards fix-encoding` command with dry-run support
+- **Web Interface**: Settings modal with wildcard encoding fix functionality
+- **Maintenance Tools**: Enhanced system maintenance and troubleshooting utilities
+- **Improved Documentation**: Updated README with wildcard management and maintenance sections
 
 ### Version 2.0 - Complete Refactor
 - **Removed Internal API**: Now a pure client application
@@ -235,6 +342,8 @@ The application uses a centralized logging system with structured output:
 - Real-time status monitoring
 - Image-only output gallery
 - Template validation and caching
+- Advanced wildcard management with encoding fix utilities
+- Built-in maintenance and troubleshooting tools
 
 ## 🤝 Contributing
 
@@ -257,4 +366,4 @@ For support and questions:
 
 ---
 
-**Forge API Tool** - Modern image generation management with a beautiful web interface! 🎨✨ 
+**Forge API Tool** - Modern image generation management with a beautiful web interface! 🎨✨

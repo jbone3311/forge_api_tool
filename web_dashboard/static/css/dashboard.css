@@ -2969,4 +2969,158 @@ body {
 
 .text-muted {
     color: #6c757d !important;
+}
+
+/* Wildcard Encoding Fix Styles */
+.wildcard-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.wildcard-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.wildcard-results {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.results-header h5 {
+    margin: 0;
+    color: #495057;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.results-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.summary-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.summary-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.results-section {
+    margin-bottom: 1rem;
+}
+
+.results-section h6 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.results-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.results-list li {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #f8f9fa;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.results-list li:last-child {
+    border-bottom: none;
+}
+
+.results-list li i {
+    flex-shrink: 0;
+    width: 12px;
+}
+
+.text-success {
+    color: #28a745 !important;
+}
+
+.text-info {
+    color: #17a2b8 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* Responsive adjustments for wildcard encoding fix */
+@media (max-width: 768px) {
+    .wildcard-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .wildcard-actions {
+        flex-direction: column;
+    }
+    
+    .wildcard-actions .btn {
+        width: 100%;
+    }
+    
+    .results-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .results-list {
+        max-height: 150px;
+    }
 } 

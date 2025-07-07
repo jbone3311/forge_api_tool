@@ -363,12 +363,45 @@ class DashboardApp {
 
     // Utility method to check if dashboard is ready
     isReady() {
-        return Object.values(this.modules).every(module => module !== null && module !== undefined);
+        return Object.values(this.modules).every(module => module && module.isReady && module.isReady());
     }
 }
 
-// Initialize the dashboard when the script loads
-window.dashboardApp = new DashboardApp();
+// Global functions for HTML button calls
+window.checkWildcardEncoding = function() {
+    if (window.settingsManager) {
+        window.settingsManager.checkWildcardEncoding();
+    } else {
+        console.error('Settings manager not available');
+    }
+};
+
+window.fixWildcardEncoding = function() {
+    if (window.settingsManager) {
+        window.settingsManager.fixWildcardEncoding();
+    } else {
+        console.error('Settings manager not available');
+    }
+};
+
+window.fixWildcardEncodingDryRun = function() {
+    if (window.settingsManager) {
+        window.settingsManager.fixWildcardEncodingDryRun();
+    } else {
+        console.error('Settings manager not available');
+    }
+};
+
+window.clearWildcardResults = function() {
+    if (window.settingsManager) {
+        window.settingsManager.clearWildcardResults();
+    } else {
+        console.error('Settings manager not available');
+    }
+};
+
+// Initialize the dashboard
+const dashboard = new DashboardApp();
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {

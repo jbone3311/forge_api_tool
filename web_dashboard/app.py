@@ -473,19 +473,82 @@ def log_js_error():
     try:
         data = request.get_json()
         if data:
-            logger.log_error(f"JavaScript Error: {data.get('type', 'Unknown')} - {data.get('message', 'No message')}", {
-                'source': data.get('source', 'Unknown'),
-                'line': data.get('lineno', 'Unknown'),
-                'column': data.get('colno', 'Unknown'),
-                'stack': data.get('stack', 'No stack trace'),
-                'url': data.get('url', 'Unknown'),
-                'user_agent': data.get('userAgent', 'Unknown'),
-                'timestamp': data.get('timestamp', 'Unknown')
-            })
-        return jsonify({'success': True})
+            error_msg = data.get('error', 'Unknown JavaScript error')
+            logger.log_error(f"Frontend JavaScript Error: {error_msg}")
+            return jsonify({'status': 'logged'})
+        return jsonify({'status': 'no_data'})
     except Exception as e:
-        logger.log_error(f"Failed to log JavaScript error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.log_error(f"Error logging JS error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/api/fix-wildcard-encoding', methods=['POST'])
+def fix_wildcard_encoding():
+    """Fix encoding issues in all wildcard files."""
+    try:
+        data = request.get_json() or {}
+        wildcards_dir = data.get('wildcards_dir', 'wildcards')
+        dry_run = data.get('dry_run', False)
+        
+        logger.info(f"Wildcard encoding fix requested - Directory: {wildcards_dir}, Dry run: {dry_run}")
+        
+        # Import the CLI class to use its method
+        from cli import ForgeAPICLI
+        cli = ForgeAPICLI()
+        
+        # Run the encoding fix
+        results = cli.fix_wildcard_encoding(wildcards_dir, dry_run)
+        
+        # Log the results
+        logger.info(f"Wildcard encoding fix completed - Files checked: {results['files_checked']}, Files fixed: {results['files_fixed']}")
+        
+        if results['errors']:
+            for error in results['errors']:
+                logger.log_error(f"Wildcard encoding fix error: {error}")
+        
+        return jsonify({
+            'status': 'success',
+            'results': results,
+            'message': f"Encoding fix completed. {results['files_fixed']} files fixed, {len(results['skipped_files'])} skipped."
+        })
+        
+    except Exception as e:
+        logger.log_error(f"Error in wildcard encoding fix API: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f"Failed to fix wildcard encoding: {str(e)}"
+        }), 500
+
+@app.route('/api/check-wildcard-encoding', methods=['GET'])
+def check_wildcard_encoding():
+    """Check for encoding issues in wildcard files without fixing them."""
+    try:
+        data = request.args.to_dict()
+        wildcards_dir = data.get('wildcards_dir', 'wildcards')
+        
+        logger.info(f"Wildcard encoding check requested - Directory: {wildcards_dir}")
+        
+        # Import the CLI class to use its method
+        from cli import ForgeAPICLI
+        cli = ForgeAPICLI()
+        
+        # Run the encoding check (dry run)
+        results = cli.fix_wildcard_encoding(wildcards_dir, dry_run=True)
+        
+        # Log the results
+        logger.info(f"Wildcard encoding check completed - Files checked: {results['files_checked']}, Files need fixing: {len(results['fixed_files'])}")
+        
+        return jsonify({
+            'status': 'success',
+            'results': results,
+            'message': f"Encoding check completed. {len(results['fixed_files'])} files need fixing, {len(results['skipped_files'])} are OK."
+        })
+        
+    except Exception as e:
+        logger.log_error(f"Error in wildcard encoding check API: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f"Failed to check wildcard encoding: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
     # Start background processor

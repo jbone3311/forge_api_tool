@@ -355,6 +355,209 @@ class SettingsManager {
         return { ...this.defaultSettings };
     }
 
+    // Wildcard Encoding Fix Methods
+    async checkWildcardEncoding() {
+        try {
+            this.showInfo('Checking wildcard encoding...');
+            
+            const response = await fetch('/api/check-wildcard-encoding');
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                this.displayWildcardResults(data.results, 'check');
+                this.updateWildcardStats(data.results);
+                this.showSuccess(data.message);
+            } else {
+                this.showError(data.message || 'Failed to check wildcard encoding');
+            }
+        } catch (error) {
+            console.error('Error checking wildcard encoding:', error);
+            this.showError('Failed to check wildcard encoding: ' + error.message);
+        }
+    }
+
+    async fixWildcardEncoding() {
+        try {
+            this.showInfo('Fixing wildcard encoding...');
+            
+            const response = await fetch('/api/fix-wildcard-encoding', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    wildcards_dir: 'wildcards',
+                    dry_run: false
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                this.displayWildcardResults(data.results, 'fix');
+                this.updateWildcardStats(data.results);
+                this.showSuccess(data.message);
+            } else {
+                this.showError(data.message || 'Failed to fix wildcard encoding');
+            }
+        } catch (error) {
+            console.error('Error fixing wildcard encoding:', error);
+            this.showError('Failed to fix wildcard encoding: ' + error.message);
+        }
+    }
+
+    async fixWildcardEncodingDryRun() {
+        try {
+            this.showInfo('Running wildcard encoding fix (dry run)...');
+            
+            const response = await fetch('/api/fix-wildcard-encoding', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    wildcards_dir: 'wildcards',
+                    dry_run: true
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                this.displayWildcardResults(data.results, 'dry-run');
+                this.updateWildcardStats(data.results);
+                this.showSuccess(data.message);
+            } else {
+                this.showError(data.message || 'Failed to run wildcard encoding dry run');
+            }
+        } catch (error) {
+            console.error('Error running wildcard encoding dry run:', error);
+            this.showError('Failed to run wildcard encoding dry run: ' + error.message);
+        }
+    }
+
+    displayWildcardResults(results, operation) {
+        const resultsContainer = document.getElementById('wildcard-results');
+        const resultsContent = document.getElementById('wildcard-results-content');
+        
+        if (!resultsContainer || !resultsContent) {
+            console.error('Wildcard results containers not found');
+            return;
+        }
+        
+        let html = `
+            <div class="results-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Operation:</span>
+                    <span class="summary-value">${operation === 'check' ? 'Check' : operation === 'fix' ? 'Fix' : 'Dry Run'}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Files:</span>
+                    <span class="summary-value">${results.total_files}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Files Checked:</span>
+                    <span class="summary-value">${results.files_checked}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Files Fixed:</span>
+                    <span class="summary-value">${results.files_fixed}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Files Skipped:</span>
+                    <span class="summary-value">${results.skipped_files.length}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Errors:</span>
+                    <span class="summary-value">${results.errors.length}</span>
+                </div>
+            </div>
+        `;
+        
+        if (results.fixed_files && results.fixed_files.length > 0) {
+            html += `
+                <div class="results-section">
+                    <h6><i class="fas fa-wrench"></i> Fixed Files:</h6>
+                    <ul class="results-list">
+                        ${results.fixed_files.map(file => `<li><i class="fas fa-check text-success"></i> ${file}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        if (results.skipped_files && results.skipped_files.length > 0) {
+            html += `
+                <div class="results-section">
+                    <h6><i class="fas fa-check-circle"></i> Skipped Files (Already UTF-8):</h6>
+                    <ul class="results-list">
+                        ${results.skipped_files.slice(0, 10).map(file => `<li><i class="fas fa-info text-info"></i> ${file}</li>`).join('')}
+                        ${results.skipped_files.length > 10 ? `<li><i class="fas fa-ellipsis-h text-muted"></i> ... and ${results.skipped_files.length - 10} more</li>` : ''}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        if (results.errors && results.errors.length > 0) {
+            html += `
+                <div class="results-section">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Errors:</h6>
+                    <ul class="results-list">
+                        ${results.errors.map(error => `<li><i class="fas fa-times text-danger"></i> ${error}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        if (results.verification_errors && results.verification_errors.length > 0) {
+            html += `
+                <div class="results-section">
+                    <h6><i class="fas fa-exclamation-circle"></i> Verification Errors:</h6>
+                    <ul class="results-list">
+                        ${results.verification_errors.map(error => `<li><i class="fas fa-times text-warning"></i> ${error}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        resultsContent.innerHTML = html;
+        resultsContainer.style.display = 'block';
+    }
+
+    updateWildcardStats(results) {
+        const filesCountElement = document.getElementById('wildcard-files-count');
+        const encodingStatusElement = document.getElementById('wildcard-encoding-status');
+        
+        if (filesCountElement) {
+            filesCountElement.textContent = results.total_files || '--';
+        }
+        
+        if (encodingStatusElement) {
+            if (results.files_fixed > 0) {
+                encodingStatusElement.textContent = `${results.files_fixed} fixed`;
+                encodingStatusElement.className = 'stat-value text-warning';
+            } else if (results.errors.length > 0) {
+                encodingStatusElement.textContent = `${results.errors.length} errors`;
+                encodingStatusElement.className = 'stat-value text-danger';
+            } else {
+                encodingStatusElement.textContent = 'All OK';
+                encodingStatusElement.className = 'stat-value text-success';
+            }
+        }
+    }
+
+    clearWildcardResults() {
+        const resultsContainer = document.getElementById('wildcard-results');
+        const resultsContent = document.getElementById('wildcard-results-content');
+        
+        if (resultsContainer) {
+            resultsContainer.style.display = 'none';
+        }
+        
+        if (resultsContent) {
+            resultsContent.innerHTML = '';
+        }
+    }
+
     showSuccess(message) {
         if (window.notificationManager) {
             window.notificationManager.success(message);
@@ -368,6 +571,14 @@ class SettingsManager {
             window.notificationManager.error(message);
         } else {
             console.error('Error:', message);
+        }
+    }
+
+    showInfo(message) {
+        if (window.notificationManager) {
+            window.notificationManager.info(message);
+        } else {
+            console.info('Info:', message);
         }
     }
 }

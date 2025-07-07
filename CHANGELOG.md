@@ -5,6 +5,48 @@ All notable changes to the Forge API Tool project will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2024-07-06
+
+### 🔧 Wildcard Management & Maintenance Tools
+
+#### ✅ Fixed
+- **Wildcard Encoding Issues**: Comprehensive utility to fix UTF-16 encoding problems in wildcard files
+- **File Read Errors**: Resolved encoding-related read errors in wildcard files
+- **Cross-Platform Compatibility**: Fixed encoding issues that occur when transferring files between systems
+
+#### ✨ Added
+- **Wildcard Encoding Fix Utility**: New `scripts/fix_wildcard_encoding.py` script
+  - Recursively scans all wildcard files for encoding issues
+  - Supports UTF-16, UTF-16-BE, and UTF-8 encoding detection and conversion
+  - Dry-run mode for safe preview of changes
+  - Detailed reporting with file-by-file results
+- **CLI Integration**: New `wildcards fix-encoding` command
+  - `python cli.py wildcards fix-encoding --dry-run` - Check without making changes
+  - `python cli.py wildcards fix-encoding` - Fix all encoding issues
+  - `python cli.py wildcards fix-encoding --wildcards-dir DIR` - Custom directory support
+- **Web Interface Integration**: Settings modal with wildcard encoding fix
+  - "Check Encoding" button to preview issues
+  - "Fix Encoding" button to apply fixes
+  - "Dry Run" button for safe testing
+  - Real-time results display with detailed statistics
+  - Live progress indicators and status updates
+- **Maintenance Tools**: Enhanced system maintenance utilities
+  - Wildcard file statistics and health monitoring
+  - Encoding status indicators
+  - Comprehensive error reporting and verification
+
+#### 🔧 Improved
+- **Wildcard System**: Enhanced wildcard management with encoding support
+- **User Experience**: Better feedback and progress indicators for maintenance operations
+- **Documentation**: Updated README with wildcard management and maintenance sections
+- **Error Handling**: More robust error handling for file operations
+- **Cross-Platform Support**: Better handling of different file encodings across platforms
+
+#### 📚 Documentation
+- **README.md**: Added comprehensive wildcard management section
+- **CLI Documentation**: Updated CLI help and examples
+- **Web Interface**: Added inline help and tooltips for maintenance features
+
 ## [2.0.0] - 2024-06-24
 
 ### 🚀 Major Release - Import System Overhaul & Production Ready
@@ -168,7 +210,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Key Features | Status |
 |---------|------|--------------|--------|
-| 2.0.0 | 2024-06-24 | Import system overhaul, production ready | ✅ Current |
+| 2.1.0 | 2024-07-06 | Wildcard management & maintenance tools | ✅ Current |
+| 2.0.0 | 2024-06-24 | Import system overhaul, production ready | ✅ Stable |
 | 1.5.0 | 2024-06-23 | Centralized logging system | ✅ Stable |
 | 1.4.0 | 2024-06-22 | Web dashboard enhancements | ✅ Stable |
 | 1.3.0 | 2024-06-21 | API integration fixes | ✅ Stable |
