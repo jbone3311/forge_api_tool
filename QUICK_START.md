@@ -1,16 +1,25 @@
-# --help - Quick Start Guide
+# test-project - Quick Start Guide
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js (for MCP tools)
-- Python 3.8+
+- python 3.8+
 - Git
 
 ### Initial Setup
 ```bash
-# Install MCP tools
-npm install -g mcp-memory-bank mcp-knowledge-graph mcp-docs-provider mcp-sequential-thinking
+# Install MCP tools (Real tools that exist)
+npm install -g @modelcontextprotocol/server-sequential-thinking @modelcontextprotocol/server-postgres @modelcontextprotocol/server-brave-search @modelcontextprotocol/server-github
+
+# Install Python MCP tools
+pip install mcp-playwright mcp --user
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Or if using pip:
+pip install -e .
 
 # Initialize git (if not already done)
 git init
@@ -23,32 +32,32 @@ git commit -m "Initial setup: AI-enhanced development environment"
 ### Daily Development Workflow
 ```bash
 # Check project context
-memory-bank: get_file_content project="main" path="progress.md"
+sequential-thinking: "Create plan for current task"
 
 # Start new feature
 git checkout -b feature/[description]
 sequential-thinking: "Create 5-step plan for [feature]"
 
 # Analyze dependencies
-knowledge-graph: "Show all files affected by [component]"
+postgres: "Query project dependencies"
 
 # Generate documentation
-docs-provider: "Generate API documentation for [new feature]"
+github: "Access project documentation"
 ```
 
 ## 🧠 Memory-First Development
 
 Before making any significant decisions:
-1. Check project history: `memory-bank: get_file_content project="main" path="progress.md"`
-2. Document decisions: `memory-bank: "Record decision: [description] with rationale: [reasoning]"`
-3. Update progress: `memory-bank: "Update progress: completed [task]"`
+1. Check project history: `sequential-thinking: "Review project progress"`
+2. Document decisions: `sequential-thinking: "Record decision: [description] with rationale: [reasoning]"`
+3. Update progress: `sequential-thinking: "Update progress: completed [task]"`
 
 ## 🔍 Dependency Analysis
 
 For dependency questions:
-- `knowledge-graph: "Show all files that import [module]"`
-- `knowledge-graph: "Find circular dependencies in [component]"`
-- `knowledge-graph: "List all components that use [functionality]"`
+- `postgres: "Query files that import [module]"`
+- `postgres: "Find circular dependencies in [component]"`
+- `postgres: "List all components that use [functionality]"`
 
 ## 📋 Sequential Planning
 
@@ -60,9 +69,9 @@ For complex tasks:
 ## 📚 Documentation
 
 For documentation:
-- `docs-provider: "Generate API documentation for [endpoint]"`
-- `docs-provider: "Update README with new [feature] information"`
-- `docs-provider: "Create troubleshooting guide for [issue]"`
+- `github: "Access API documentation for [endpoint]"`
+- `github: "Update README with new [feature] information"`
+- `github: "Create troubleshooting guide for [issue]"`
 
 ## 🎯 Common Commands
 
@@ -77,26 +86,26 @@ git commit -m "Step [N]: [description]"
 sequential-thinking: done [N]
 
 # Document decisions
-memory-bank: "Record final decisions for [feature]"
+sequential-thinking: "Record final decisions for [feature]"
 ```
 
 ### Debugging
 ```bash
 # Analyze problem
-knowledge-graph: "Show all components involved in [error]"
-memory-bank: "Check if this issue occurred before"
+postgres: "Query components involved in [error]"
+sequential-thinking: "Check if this issue occurred before"
 
 # Create debugging plan
 sequential-thinking: "Create debugging checklist for [issue]"
 
 # Document solution
-memory-bank: "Document solution for [issue]"
+sequential-thinking: "Document solution for [issue]"
 ```
 
 ## 📊 Project Structure
 
 ```
---help/
+test-project/
 ├── .universal/          # AI development environment
 │   ├── rules/          # Cursor AI rules
 │   ├── templates/      # Universal templates
@@ -121,8 +130,8 @@ memory-bank: "Document solution for [issue]"
 ## 📞 Support
 
 For issues or questions:
-1. Check memory bank for similar problems
-2. Use knowledge graph for dependency analysis
+1. Check sequential thinking for similar problems
+2. Use postgres for dependency analysis
 3. Create debugging plan with sequential-thinking
 4. Document solutions for future reference
 

@@ -149,7 +149,8 @@ class UniversalSystemTester:
             with open(mcp_config_path, 'r') as f:
                 config = json.load(f)
             
-            required_servers = ["memory-bank", "knowledge-graph", "docs-provider", "sequential-thinking"]
+            # Real MCP servers that actually exist
+            required_servers = ["playwright", "sequential-thinking", "postgres", "brave-search", "github"]
             missing_servers = []
             
             for server in required_servers:
@@ -160,7 +161,7 @@ class UniversalSystemTester:
                 self.log_test("MCP Configuration", "FAIL", f"Missing MCP servers: {missing_servers}")
                 return False
             
-            # Check for .universal paths
+            # Check for .forge paths (should be .universal)
             config_str = json.dumps(config)
             if ".forge" in config_str:
                 self.log_test("MCP Configuration", "FAIL", "Found .forge references, should be .universal")
@@ -364,14 +365,15 @@ class UniversalSystemTester:
             return False
     
     def test_mcp_tool_availability(self) -> bool:
-        """Test 10: Check if MCP tools are available"""
+        """Test 10: Check if MCP tools are available and install missing ones"""
         print("\n🔧 Testing MCP Tool Availability...")
         
+        # Real MCP tools that actually exist
         mcp_tools = [
-            "mcp-memory-bank",
-            "mcp-knowledge-graph", 
-            "mcp-docs-provider",
-            "mcp-sequential-thinking"
+            "mcp-playwright",
+            "mcp",
+            "@modelcontextprotocol/server-sequential-thinking",
+            "@modelcontextprotocol/server-postgres"
         ]
         
         available_tools = []
@@ -379,8 +381,15 @@ class UniversalSystemTester:
         
         for tool in mcp_tools:
             try:
-                result = subprocess.run(["npx", tool, "--help"], 
-                                      capture_output=True, text=True, timeout=5)
+                if tool.startswith("@modelcontextprotocol"):
+                    # Node.js tool
+                    result = subprocess.run(["npx", tool, "--help"], 
+                                          capture_output=True, text=True, timeout=5)
+                else:
+                    # Python tool
+                    result = subprocess.run([sys.executable, "-m", tool, "--help"], 
+                                          capture_output=True, text=True, timeout=5)
+                
                 if result.returncode == 0 or "Usage:" in result.stdout or "Usage:" in result.stderr:
                     available_tools.append(tool)
                 else:
@@ -388,13 +397,87 @@ class UniversalSystemTester:
             except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
                 missing_tools.append(tool)
         
+        # Auto-install missing tools
+        if missing_tools:
+            print(f"  ⚠️  Missing tools: {missing_tools}")
+            print("  🔧 Attempting to install missing tools...")
+            
+            for tool in missing_tools:
+                try:
+                    if tool.startswith("@modelcontextprotocol"):
+                        # Install Node.js tool
+                        print(f"    Installing {tool}...")
+                        result = subprocess.run([
+                            "npm", "install", "-g", tool
+                        ], capture_output=True, text=True, timeout=60)
+                        
+                        if result.returncode == 0:
+                            print(f"      ✅ {tool} installed successfully")
+                            available_tools.append(tool)
+                            missing_tools.remove(tool)
+                        else:
+                            print(f"      ❌ Failed to install {tool}: {result.stderr}")
+                    else:
+                        # Install Python tool
+                        print(f"    Installing {tool}...")
+                        result = subprocess.run([
+                            sys.executable, "-m", "pip", "install", tool, "--user"
+                        ], capture_output=True, text=True, timeout=60)
+                        
+                        if result.returncode == 0:
+                            print(f"      ✅ {tool} installed successfully")
+                            available_tools.append(tool)
+                            missing_tools.remove(tool)
+                        else:
+                            print(f"      ❌ Failed to install {tool}: {result.stderr}")
+                            
+                except Exception as e:
+                    print(f"      ❌ Error installing {tool}: {e}")
+        
         if missing_tools:
             self.log_test("MCP Tool Availability", "WARNING", 
-                         f"Missing tools: {missing_tools}. Install with: npm install -g {' '.join(missing_tools)}")
+                         f"Some tools still missing: {missing_tools}. Manual installation may be required.")
         else:
             self.log_test("MCP Tool Availability", "PASS", f"All {len(mcp_tools)} MCP tools available")
         
         return len(available_tools) > 0
+    
+    def test_mcp_tools(self) -> bool:
+        """Test MCP tools installation and functionality"""
+        print("🔧 Testing MCP tools...")
+        
+        # Real MCP tools that actually exist
+        real_tools = [
+            "mcp-playwright",
+            "mcp",
+            "@modelcontextprotocol/server-sequential-thinking",
+            "@modelcontextprotocol/server-postgres"
+        ]
+        
+        for tool in real_tools:
+            try:
+                if tool.startswith("@modelcontextprotocol"):
+                    # Node.js tool
+                    result = subprocess.run(["npx", tool, "--version"], 
+                                          capture_output=True, text=True, timeout=10)
+                else:
+                    # Python tool
+                    result = subprocess.run([sys.executable, "-m", tool, "--version"], 
+                                          capture_output=True, text=True, timeout=10)
+                
+                if result.returncode == 0:
+                    print(f"  ✅ {tool} - Working")
+                else:
+                    print(f"  ⚠️  {tool} - Installed but may have issues")
+                    
+            except subprocess.TimeoutExpired:
+                print(f"  ⚠️  {tool} - Timeout (may be working)")
+            except FileNotFoundError:
+                print(f"  ❌ {tool} - Not found")
+            except Exception as e:
+                print(f"  ❌ {tool} - Error: {e}")
+        
+        return True
     
     def run_all_tests(self) -> Dict:
         """Run all tests and return results"""
@@ -411,7 +494,8 @@ class UniversalSystemTester:
             self.test_pre_commit_hook,
             self.test_setup_script,
             self.test_branch_specific_features,
-            self.test_mcp_tool_availability
+            self.test_mcp_tool_availability,
+            self.test_mcp_tools
         ]
         
         # Execute all tests

@@ -35,25 +35,28 @@ git --version
 ### Step 1: Install MCP Tools
 
 ```bash
-# Install MCP tools globally
-npm install -g mcp-memory-bank
-npm install -g mcp-knowledge-graph
-npm install -g mcp-docs-provider
-npm install -g mcp-sequential-thinking
+# Install MCP tools globally (Real tools that exist)
+npm install -g @modelcontextprotocol/server-sequential-thinking
+npm install -g @modelcontextprotocol/server-postgres
+npm install -g @modelcontextprotocol/server-brave-search
+npm install -g @modelcontextprotocol/server-github
+
+# Install Python MCP tools
+pip install mcp-playwright mcp --user
 
 # Verify installations
-mcp-memory-bank --version
-mcp-knowledge-graph --version
-mcp-docs-provider --version
-mcp-sequential-thinking --version
+npx @modelcontextprotocol/server-sequential-thinking --version
+npx @modelcontextprotocol/server-postgres --version
+mcp-playwright --version
+mcp --version
 ```
 
 **Expected Output:**
 ```
-mcp-memory-bank: v1.0.0
-mcp-knowledge-graph: v1.0.0
-mcp-docs-provider: v1.0.0
-mcp-sequential-thinking: v1.0.0
+Sequential Thinking MCP Server running on stdio
+PostgreSQL MCP Server running on stdio
+mcp-playwright version 0.1.1
+mcp version 1.10.1
 ```
 
 ### Step 2: Copy Universal System
@@ -107,21 +110,39 @@ mkdir .cursor/rules
 ```json
 {
   "mcpServers": {
-    "memory-bank": {
-      "command": "mcp-memory-bank",
-      "args": ["--project-dir", ".universal/memory"]
-    },
-    "knowledge-graph": {
-      "command": "mcp-knowledge-graph",
-      "args": ["--project-dir", "."]
-    },
-    "docs-provider": {
-      "command": "mcp-docs-provider",
-      "args": ["--docs-dir", "docs"]
+    "playwright": {
+      "command": "mcp-playwright",
+      "args": []
     },
     "sequential-thinking": {
-      "command": "mcp-sequential-thinking",
-      "args": ["--project-dir", ".universal/memory/tasks"]
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-postgres",
+        "--connection-string",
+        "postgresql://localhost:5432/your_database"
+      ]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-brave-search",
+        "--api-key",
+        "${BRAVE_API_KEY}"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-github",
+        "--token",
+        "${GITHUB_TOKEN}"
+      ]
     }
   }
 }
@@ -198,21 +219,39 @@ export UNIVERSAL_TEMPLATES_DIR=".universal/templates"
 // .vscode/settings.json (if using VS Code)
 {
   "mcp.servers": {
-    "memory-bank": {
-      "command": "mcp-memory-bank",
-      "args": ["--project-dir", ".universal/memory"]
-    },
-    "knowledge-graph": {
-      "command": "mcp-knowledge-graph",
-      "args": ["--project-dir", "."]
-    },
-    "docs-provider": {
-      "command": "mcp-docs-provider",
-      "args": ["--docs-dir", "docs"]
+    "playwright": {
+      "command": "mcp-playwright",
+      "args": []
     },
     "sequential-thinking": {
-      "command": "mcp-sequential-thinking",
-      "args": ["--project-dir", ".universal/memory/tasks"]
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-postgres",
+        "--connection-string",
+        "postgresql://localhost:5432/your_database"
+      ]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-brave-search",
+        "--api-key",
+        "${BRAVE_API_KEY}"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-github",
+        "--token",
+        "${GITHUB_TOKEN}"
+      ]
     }
   }
 }
@@ -315,10 +354,13 @@ git commit -m "Add [feature] with AI assistance"
 
 #### MCP Tools Not Found
 ```bash
-# Error: Command not found: mcp-memory-bank
-# Solution: Reinstall MCP tools
-npm uninstall -g mcp-memory-bank mcp-knowledge-graph mcp-docs-provider mcp-sequential-thinking
-npm install -g mcp-memory-bank mcp-knowledge-graph mcp-docs-provider mcp-sequential-thinking
+# Error: Command not found: mcp-playwright
+# Solution: Install Python MCP tools
+pip install mcp-playwright mcp --user
+
+# Error: Command not found: @modelcontextprotocol/server-sequential-thinking
+# Solution: Install Node.js MCP tools
+npm install -g @modelcontextprotocol/server-sequential-thinking @modelcontextprotocol/server-postgres @modelcontextprotocol/server-brave-search @modelcontextprotocol/server-github
 ```
 
 #### Cursor Rules Not Working

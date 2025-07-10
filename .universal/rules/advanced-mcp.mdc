@@ -1,29 +1,31 @@
 # Advanced MCP Tool Integration
 
 ## Core Principles
-- Use enhanced MCP tools for specialized tasks
+- Use real MCP tools for specialized tasks
 - Integrate multiple tools for complex workflows
 - Monitor tool performance and effectiveness
-- Create custom tools for project-specific needs
+- Document tool usage and best practices
 
-## Enhanced MCP Tools
-- **Playwright**: Browser automation, testing, and debugging
-- **Supabase**: Database operations and analytics
-- **MCP Framework**: Custom tool development
-- **Context7**: Advanced context management
-- **LangChain**: AI framework integration
+## Real MCP Tools
+- **Playwright**: Browser automation, testing, and debugging (mcp-playwright)
+- **Sequential Thinking**: Step-by-step planning and problem solving (@modelcontextprotocol/server-sequential-thinking)
+- **Postgres**: Database operations and analytics (@modelcontextprotocol/server-postgres)
+- **Brave Search**: Web search and research (@modelcontextprotocol/server-brave-search)
+- **GitHub**: Repository and documentation integration (@modelcontextprotocol/server-github)
 
 ## Tool Usage Patterns
 - Use Playwright for web testing and automation
-- Use Supabase for database operations and analytics
-- Use MCP Framework for custom tool development
+- Use Sequential Thinking for planning and workflow automation
+- Use Postgres for knowledge storage and queries
+- Use Brave Search for research and information retrieval
+- Use GitHub for documentation and code analysis
 - Combine tools for complex workflows
 - Monitor tool performance and usage
 
 ## Integration Workflows
-- Web Testing + Documentation: Playwright → Memory Bank → Docs Provider
-- Database + Analysis: Supabase → Knowledge Graph → Sequential Thinking
-- Custom Tools + Validation: MCP Framework → Memory Bank → Testing
+- Web Testing + Documentation: Playwright → Sequential Thinking → GitHub
+- Database + Analysis: Postgres → Sequential Thinking → Brave Search
+- Documentation + Research: GitHub → Brave Search → Sequential Thinking
 
 ## Performance Considerations
 - Monitor tool response times
@@ -32,19 +34,19 @@
 - Implement proper error handling
 
 ## Security Best Practices
-- Secure sensitive data in memory bank
+- Secure sensitive data in Postgres
 - Use environment variables for API keys
 - Implement proper access controls
 - Monitor tool usage for security
 
 ## Custom Tool Development
-- Use MCP Framework for custom tools
-- Document tool capabilities in memory bank
-- Test custom tools thoroughly
+- Extend workflows using Sequential Thinking and Postgres
+- Document tool capabilities in project memory
+- Test custom workflows thoroughly
 - Integrate with existing workflow
 
-@advanced-mcp @enhanced-tools @custom-tools @performance @security
-description: Advanced MCP tool integration and custom tool development
+@advanced-mcp @real-tools @integration @performance @security
+description: Advanced MCP tool integration and workflow automation
 globs:
 alwaysApply: false
 ---
@@ -52,3 +54,4 @@ description:
 globs:
 alwaysApply: false
 ---
+ 
