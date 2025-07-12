@@ -10,6 +10,7 @@
 ### Initial Setup
 ```bash
 # Install MCP tools (Real tools that exist)
+# See .universal/setup-mcp-tools.py for complete installation
 npm install -g @modelcontextprotocol/server-sequential-thinking @modelcontextprotocol/server-postgres @modelcontextprotocol/server-brave-search @modelcontextprotocol/server-github
 
 # Install Python MCP tools

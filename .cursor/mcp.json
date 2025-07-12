@@ -1,53 +1,37 @@
 {
   "mcpServers": {
-    "playwright": {
-      "command": "mcp-playwright",
-      "args": []
-    },
     "memory-bank": {
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-memory-bank"
-      ]
+      "args": ["-y", "mcp-memory-bank"]
     },
     "knowledge-graph": {
-      "command": "npx", 
-      "args": [
-        "-y",
-        "mcp-knowledge-graph"
-      ]
+      "command": "npx",
+      "args": ["-y", "mcp-knowledge-graph"]
     },
     "package-docs": {
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-package-docs"
-      ],
+      "args": ["-y", "mcp-package-docs"],
       "env": {
         "ENABLE_LSP": "true"
       }
     },
     "sequential-thinking": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "postgres": {
       "command": "npx",
       "args": [
-        "-y",
+        "-y", 
         "@modelcontextprotocol/server-postgres",
         "--connection-string",
-        "postgresql://localhost:5432/your_database"
+        "${DATABASE_URL}"
       ]
     },
     "brave-search": {
       "command": "npx",
       "args": [
-        "-y",
+        "-y", 
         "@modelcontextprotocol/server-brave-search",
         "--api-key",
         "${BRAVE_API_KEY}"
@@ -56,11 +40,15 @@
     "github": {
       "command": "npx",
       "args": [
-        "-y",
+        "-y", 
         "@modelcontextprotocol/server-github",
         "--token",
         "${GITHUB_TOKEN}"
       ]
+    },
+    "playwright": {
+      "command": "python",
+      "args": ["-m", "mcp_playwright"]
     }
   }
-}
+} 

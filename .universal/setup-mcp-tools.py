@@ -23,7 +23,7 @@ def install_mcp_tools():
     node_mcp_tools = [
         "mcp-memory-bank",
         "mcp-knowledge-graph", 
-        "@YassineTk/mcp-docs-provider",
+        "mcp-package-docs",
         "@modelcontextprotocol/server-sequential-thinking",
         "@modelcontextprotocol/server-postgres",
         "@modelcontextprotocol/server-brave-search",
@@ -49,18 +49,19 @@ def install_mcp_tools():
             return False
     
     # Install Node.js MCP tools
-    print("\n📦 Installing Node.js MCP tools...")
+    print("\n\U0001F4E6 Installing Node.js MCP tools...")
     for tool in node_mcp_tools:
         try:
             print(f"  Installing {tool}...")
+            # Use shell=True so npm.cmd is found on Windows and to avoid terminal closure issues in Cursor
             result = subprocess.run([
                 "npm", "install", "-g", tool
-            ], capture_output=True, text=True, check=True)
-            print(f"  ✅ {tool} installed successfully")
+            ], capture_output=True, text=True, check=True, shell=True)
+            print(f"  \u2705 {tool} installed successfully")
         except subprocess.CalledProcessError as e:
-            print(f"  ❌ Failed to install {tool}: {e.stderr}")
+            print(f"  \u274C Failed to install {tool}: {e.stderr}")
         except FileNotFoundError:
-            print(f"  ❌ npm not found. Please install Node.js and npm first.")
+            print(f"  \u274C npm not found. Please install Node.js and npm first.")
             return False
     
     print("\n✅ MCP tools installation complete!")
@@ -69,7 +70,7 @@ def install_mcp_tools():
     print("2. Set up environment variables for API keys:")
     print("   - BRAVE_API_KEY for Brave Search")
     print("   - GITHUB_TOKEN for GitHub integration")
-    print("3. Test the installation: python setup-mcp-tools.py --test")
+    print("3. Test the installation: python .universal/setup-mcp-tools.py --test")
     
     return True
 
@@ -81,10 +82,20 @@ def test_mcp_tools():
     python_tools = ["mcp-playwright", "mcp"]
     for tool in python_tools:
         try:
-            result = subprocess.run([
-                sys.executable, "-m", tool, "--version"
-            ], capture_output=True, text=True, check=True)
-            print(f"  ✅ {tool}: {result.stdout.strip()}")
+            # Test by importing the module instead of running --version
+            if tool == "mcp":
+                result = subprocess.run([
+                    sys.executable, "-c", "import mcp; print('mcp available')"
+                ], capture_output=True, text=True, check=True, shell=True)
+            elif tool == "mcp-playwright":
+                result = subprocess.run([
+                    sys.executable, "-c", "import mcp_playwright; print('mcp-playwright available')"
+                ], capture_output=True, text=True, check=True, shell=True)
+            
+            if "available" in result.stdout:
+                print(f"  ✅ {tool}: Available")
+            else:
+                print(f"  ❌ {tool}: Not working properly")
         except subprocess.CalledProcessError:
             print(f"  ❌ {tool}: Not working properly")
         except FileNotFoundError:
@@ -94,22 +105,25 @@ def test_mcp_tools():
     node_tools = [
         "mcp-memory-bank",
         "mcp-knowledge-graph",
-        "@YassineTk/mcp-docs-provider"
+        "mcp-package-docs"
     ]
     
     for tool in node_tools:
         try:
-            # Try to run the tool to see if it's available
+            # Quick test - just check if tool exists without running it
             result = subprocess.run([
-                "npx", tool, "--help"
-            ], capture_output=True, text=True, timeout=10)
-            print(f"  ✅ {tool}: Available")
+                "npm", "list", "-g", tool
+            ], capture_output=True, text=True, timeout=5, shell=True)
+            if tool in result.stdout or "empty" not in result.stdout:
+                print(f"  ✅ {tool}: Available")
+            else:
+                print(f"  ❌ {tool}: Not available")
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
             print(f"  ❌ {tool}: Not available or not working")
     
     print("\n📋 Installation Summary:")
     print("- Python MCP tools: mcp-playwright, mcp")
-    print("- Node.js MCP tools: memory-bank, knowledge-graph, docs-provider, sequential-thinking, postgres, brave-search, github")
+    print("- Node.js MCP tools: memory-bank, knowledge-graph, package-docs, sequential-thinking, postgres, brave-search, github")
     print("\n🔗 For more MCP tools, visit: https://github.com/appcypher/awesome-mcp-servers")
 
 if __name__ == "__main__":
