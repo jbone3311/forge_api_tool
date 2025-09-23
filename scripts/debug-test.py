@@ -24,7 +24,7 @@ def test_specific_component(component_name, test_func):
 
 def test_memory_system():
     """Test memory system"""
-    main_progress = Path(".universal/memory/main/progress.md")
+    main_progress = Path(".SYSTEM/memory/main/progress.md")
     if not main_progress.exists():
         return False
     
@@ -39,7 +39,7 @@ def test_template_system():
     required_templates = ["ai-development-workflow.md", "ai-enhanced-testing.md", "ai-assisted-refactoring.md"]
     
     for template in required_templates:
-        template_path = Path(f".universal/templates/{template}")
+        template_path = Path(f".SYSTEM/templates/{template}")
         if not template_path.exists():
             print(f"   Missing: {template}")
             return False
@@ -48,7 +48,7 @@ def test_template_system():
 
 def test_pre_commit_hook():
     """Test pre-commit hook"""
-    hook_path = Path(".universal/hooks/pre-commit")
+    hook_path = Path(".SYSTEM/hooks/pre-commit")
     if not hook_path.exists():
         return False
     
@@ -59,7 +59,7 @@ def test_pre_commit_hook():
     return all(feature in content for feature in required_features)
 
 def main():
-    print("🔧 Debug Test - Universal AI Development System")
+    print("🔧 Debug Test - SYSTEM AI Development System")
     print("=" * 50)
     
     tests = [

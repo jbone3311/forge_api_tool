@@ -4,8 +4,8 @@
 Performed a comprehensive reorganization of the documentation system to ensure clear separation between universal templates/instructions and project-specific documentation. Updated the main README to reflect the new directory structure, verified all documentation for accuracy and completeness, and provided recommendations for additional project-specific docs.
 
 ## Tasks Completed
-- [x] Moved all universal templates and instructions to `docs/universal/`
-- [x] Verified all project-specific docs are in `docs/project-specific/` and related directories
+- [x] Moved all universal templates and instructions to `docs/SYSTEM/`
+- [x] Verified all project-specific docs are in `docs/PROJECT-SPECIFIC/` and related directories
 - [x] Updated `docs/README.md` to reflect new structure and contents
 - [x] Reviewed all documentation for accuracy and completeness
 - [x] Provided recommendations for optional project-specific docs (deployment, integration, troubleshooting, security, changelog)

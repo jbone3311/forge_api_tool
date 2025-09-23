@@ -10,7 +10,7 @@
 ### Initial Setup
 ```bash
 # Install MCP tools (Real tools that exist)
-# See .universal/setup-mcp-tools.py for complete installation
+# See .SYSTEM/setup-mcp-tools.py for complete installation
 npm install -g @modelcontextprotocol/server-sequential-thinking @modelcontextprotocol/server-postgres @modelcontextprotocol/server-brave-search @modelcontextprotocol/server-github
 
 # Install Python MCP tools
@@ -107,9 +107,9 @@ sequential-thinking: "Document solution for [issue]"
 
 ```
 test-project/
-├── .universal/          # AI development environment
+├── .SYSTEM/          # AI development environment
 │   ├── rules/          # Cursor AI rules
-│   ├── templates/      # Universal templates
+│   ├── templates/      # SYSTEM templates
 │   ├── mcp/           # MCP tool configurations
 │   ├── memory/        # Project memory and context
 │   └── extensions/    # Future extensions

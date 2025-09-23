@@ -1,9 +1,48 @@
 {
   "installation_results": {
-    "python_tools": {},
-    "node_tools": {},
-    "configuration": {},
-    "documentation": {}
+    "python_tools": {
+      "mcp-playwright": {
+        "status": "success",
+        "version": "Unknown"
+      },
+      "mcp": {
+        "status": "success",
+        "version": "Unknown"
+      }
+    },
+    "node_tools": {
+      "@modelcontextprotocol/server-sequential-thinking": {
+        "status": "failed",
+        "error": "npm error code EEXIST\nnpm error path /opt/homebrew/bin/mcp-server-sequential-thinking\nnpm error EEXIST: file already exists\nnpm error File exists: /opt/homebrew/bin/mcp-server-sequential-thinking\nnpm error Remove the existing file and try again, or run npm\nnpm error with --force to overwrite files recklessly.\nnpm error A complete log of this run can be found in: /Users/jim/.npm/_logs/2025-08-03T07_37_17_403Z-debug-0.log\n"
+      },
+      "@modelcontextprotocol/server-postgres": {
+        "status": "success",
+        "version": "Unknown"
+      },
+      "@modelcontextprotocol/server-brave-search": {
+        "status": "success",
+        "version": "Unknown"
+      },
+      "@modelcontextprotocol/server-github": {
+        "status": "success",
+        "version": "Unknown"
+      }
+    },
+    "configuration": {
+      "mcp.json": {
+        "status": "created",
+        "path": "/Users/jim/Library/CloudStorage/Dropbox/code/## Code in Progress ##/Forge-API-Tool/.universal/mcp/mcp.json"
+      }
+    },
+    "documentation": {
+      "tools_reference": "/Users/jim/Library/CloudStorage/Dropbox/code/## Code in Progress ##/Forge-API-Tool/.universal/docs/mcp/mcp-tools-reference.md",
+      "installation_guide": "/Users/jim/Library/CloudStorage/Dropbox/code/## Code in Progress ##/Forge-API-Tool/.universal/docs/mcp/installation-guide.md",
+      "templates": [
+        "sequential-thinking-template.md",
+        "knowledge-template.md",
+        "research-template.md"
+      ]
+    }
   },
   "test_results": {
     "python_tools": {
@@ -12,8 +51,8 @@
     },
     "node_tools": {
       "@modelcontextprotocol/server-sequential-thinking": "error",
-      "@modelcontextprotocol/server-postgres": "error",
-      "@modelcontextprotocol/server-brave-search": "error",
+      "@modelcontextprotocol/server-postgres": "warning",
+      "@modelcontextprotocol/server-brave-search": "warning",
       "@modelcontextprotocol/server-github": "error"
     },
     "configuration": {
@@ -21,5 +60,5 @@
     },
     "overall_status": "error"
   },
-  "timestamp": "1751947552.34716"
+  "timestamp": "1754206635.7623336"
 }

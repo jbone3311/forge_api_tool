@@ -21,7 +21,7 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual Environment
 venv/
 env/
 ENV/
@@ -44,27 +44,28 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Project specific
-outputs/
-*.log
-queue.json
-wildcard_usage.json
-database.db
-
-# Test results and generated files
-*_test_results.json
-*_results.json
-comprehensive_test_results.json
-direct_forge_test_results.json
-forge_endpoint_test_results.json
-
-# Cache files
-cache/
+# Logs
 logs/
+*.log
 
-# Flask
-instance/
-.webassets-cache
+# Cache
+cache/
+.cache/
+
+# Output files (keep structure but ignore large files)
+outputs/*/
+!outputs/.gitkeep
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test results
+test-results/
+coverage/
+.pytest_cache/
 
 # Environment variables
 .env
@@ -73,37 +74,18 @@ instance/
 .env.test.local
 .env.production.local
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-*.cover
-.hypothesis/
-
-# Node.js (for web dashboard)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
 # Temporary files
 *.tmp
 *.temp
 *.bak
-*.backup 
+*.backup
 
-# Universal AI Development Environment
-.universal/memory/*/graph/
-.universal/memory/docs-cache/
-.universal/memory/tasks/
-.universal/extensions/
+# Queue files (these are runtime data)
+queue.json
+queue.json.backup
 
-# MCP Tool Caches
-.cursorMEM/
-.mcp-cache/
+# Wildcard usage (runtime data)
+wildcard_usage.json
 
-# Node modules for MCP tools (if installed locally)
-node_modules/
+# Documentation zip
+docs.zip

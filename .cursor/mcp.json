@@ -47,8 +47,12 @@
       ]
     },
     "playwright": {
-      "command": "python",
-      "args": ["-m", "mcp_playwright"]
+      "command": "npx",
+      "args": [
+        "-y",
+        "@executeautomation/playwright-mcp-server"
+      ],
+      "env": {}
     }
   }
 } 

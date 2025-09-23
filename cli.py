@@ -16,8 +16,8 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 # Add the project root to the path
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
+project_root = Path(__file__).resolve().parent
+sys.path.insert(0, str(project_root))
 
 from core.config_handler import config_handler
 from core.forge_api import ForgeAPIClient
@@ -36,6 +36,7 @@ class ForgeAPICLI:
     
     def __init__(self):
         """Initialize the CLI."""
+        self.project_root = Path(__file__).resolve().parent
         self.forge_client = None
         self.batch_runner = None
         self.output_manager = OutputManager()
@@ -57,6 +58,21 @@ class ForgeAPICLI:
         except Exception as e:
             logger.warning(f"Could not initialize API client: {e}")
     
+    def _ensure_api_client(self):
+        """Ensure API client is initialized, re-initializing if needed."""
+        if self.forge_client is None and api_config.base_url:
+            self._initialize_api_client()
+        return self.forge_client is not None
+    
+    def _can_connect(self) -> bool:
+        """Check if API connection is available (silent)."""
+        if not self.forge_client:
+            return False
+        try:
+            return bool(self.forge_client.test_connection(silent=True))
+        except Exception:
+            return False
+    
     def test_connection(self) -> bool:
         """Test connection to the API."""
         if not self.forge_client:
@@ -75,13 +91,13 @@ class ForgeAPICLI:
             print(f"❌ Connection test error: {e}")
             return False
     
-    def list_configs(self) -> None:
+    def list_configs(self) -> bool:
         """List all available configurations."""
         try:
             configs = config_handler.list_configs()
             if not configs:
                 print("📋 No configurations found")
-                return
+                return False
             
             print(f"📋 Found {len(configs)} configurations:")
             print("-" * 50)
@@ -98,10 +114,12 @@ class ForgeAPICLI:
                 except Exception as e:
                     print(f"📄 {config_name} (Error loading: {e})")
                     print()
+            return True
         except Exception as e:
             print(f"❌ Error listing configurations: {e}")
+            return False
     
-    def show_config(self, config_name: str) -> None:
+    def show_config(self, config_name: str) -> bool:
         """Show detailed information about a configuration."""
         try:
             config = config_handler.load_config(config_name)
@@ -134,9 +152,11 @@ class ForgeAPICLI:
                 for key, value in config['output_settings'].items():
                     print(f"  {key}: {value}")
                 print()
+            return True
                 
         except Exception as e:
             print(f"❌ Error showing configuration: {e}")
+            return False
     
     def generate_single(self, config_name: str, prompt: str, seed: Optional[int] = None) -> bool:
         """Generate a single image."""
@@ -202,10 +222,25 @@ class ForgeAPICLI:
             # Start processing
             self.batch_runner.start_processing()
             
-            # Monitor progress
+            # Monitor progress with timeout protection
+            start_time = time.time()
+            timeout = 300  # 5 minutes timeout
+            batch_count = 0
+            
             while self.batch_runner.running:
                 time.sleep(1)
-                # Could add progress reporting here
+                elapsed = time.time() - start_time
+                
+                # Check for timeout
+                if elapsed > timeout:
+                    print(f"⏰ Timeout reached ({timeout}s), stopping batch processing")
+                    self.batch_runner.stop_processing()
+                    return False
+                
+                # Report progress every 10 seconds
+                if int(elapsed) % 10 == 0 and elapsed > 0:
+                    batch_count += 1
+                    print(f"⏳ Processing... ({int(elapsed)}s elapsed)")
             
             print("✅ Batch generation completed!")
             return True
@@ -378,7 +413,7 @@ class ForgeAPICLI:
             # API connection status
             if self.forge_client:
                 print("🔗 API Connection: Configured")
-                if self.test_connection():
+                if self._can_connect():
                     print("   Status: ✅ Connected")
                 else:
                     print("   Status: ❌ Disconnected")
@@ -462,6 +497,10 @@ class ForgeAPICLI:
             from scripts.fix_wildcard_encoding import fix_all_wildcard_encoding
             
             print("🔧 Fixing wildcard encoding issues...")
+            
+            # Use project-relative path
+            if not os.path.isabs(wildcards_dir):
+                wildcards_dir = str(self.project_root / wildcards_dir)
             
             # Run the comprehensive wildcard encoding fix
             results = fix_all_wildcard_encoding(wildcards_dir, dry_run)
@@ -570,7 +609,7 @@ Examples:
     
     if not args.command:
         parser.print_help()
-        return
+        sys.exit(1)
     
     # Initialize CLI
     cli = ForgeAPICLI()
@@ -582,23 +621,38 @@ Examples:
         
         elif args.command == 'configs':
             if args.configs_command == 'list':
-                cli.list_configs()
+                success = cli.list_configs()
             elif args.configs_command == 'show':
-                cli.show_config(args.config_name)
+                success = cli.show_config(args.config_name)
             elif args.configs_command == 'export':
-                cli.export_config(args.config_name, args.output_file)
+                success = cli.export_config(args.config_name, args.output_file)
             elif args.configs_command == 'import':
-                cli.import_config(args.input_file, args.name)
+                success = cli.import_config(args.input_file, args.name)
+            else:
+                print("❌ Invalid configs subcommand")
+                success = False
+            
+            if not success:
+                sys.exit(1)
         
         elif args.command == 'generate':
             if args.generate_command == 'single':
-                cli.generate_single(args.config_name, args.prompt, args.seed)
+                success = cli.generate_single(args.config_name, args.prompt, args.seed)
             elif args.generate_command == 'batch':
-                cli.generate_batch(args.config_name, args.batch_size, args.batches)
+                success = cli.generate_batch(args.config_name, args.batch_size, args.batches)
+            else:
+                print("❌ Invalid generate subcommand")
+                success = False
+            
+            if not success:
+                sys.exit(1)
         
         elif args.command == 'outputs':
             if args.outputs_command == 'list':
                 cli.list_outputs()
+            else:
+                print("❌ Invalid outputs subcommand")
+                sys.exit(1)
         
         elif args.command == 'analyze':
             cli.analyze_image(args.image_path)
@@ -610,9 +664,14 @@ Examples:
                 cli.preview_wildcards(args.config_name, args.count)
             elif args.wildcards_command == 'fix-encoding':
                 cli.fix_wildcard_encoding(args.wildcards_dir, args.dry_run)
+            else:
+                print("❌ Invalid wildcards subcommand")
+                sys.exit(1)
         
         elif args.command == 'test':
-            cli.test_connection()
+            success = cli.test_connection()
+            if not success:
+                sys.exit(1)
     
     except KeyboardInterrupt:
         print("\n⚠️  Operation interrupted by user")

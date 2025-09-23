@@ -1,32 +1,11 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "mcp-playwright",
-      "args": []
-    },
-    "memory-bank": {
       "command": "npx",
       "args": [
         "-y",
-        "mcp-memory-bank"
+        "@executeautomation/playwright-mcp-server"
       ]
-    },
-    "knowledge-graph": {
-      "command": "npx", 
-      "args": [
-        "-y",
-        "mcp-knowledge-graph"
-      ]
-    },
-    "package-docs": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-package-docs"
-      ],
-      "env": {
-        "ENABLE_LSP": "true"
-      }
     },
     "sequential-thinking": {
       "command": "npx",

@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge API Tool - Clean Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .status-item {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .wildcards-panel {
+            grid-column: 1 / -1;
+        }
+
+        .wildcards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .setting-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .setting-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .setting-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .setting-thumbnail {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            background: #f7fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+        }
+
+        .setting-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .no-thumbnail {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #a0aec0;
+        }
+
+        .no-thumbnail-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .no-thumbnail-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .setting-info {
+            margin-bottom: 12px;
+        }
+
+        .setting-name {
+            font-weight: bold;
+            color: #4a5568;
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+        }
+
+        .setting-description {
+            color: #718096;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .setting-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .tag {
+            background: #edf2f7;
+            color: #4a5568;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .setting-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .wildcard-info-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .wildcard-details h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .wildcard-stats {
+            color: #718096;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .wildcard-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .wildcard-usage-info {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .wildcard-usage-info h4 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .wildcard-usage-info ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .wildcard-usage-info li {
+            color: #718096;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .wildcard-usage-info code {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .wildcard-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .wildcard-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .wildcard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .wildcard-name {
+            font-weight: bold;
+            color: #4a5568;
+            font-size: 1.1rem;
+        }
+
+        .wildcard-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .wildcard-preview {
+            max-height: 100px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .wildcard-preview-item {
+            padding: 2px 0;
+            color: #666;
+        }
+
+        .wildcard-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .prompt-preview {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .prompt-preview h4 {
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .prompt-text {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .queue-panel {
+            grid-column: 1 / -1;
+        }
+
+        .job-item {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .job-item.running {
+            border-color: #f6ad55;
+            background: rgba(246, 173, 85, 0.1);
+        }
+
+        .job-item.completed {
+            border-color: #68d391;
+            background: rgba(104, 211, 145, 0.1);
+        }
+
+        .job-item.failed {
+            border-color: #fc8181;
+            background: rgba(252, 129, 129, 0.1);
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .job-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .job-status.pending {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .job-status.running {
+            background: #f6ad55;
+            color: white;
+        }
+
+        .job-status.completed {
+            background: #68d391;
+            color: white;
+        }
+
+        .job-status.failed {
+            background: #fc8181;
+            color: white;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            transition: width 0.3s ease;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+        }
+
+        .close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .wildcard-items {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .wildcard-item {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .wildcard-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .wildcards-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Forge API Tool</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    📡 Provider: <span id="current-provider">{{ api_info.current_provider }}</span>
+                </div>
+                <div class="status-item">
+                    📊 Queue: <span id="queue-size">0</span> jobs
+                </div>
+                <div class="status-item">
+                    🎲 Wildcards: <span id="wildcards-count">{{ available_wildcards|length }}</span> files
+                </div>
+                <div class="status-item">
+                    📁 Outputs: <span id="outputs-count">{{ output_stats.total_outputs }}</span> files
+                </div>
+                <div class="status-item">
+                    ⚙️ Settings: <span id="settings-count">{{ configs|length }}</span> available
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Wildcards Panel -->
+            <div class="panel wildcards-panel">
+                <h2>🎲 Wildcard Management</h2>
+                <p>Select a wildcard file to view its contents and use in your prompts.</p>
+                
+                <div class="form-group">
+                    <label for="wildcard-select">Select Wildcard File:</label>
+                    <select id="wildcard-select" class="form-control" onchange="loadWildcardInfo()">
+                        <option value="">Choose a wildcard file...</option>
+                        {% for wildcard_name in available_wildcards %}
+                        {% set info = wildcard_info.get(wildcard_name, {}) %}
+                        <option value="{{ wildcard_name }}" data-count="{{ info.get('item_count', 0) }}">
+                            {{ wildcard_name.replace('_', ' ').title() }} ({{ info.get('item_count', 0) }} items)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div id="wildcard-info" class="wildcard-info-panel" style="display: none;">
+                    <div class="wildcard-details">
+                        <h3 id="selected-wildcard-name">Selected Wildcard</h3>
+                        <div class="wildcard-stats">
+                            <span id="wildcard-item-count">0</span> items available
+                        </div>
+                        <div class="wildcard-actions">
+                            <button class="btn btn-primary" onclick="viewWildcardItems()">
+                                📋 View All Items
+                            </button>
+                            <button class="btn btn-secondary" onclick="insertWildcard()">
+                                ➕ Insert in Prompt
+                            </button>
+                            <button class="btn btn-secondary" onclick="randomizeWildcard()">
+                                🎲 Random Selection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="wildcard-usage-info">
+                    <h4>💡 How to Use Wildcards:</h4>
+                    <ul>
+                        <li>Select a wildcard file from the dropdown above</li>
+                        <li>Use <code>__WILDCARD_NAME__</code> in your prompts (like Automatic1111)</li>
+                        <li>Click "Insert in Prompt" to add the wildcard to your prompt</li>
+                        <li>Wildcards will be randomly replaced when generating images</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Image Settings Panel -->
+            <div class="panel">
+                <h2>🎨 Image Settings</h2>
+                <p>Select from available image generation settings. Click on thumbnails to preview and use settings.</p>
+                
+                <div class="settings-grid" id="settings-grid">
+                    {% for settings_name, settings_info in configs.items() %}
+                    <div class="setting-card" data-settings="{{ settings_name }}">
+                        {% if settings_info.thumbnail %}
+                        <div class="setting-thumbnail">
+                            <img src="/api/settings/{{ settings_name }}/thumbnail" alt="{{ settings_name }}" 
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div class="no-thumbnail" style="display: none;">
+                                <div class="no-thumbnail-icon">🎨</div>
+                                <div class="no-thumbnail-text">No Preview</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="setting-thumbnail">
+                            <div class="no-thumbnail">
+                                <div class="no-thumbnail-icon">🎨</div>
+                                <div class="no-thumbnail-text">No Preview</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="setting-info">
+                            <div class="setting-name">{{ settings_name }}</div>
+                            {% if settings_info.description %}
+                            <div class="setting-description">{{ settings_info.description }}</div>
+                            {% endif %}
+                            {% if settings_info.tags %}
+                            <div class="setting-tags">
+                                {% for tag in settings_info.tags %}
+                                <span class="tag">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="setting-actions">
+                            <button class="btn btn-primary" onclick="selectSettings('{{ settings_name }}')">
+                                Use Settings
+                            </button>
+                            <button class="btn btn-secondary" onclick="previewSettings('{{ settings_name }}')">
+                                Preview
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Prompt Builder Panel -->
+            <div class="panel">
+                <h2>✍️ Prompt Builder</h2>
+                <div class="form-group">
+                    <label for="prompt-template">Prompt Template:</label>
+                    <textarea id="prompt-template" class="form-control" placeholder="Enter your prompt template with wildcards like __SUBJECT__, __SETTING__, etc...">A beautiful __SUBJECT__ in a __SETTING__ with __MOOD__ lighting</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="negative-prompt">Negative Prompt:</label>
+                    <input type="text" id="negative-prompt" class="form-control" placeholder="Enter negative prompt...">
+                </div>
+
+                <button class="btn btn-primary" onclick="processPrompt()" style="width: 100%; margin-bottom: 15px;">
+                    Process Wildcards
+                </button>
+
+                <div id="prompt-preview" class="prompt-preview" style="display: none;">
+                    <h4>Processed Prompt:</h4>
+                    <div class="prompt-text" id="processed-prompt-text"></div>
+                </div>
+
+                <div id="prompt-previews" style="display: none;">
+                    <h4>Preview Variations:</h4>
+                    <div id="preview-list"></div>
+                </div>
+            </div>
+
+            <!-- Generation Panel -->
+            <div class="panel">
+                <h2>🎨 Image Generation</h2>
+                <div class="form-group">
+                    <label for="settings-select">Image Settings:</label>
+                    <select id="settings-select" class="form-control">
+                        {% for settings_name in configs.keys() %}
+                        <option value="{{ settings_name }}">{{ settings_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="steps">Steps:</label>
+                    <input type="number" id="steps" class="form-control" value="20" min="1" max="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="cfg-scale">CFG Scale:</label>
+                    <input type="number" id="cfg-scale" class="form-control" value="7.0" min="1" max="20" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="width">Width:</label>
+                    <input type="number" id="width" class="form-control" value="512" min="64" max="2048" step="64">
+                </div>
+
+                <div class="form-group">
+                    <label for="height">Height:</label>
+                    <input type="number" id="height" class="form-control" value="512" min="64" max="2048" step="64">
+                </div>
+
+                <button class="btn btn-primary" onclick="generateImage()" style="width: 100%;">
+                    Generate Image
+                </button>
+            </div>
+
+            <!-- Queue Panel -->
+            <div class="panel queue-panel">
+                <h2>📋 Generation Queue</h2>
+                <div id="queue-list">
+                    <p style="text-align: center; color: #666; padding: 20px;">No jobs in queue</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wildcard Items Modal -->
+    <div id="wildcard-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Wildcard Items</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modal-content">
+                <!-- Wildcard items will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        // Initialize Socket.IO
+        const socket = io();
+
+        // Global variables
+        let wildcardsData = {{ wildcard_info|tojson }};
+        let currentWildcardModal = null;
+
+        // Socket event handlers
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+        socket.on('job_status_update', function(data) {
+            updateQueueDisplay();
+        });
+
+        socket.on('job_progress', function(data) {
+            updateJobProgress(data.job_id, data.progress, data.current_step, data.total_steps);
+        });
+
+        socket.on('job_completed', function(data) {
+            updateQueueDisplay();
+            showNotification('Job completed successfully!', 'success');
+        });
+
+        socket.on('job_failed', function(data) {
+            updateQueueDisplay();
+            showNotification('Job failed: ' + data.error, 'error');
+        });
+
+        // Wildcard search functionality
+        document.getElementById('wildcard-search').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.wildcard-card');
+            
+            cards.forEach(card => {
+                const wildcardName = card.dataset.wildcard.toLowerCase();
+                if (wildcardName.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // View wildcard items
+        // Load wildcard info when dropdown changes
+        function loadWildcardInfo() {
+            const select = document.getElementById('wildcard-select');
+            const wildcardInfo = document.getElementById('wildcard-info');
+            const selectedName = document.getElementById('selected-wildcard-name');
+            const itemCount = document.getElementById('wildcard-item-count');
+            
+            if (select.value) {
+                const option = select.options[select.selectedIndex];
+                const count = option.getAttribute('data-count');
+                
+                selectedName.textContent = select.value.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                itemCount.textContent = count;
+                wildcardInfo.style.display = 'block';
+            } else {
+                wildcardInfo.style.display = 'none';
+            }
+        }
+
+        // View wildcard items in modal
+        function viewWildcardItems() {
+            const select = document.getElementById('wildcard-select');
+            const wildcardName = select.value;
+            
+            if (!wildcardName) {
+                showNotification('Please select a wildcard file first', 'error');
+                return;
+            }
+            
+            currentWildcardModal = wildcardName;
+            document.getElementById('modal-title').textContent = wildcardName + ' Items';
+            
+            fetch(`/api/wildcards/${wildcardName}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const modalContent = document.getElementById('modal-content');
+                        modalContent.innerHTML = `
+                            <div style="margin-bottom: 15px;">
+                                <strong>Total Items:</strong> ${data.item_count}
+                            </div>
+                            <div class="wildcard-items">
+                                ${data.items.map(item => `
+                                    <div class="wildcard-item" onclick="selectWildcardItem('${item.replace(/'/g, "\\'")}')">
+                                        ${item}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                        document.getElementById('wildcard-modal').style.display = 'block';
+                    } else {
+                        showNotification('Error loading wildcard items: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error loading wildcard items: ' + error, 'error');
+                });
+        }
+
+        // Insert wildcard into prompt
+        function insertWildcard() {
+            const select = document.getElementById('wildcard-select');
+            const wildcardName = select.value;
+            
+            if (!wildcardName) {
+                showNotification('Please select a wildcard file first', 'error');
+                return;
+            }
+            
+            const promptTextarea = document.getElementById('prompt-template');
+            const wildcardText = `__${wildcardName}__`;
+            
+            // Insert at cursor position or at end
+            const start = promptTextarea.selectionStart;
+            const end = promptTextarea.selectionEnd;
+            const text = promptTextarea.value;
+            const before = text.substring(0, start);
+            const after = text.substring(end, text.length);
+            
+            promptTextarea.value = before + wildcardText + after;
+            promptTextarea.focus();
+            
+            // Set cursor position after inserted text
+            const newCursorPos = start + wildcardText.length;
+            promptTextarea.setSelectionRange(newCursorPos, newCursorPos);
+            
+            showNotification(`Added ${wildcardText} to prompt`, 'success');
+        }
+
+        // Randomize wildcard selection
+        function randomizeWildcard() {
+            const select = document.getElementById('wildcard-select');
+            const wildcardName = select.value;
+            
+            if (!wildcardName) {
+                showNotification('Please select a wildcard file first', 'error');
+                return;
+            }
+            
+            fetch(`/api/wildcards/${wildcardName}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.items.length > 0) {
+                        const randomItem = data.items[Math.floor(Math.random() * data.items.length)];
+                        showNotification(`Random selection: ${randomItem}`, 'info');
+                        
+                        // Optionally insert the random item into prompt
+                        const promptTextarea = document.getElementById('prompt-template');
+                        const start = promptTextarea.selectionStart;
+                        const end = promptTextarea.selectionEnd;
+                        const text = promptTextarea.value;
+                        const before = text.substring(0, start);
+                        const after = text.substring(end, text.length);
+                        
+                        promptTextarea.value = before + randomItem + after;
+                        promptTextarea.focus();
+                        
+                        const newCursorPos = start + randomItem.length;
+                        promptTextarea.setSelectionRange(newCursorPos, newCursorPos);
+                    } else {
+                        showNotification('No items available in this wildcard file', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error loading wildcard: ' + error, 'error');
+                });
+        }
+
+        // Use wildcard in prompt
+        function useInPrompt(wildcardName) {
+            const promptTemplate = document.getElementById('prompt-template');
+            const currentPrompt = promptTemplate.value;
+            const wildcardVariable = `__${wildcardName}__`;
+            
+            if (currentPrompt.includes(wildcardVariable)) {
+                showNotification('Wildcard already used in prompt', 'info');
+                return;
+            }
+            
+            promptTemplate.value = currentPrompt + (currentPrompt ? ', ' : '') + wildcardVariable;
+            promptTemplate.focus();
+        }
+
+        // Select wildcard item
+        function selectWildcardItem(item) {
+            const promptTemplate = document.getElementById('prompt-template');
+            const currentPrompt = promptTemplate.value;
+            const wildcardVariable = `__${currentWildcardModal}__`;
+            
+            // Replace wildcard variable with selected item
+            const newPrompt = currentPrompt.replace(new RegExp(wildcardVariable, 'g'), item);
+            promptTemplate.value = newPrompt;
+            
+            closeModal();
+            showNotification(`Replaced ${wildcardVariable} with "${item}"`, 'success');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('wildcard-modal').style.display = 'none';
+            currentWildcardModal = null;
+        }
+
+        // Process prompt
+        function processPrompt() {
+            const prompt = document.getElementById('prompt-template').value;
+            
+            if (!prompt) {
+                showNotification('Please enter a prompt template', 'error');
+                return;
+            }
+            
+            fetch('/api/wildcards/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    preview_count: 3
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show processed prompt
+                    document.getElementById('processed-prompt-text').textContent = data.processed_prompt;
+                    document.getElementById('prompt-preview').style.display = 'block';
+                    
+                    // Show preview variations
+                    const previewList = document.getElementById('preview-list');
+                    previewList.innerHTML = data.previews.map((preview, index) => `
+                        <div class="prompt-text" style="margin-bottom: 10px;">
+                            <strong>Variation ${index + 1}:</strong> ${preview}
+                        </div>
+                    `).join('');
+                    document.getElementById('prompt-previews').style.display = 'block';
+                    
+                    showNotification('Prompt processed successfully!', 'success');
+                } else {
+                    showNotification('Error processing prompt: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showNotification('Error processing prompt: ' + error, 'error');
+            });
+        }
+
+        // Generate image
+        function generateImage() {
+            const prompt = document.getElementById('prompt-template').value;
+            const negativePrompt = document.getElementById('negative-prompt').value;
+            const settingsName = document.getElementById('settings-select').value;
+            const steps = parseInt(document.getElementById('steps').value);
+            const cfgScale = parseFloat(document.getElementById('cfg-scale').value);
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+            
+            if (!prompt) {
+                showNotification('Please enter a prompt', 'error');
+                return;
+            }
+            
+            const jobData = {
+                prompt: prompt,
+                negative_prompt: negativePrompt,
+                config_name: settingsName,
+                steps: steps,
+                cfg_scale: cfgScale,
+                width: width,
+                height: height
+            };
+            
+            fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(jobData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Image generation started!', 'success');
+                    updateQueueDisplay();
+                } else {
+                    showNotification('Error starting generation: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showNotification('Error starting generation: ' + error, 'error');
+            });
+        }
+
+        // Update queue display
+        function updateQueueDisplay() {
+            fetch('/api/queue/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const queueList = document.getElementById('queue-list');
+                        const jobs = data.status.jobs;
+                        
+                        if (jobs.length === 0) {
+                            queueList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No jobs in queue</p>';
+                        } else {
+                            queueList.innerHTML = jobs.map(job => `
+                                <div class="job-item ${job.status}">
+                                    <div class="job-header">
+                                        <div>
+                                            <strong>Job #${job.id}</strong> - ${job.prompt.substring(0, 50)}${job.prompt.length > 50 ? '...' : ''}
+                                        </div>
+                                        <div class="job-status ${job.status}">${job.status}</div>
+                                    </div>
+                                    <div>Provider: ${job.api_provider}</div>
+                                    <div>Config: ${job.config_name}</div>
+                                    ${job.status === 'running' ? `
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: ${job.progress}%"></div>
+                                        </div>
+                                        <div>Progress: ${job.progress.toFixed(1)}% (Step ${job.current_step || 0}/${job.steps})</div>
+                                    ` : ''}
+                                    ${job.status === 'completed' && job.processed_prompt ? `
+                                        <div style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 5px;">
+                                            <strong>Processed Prompt:</strong> ${job.processed_prompt}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('');
+                        }
+                        
+                        document.getElementById('queue-size').textContent = jobs.length;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating queue:', error);
+                });
+        }
+
+        // Update job progress
+        function updateJobProgress(jobId, progress, currentStep, totalSteps) {
+            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
+            if (jobElement) {
+                const progressFill = jobElement.querySelector('.progress-fill');
+                const progressText = jobElement.querySelector('.progress-text');
+                
+                if (progressFill) {
+                    progressFill.style.width = progress + '%';
+                }
+                if (progressText) {
+                    progressText.textContent = `Progress: ${progress.toFixed(1)}% (Step ${currentStep}/${totalSteps})`;
+                }
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 400px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            `;
+            
+            switch(type) {
+                case 'success':
+                    notification.style.background = '#68d391';
+                    break;
+                case 'error':
+                    notification.style.background = '#fc8181';
+                    break;
+                case 'info':
+                default:
+                    notification.style.background = '#667eea';
+                    break;
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Settings management functions
+        function selectSettings(settingsName) {
+            // Update the settings select dropdown
+            document.getElementById('settings-select').value = settingsName;
+            
+            // Update visual selection
+            document.querySelectorAll('.setting-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.querySelector(`[data-settings="${settingsName}"]`).classList.add('selected');
+            
+            showNotification(`Selected settings: ${settingsName}`, 'success');
+        }
+
+        function previewSettings(settingsName) {
+            fetch(`/api/settings/${settingsName}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const settings = data.settings;
+                        let previewHtml = `
+                            <h3>Settings Preview: ${settingsName}</h3>
+                            <div style="margin-bottom: 15px;">
+                                <strong>Description:</strong> ${settings.description || 'No description available'}
+                            </div>
+                        `;
+                        
+                        if (settings.tags && settings.tags.length > 0) {
+                            previewHtml += `
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Tags:</strong> ${settings.tags.map(tag => `<span class="tag">${tag}</span>`).join(' ')}
+                                </div>
+                            `;
+                        }
+                        
+                        // Show config details
+                        const config = settings.config;
+                        if (config.generation_settings) {
+                            previewHtml += `
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Generation Settings:</strong>
+                                    <ul style="margin-top: 5px; padding-left: 20px;">
+                                        <li>Steps: ${config.generation_settings.steps || 'Default'}</li>
+                                        <li>CFG Scale: ${config.generation_settings.cfg_scale || 'Default'}</li>
+                                        <li>Width: ${config.generation_settings.width || 'Default'}</li>
+                                        <li>Height: ${config.generation_settings.height || 'Default'}</li>
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                        
+                        if (config.model_settings) {
+                            previewHtml += `
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Model Settings:</strong>
+                                    <ul style="margin-top: 5px; padding-left: 20px;">
+                                        <li>Checkpoint: ${config.model_settings.checkpoint || 'Default'}</li>
+                                        <li>Sampler: ${config.model_settings.sampler || 'Default'}</li>
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                        
+                        // Create a simple modal for preview
+                        const modal = document.createElement('div');
+                        modal.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background: rgba(0,0,0,0.5);
+                            z-index: 10000;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        `;
+                        
+                        const modalContent = document.createElement('div');
+                        modalContent.style.cssText = `
+                            background: white;
+                            border-radius: 15px;
+                            padding: 30px;
+                            max-width: 600px;
+                            width: 90%;
+                            max-height: 80vh;
+                            overflow-y: auto;
+                            position: relative;
+                        `;
+                        
+                        modalContent.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
+                                <h3 style="margin: 0;">Settings Preview</h3>
+                                <span onclick="this.parentElement.parentElement.parentElement.remove()" style="font-size: 24px; cursor: pointer; color: #999;">&times;</span>
+                            </div>
+                            ${previewHtml}
+                            <div style="margin-top: 20px; text-align: right;">
+                                <button class="btn btn-primary" onclick="selectSettings('${settingsName}'); this.parentElement.parentElement.parentElement.remove();">
+                                    Use These Settings
+                                </button>
+                            </div>
+                        `;
+                        
+                        modal.appendChild(modalContent);
+                        document.body.appendChild(modal);
+                        
+                        // Close modal when clicking outside
+                        modal.onclick = function(e) {
+                            if (e.target === modal) {
+                                modal.remove();
+                            }
+                        };
+                        
+                    } else {
+                        showNotification('Error loading settings: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error loading settings: ' + error, 'error');
+                });
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('wildcard-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateQueueDisplay();
+            
+            // Update queue every 5 seconds
+            setInterval(updateQueueDisplay, 5000);
+        });
+    </script>
+</body>
+</html>

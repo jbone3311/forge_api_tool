@@ -3,16 +3,22 @@
 ## Installation Summary
 
 ### Python MCP Tools
+- **mcp-playwright**: success (Version: Unknown)
+- **mcp**: success (Version: Unknown)
 
 ### Node.js MCP Tools
+- **@modelcontextprotocol/server-sequential-thinking**: failed (Version: Unknown)
+- **@modelcontextprotocol/server-postgres**: success (Version: Unknown)
+- **@modelcontextprotocol/server-brave-search**: success (Version: Unknown)
+- **@modelcontextprotocol/server-github**: success (Version: Unknown)
 
 ### Configuration
-- **MCP Config**: unknown
+- **MCP Config**: created
 
 ### Documentation
-- **Tools Reference**: Not created
-- **Installation Guide**: Not created
-- **Templates**: 0 created
+- **Tools Reference**: /Users/jim/Library/CloudStorage/Dropbox/code/## Code in Progress ##/Forge-API-Tool/.universal/docs/mcp/mcp-tools-reference.md
+- **Installation Guide**: /Users/jim/Library/CloudStorage/Dropbox/code/## Code in Progress ##/Forge-API-Tool/.universal/docs/mcp/installation-guide.md
+- **Templates**: 3 created
 
 ## Test Results
 
@@ -24,8 +30,8 @@
 
 ### Node.js Tools Test Results
 - **@modelcontextprotocol/server-sequential-thinking**: error
-- **@modelcontextprotocol/server-postgres**: error
-- **@modelcontextprotocol/server-brave-search**: error
+- **@modelcontextprotocol/server-postgres**: warning
+- **@modelcontextprotocol/server-brave-search**: warning
 - **@modelcontextprotocol/server-github**: error
 
 ### Configuration Test Results
@@ -42,7 +48,7 @@
 
 2. **Test Individual Tools**:
    ```bash
-   mcp-playwright --help
+   npx @executeautomation/playwright-mcp-server --help
    npx @modelcontextprotocol/server-sequential-thinking --help
    ```
 

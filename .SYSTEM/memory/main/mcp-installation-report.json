@@ -1,0 +1,25 @@
+{
+  "installation_results": {
+    "python_tools": {},
+    "node_tools": {},
+    "configuration": {},
+    "documentation": {}
+  },
+  "test_results": {
+    "python_tools": {
+      "mcp-playwright": "warning",
+      "mcp": "warning"
+    },
+    "node_tools": {
+      "@modelcontextprotocol/server-sequential-thinking": "error",
+      "@modelcontextprotocol/server-postgres": "error",
+      "@modelcontextprotocol/server-brave-search": "error",
+      "@modelcontextprotocol/server-github": "error"
+    },
+    "configuration": {
+      "mcp.json": "found"
+    },
+    "overall_status": "error"
+  },
+  "timestamp": "1751947552.34716"
+}

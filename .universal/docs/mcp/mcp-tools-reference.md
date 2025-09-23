@@ -3,28 +3,17 @@
 ## Overview
 This document provides a comprehensive reference for all MCP (Model Context Protocol) tools used in the Universal AI Development System.
 
-## Python MCP Tools
+## Node.js MCP Tools
 
-### mcp-playwright
+### @executeautomation/playwright-mcp-server
 **Purpose**: Browser automation and web testing
-**Installation**: `pip install mcp-playwright --user`
-**Usage**: `mcp-playwright --help`
+**Installation**: `npm install -g @executeautomation/playwright-mcp-server`
+**Usage**: `npx @executeautomation/playwright-mcp-server --help`
 **Features**:
 - Web page automation
 - Screenshot capture
 - Form filling
 - Navigation testing
-
-### mcp (Core Framework)
-**Purpose**: Core MCP framework and CLI tools
-**Installation**: `pip install mcp --user`
-**Usage**: `mcp --help`
-**Features**:
-- MCP server management
-- Tool validation
-- Configuration management
-
-## Node.js MCP Tools
 
 ### @modelcontextprotocol/server-sequential-thinking
 **Purpose**: Sequential thinking and problem solving
@@ -85,8 +74,11 @@ Location: `.universal/mcp/mcp.json`
 {
   "mcpServers": {
     "playwright": {
-      "command": "mcp-playwright",
-      "args": []
+      "command": "npx",
+      "args": [
+        "-y",
+        "@executeautomation/playwright-mcp-server"
+      ]
     },
     "sequential-thinking": {
       "command": "npx",
@@ -188,7 +180,7 @@ sudo npm install -g @modelcontextprotocol/server-sequential-thinking
 **Connection errors**
 ```bash
 # Check if tools are running
-mcp-playwright --version
+npx @executeautomation/playwright-mcp-server --version
 npx @modelcontextprotocol/server-sequential-thinking --version
 ```
 
