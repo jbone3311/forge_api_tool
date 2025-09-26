@@ -17,8 +17,9 @@ class APIConfig:
         self.retry_attempts = 3
         
         # API type and configuration
-        self.api_type = "local"  # "local" or "rundiffusion"
+        self.api_type = "local"  # "local", "rundiffusion", "pinokio", or "mock"
         self.rundiffusion_config = None
+        self.pinokio_config = None
         
         # Load configuration
         self._load_from_env()
@@ -42,10 +43,13 @@ class APIConfig:
                     data = json.load(f)
                     self.api_type = data.get('api_type', 'local')
                     self.rundiffusion_config = data.get('rundiffusion_config')
+                    self.pinokio_config = data.get('pinokio_config')
                     
                     # Update base_url based on API type
                     if self.api_type == 'rundiffusion' and self.rundiffusion_config:
                         self.base_url = self.rundiffusion_config.get('url', self.base_url)
+                    elif self.api_type == 'pinokio' and self.pinokio_config:
+                        self.base_url = self.pinokio_config.get('url', self.base_url)
         except Exception as e:
             print(f"Warning: Could not load API preference: {e}")
     

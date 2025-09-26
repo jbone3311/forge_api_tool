@@ -1,0 +1,11 @@
+{
+  "api_type": "pinokio",
+  "pinokio_config": {
+    "url": "https://briefly-charleston-verified-individuals.trycloudflare.com",
+    "email": "m@https://briefly-charleston-verified-individuals.trycloudflare.com",
+    "password": "jbone3311",
+    "description": "PINOKIO instance via Cloudflare tunnel",
+    "timeout": 300,
+    "retry_attempts": 3
+  }
+}

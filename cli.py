@@ -2,76 +2,22 @@
 """
 Forge API Tool - Command Line Interface
 
-A comprehensive CLI for managing image generation, configurations, wildcards,
-and all other features of the Forge API Tool.
+This is now a simple wrapper that uses the new refactored CLI architecture.
 """
 
-import os
 import sys
-import json
-import argparse
-import time
-from datetime import datetime
-from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 # Add the project root to the path
 project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
-from core.config_handler import config_handler
-from core.forge_api import ForgeAPIClient
-from core.batch_runner import BatchRunner
-from core.output_manager import OutputManager
-from core.centralized_logger import logger
-from core.wildcard_manager import WildcardManagerFactory
-from core.prompt_builder import PromptBuilder
-from core.image_analyzer import ImageAnalyzer
-from core.job_queue import JobQueue
-from core.api_config import api_config
+# Import and run the new CLI
+from cli.main import main
 
+if __name__ == '__main__':
+    sys.exit(main())
 
-class ForgeAPICLI:
-    """Command Line Interface for Forge API Tool."""
-    
-    def __init__(self):
-        """Initialize the CLI."""
-        self.project_root = Path(__file__).resolve().parent
-        self.forge_client = None
-        self.batch_runner = None
-        self.output_manager = OutputManager()
-        self.wildcard_factory = WildcardManagerFactory()
-        self.prompt_builder = PromptBuilder(self.wildcard_factory)
-        self.image_analyzer = ImageAnalyzer()
-        self.job_queue = JobQueue()
-        
-        # Initialize API client if configuration exists
-        self._initialize_api_client()
-    
-    def _initialize_api_client(self):
-        """Initialize the API client if configuration is available."""
-        try:
-            if api_config.base_url:
-                self.forge_client = ForgeAPIClient()
-                if self.batch_runner:
-                    self.batch_runner.set_forge_client(self.forge_client)
-        except Exception as e:
-            logger.warning(f"Could not initialize API client: {e}")
-    
-    def _ensure_api_client(self):
-        """Ensure API client is initialized, re-initializing if needed."""
-        if self.forge_client is None and api_config.base_url:
-            self._initialize_api_client()
-        return self.forge_client is not None
-    
-    def _can_connect(self) -> bool:
-        """Check if API connection is available (silent)."""
-        if not self.forge_client:
-            return False
-        try:
-            return bool(self.forge_client.test_connection(silent=True))
-        except Exception:
-            return False
     
     def test_connection(self) -> bool:
         """Test connection to the API."""
