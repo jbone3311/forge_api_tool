@@ -154,6 +154,46 @@ def cancel_job(job_id):
         return jsonify({'error': str(e)}), 500
 
 
+@main_bp.route('/api/settings/provider', methods=['POST'])
+def set_api_provider():
+    """Set the API provider."""
+    try:
+        from flask import g
+        app_context = g.app_context
+        
+        data = request.get_json()
+        provider = data.get('provider', 'mock')
+        output_folder = data.get('output_folder', 'outputs')
+        
+        # Switch API provider
+        app_context.switch_api_provider(provider)
+        
+        # Update output folder if needed
+        output_manager = app_context.get_output_manager()
+        if output_folder and output_folder != output_manager.base_output_dir:
+            output_manager.base_output_dir = output_folder
+            logger.log_app_event("output_folder_changed", {
+                "new_folder": output_folder
+            })
+        
+        logger.info(f"API provider switched to: {provider}")
+        logger.info(f"Output folder set to: {output_folder}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Provider switched to {provider}',
+            'provider': provider,
+            'output_folder': output_folder
+        })
+        
+    except Exception as e:
+        logger.error(f"Error setting API provider: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @main_bp.route('/api/health')
 def health_check():
     """Health check endpoint."""

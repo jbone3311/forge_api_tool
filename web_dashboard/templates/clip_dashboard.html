@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLIP Processor - Forge API Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+
+        .wildcards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .wildcard-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .wildcard-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .wildcard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .wildcard-title {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .wildcard-mode {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .wildcard-stats {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .wildcard-preview {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #4a5568;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.success {
+            background: #48bb78;
+        }
+
+        .notification.error {
+            background: #f56565;
+        }
+
+        .notification.info {
+            background: #4299e1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .progress-bar {
+            height: 30px;
+            background: #e2e8f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Dashboard</a>
+
+        <div class="header">
+            <h1>🎨 CLIP Image Processor</h1>
+            <p>Convert images to wildcard files using CLIP Interrogator</p>
+            
+            <div class="stats-bar">
+                <div class="stat-item">
+                    📁 Themes: <strong>{{ stats.themes|length if stats.themes else 0 }}</strong>
+                </div>
+                <div class="stat-item">
+                    📄 Wildcard Files: <strong>{{ stats.total_files or 0 }}</strong>
+                </div>
+                <div class="stat-item">
+                    🏷️ Total Tags: <strong>{{ stats.total_tags or 0 }}</strong>
+                </div>
+                <div class="stat-item" id="connection-status">
+                    🔌 Status: <strong>Not tested</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection Test Panel -->
+        <div class="panel">
+            <h2>🔍 API Connection</h2>
+            <p>Test connection to Automatic1111 and CLIP Interrogator extension</p>
+            <button class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+            <div id="connection-result" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- Process Images Panel -->
+        <div class="panel">
+            <h2>📸 Process Images</h2>
+            <p>Select a directory containing images or subdirectories (each subdir becomes a theme)</p>
+            
+            <form id="process-form">
+                <div class="form-group">
+                    <label for="input-dir">Input Directory</label>
+                    <input type="text" id="input-dir" class="form-control" 
+                           placeholder="/path/to/images" required>
+                    <small style="color: #718096; display: block; margin-top: 5px;">
+                        📁 Tip: Use subdirectories like "dogs/", "cars/" to create themed wildcards
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label>CLIP Modes</label>
+                    <div class="checkbox-group">
+                        {% for mode in modes %}
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="modes" value="{{ mode }}" checked>
+                            <span>{{ mode|title }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="theme-name">Theme Name (Optional)</label>
+                    <input type="text" id="theme-name" class="form-control" 
+                           placeholder="Leave empty to use directory name">
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="recursive" checked>
+                        <span>Process subdirectories as separate themes</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary">🚀 Process Images</button>
+            </form>
+
+            <div id="processing-status" style="display: none; margin-top: 20px;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%;">0%</div>
+                </div>
+                <p id="progress-text" style="margin-top: 10px; color: #4a5568;"></p>
+            </div>
+        </div>
+
+        <!-- Generated Wildcards Panel -->
+        <div class="panel">
+            <h2>📋 Generated Wildcard Files</h2>
+            <div class="wildcards-grid">
+                {% if wildcards %}
+                    {% for wildcard in wildcards %}
+                    <div class="wildcard-card">
+                        <div class="wildcard-header">
+                            <span class="wildcard-title">{{ wildcard.theme }}</span>
+                            <span class="wildcard-mode">{{ wildcard.mode }}</span>
+                        </div>
+                        <div class="wildcard-stats">
+                            📝 {{ wildcard.tag_count }} tags
+                        </div>
+                        <div class="wildcard-preview">
+                            {% for tag in wildcard.preview %}
+                            {{ tag }}<br>
+                            {% endfor %}
+                            {% if wildcard.tag_count > 10 %}
+                            <em>...and {{ wildcard.tag_count - 10 }} more</em>
+                            {% endif %}
+                        </div>
+                        <button class="btn btn-secondary" style="margin-top: 10px; width: 100%;" 
+                                onclick="downloadWildcard('{{ wildcard.filename }}')">
+                            ⬇️ Download
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: #718096; grid-column: 1 / -1;">
+                        No wildcard files generated yet. Process some images to get started!
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        async function testConnection() {
+            try {
+                const response = await fetch('/clip/test-connection', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                const statusEl = document.getElementById('connection-status');
+                const resultEl = document.getElementById('connection-result');
+
+                if (result.connected) {
+                    statusEl.innerHTML = '🔌 Status: <strong style="color: #48bb78;">Connected</strong>';
+                    resultEl.innerHTML = `
+                        <div style="padding: 10px; background: #c6f6d5; border-radius: 8px; color: #22543d;">
+                            ✅ API Connected<br>
+                            ${result.extension_installed ? '✅ CLIP Interrogator Installed' : '❌ CLIP Interrogator Not Found'}
+                            ${result.message ? '<br>' + result.message : ''}
+                        </div>
+                    `;
+                    showNotification('API connection successful!', 'success');
+                } else {
+                    statusEl.innerHTML = '🔌 Status: <strong style="color: #f56565;">Disconnected</strong>';
+                    resultEl.innerHTML = `
+                        <div style="padding: 10px; background: #fed7d7; border-radius: 8px; color: #742a2a;">
+                            ❌ ${result.error || 'Connection failed'}
+                        </div>
+                    `;
+                    showNotification('Connection failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Error testing connection: ' + error, 'error');
+            }
+        }
+
+        document.getElementById('process-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const inputDir = document.getElementById('input-dir').value;
+            const themeName = document.getElementById('theme-name').value;
+            const recursive = document.getElementById('recursive').checked;
+            const modes = Array.from(document.querySelectorAll('input[name="modes"]:checked'))
+                              .map(cb => cb.value);
+
+            if (modes.length === 0) {
+                showNotification('Please select at least one mode', 'error');
+                return;
+            }
+
+            // Show processing UI
+            document.getElementById('processing-status').style.display = 'block';
+            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('progress-fill').textContent = '0%';
+            document.getElementById('progress-text').textContent = 'Starting...';
+
+            try {
+                const response = await fetch('/clip/process', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        input_dir: inputDir,
+                        modes: modes,
+                        theme_name: themeName || null,
+                        recursive: recursive
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('progress-fill').style.width = '100%';
+                    document.getElementById('progress-fill').textContent = '100%';
+                    document.getElementById('progress-text').textContent = 
+                        `✅ Complete! Processed ${result.total_images} images, generated ${result.total_tags} tags`;
+                    
+                    showNotification(`Successfully processed ${result.themes_processed.length} themes!`, 'success');
+                    
+                    // Reload page after 2 seconds to show new wildcards
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showNotification('Processing failed: ' + result.error, 'error');
+                    document.getElementById('processing-status').style.display = 'none';
+                }
+            } catch (error) {
+                showNotification('Error processing images: ' + error, 'error');
+                document.getElementById('processing-status').style.display = 'none';
+            }
+        });
+
+        function downloadWildcard(filename) {
+            window.location.href = `/clip/wildcards/${filename}`;
+        }
+    </script>
+</body>
+</html>

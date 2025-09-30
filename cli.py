@@ -465,6 +465,56 @@ if __name__ == '__main__':
                 "skipped_files": [],
                 "verification_errors": []
             }
+    
+    def lint_wildcards(self, wildcards_dir: str = "wildcards", strict_mode: bool = False, 
+                      auto_fix: bool = False, verbose: bool = False, json_output: bool = False) -> None:
+        """Run comprehensive wildcard linting and analysis."""
+        try:
+            # Import the wildcard linter
+            from core.wildcard_linter import WildcardLinter, print_lint_results
+            
+            print("🔍 Running comprehensive wildcard linter...")
+            print()
+            
+            # Use project-relative path
+            if not os.path.isabs(wildcards_dir):
+                wildcards_dir = str(self.project_root / wildcards_dir)
+            
+            # Create linter instance
+            linter = WildcardLinter(wildcards_dir, strict_mode)
+            
+            # Run linting
+            results = linter.lint_all(dry_run=not auto_fix)
+            
+            # Auto-fix if requested
+            if auto_fix and results.get('success'):
+                print("\n🔧 Applying automatic fixes...")
+                fix_results = linter.fix_issues()
+                print(f"✅ Fixed {fix_results['fixed_count']} issues\n")
+                
+                # Re-run linting to show updated results
+                results = linter.lint_all(dry_run=True)
+            
+            # Output results
+            if json_output:
+                import json
+                print(json.dumps(results, indent=2))
+            else:
+                print_lint_results(results, verbose)
+            
+            # Exit with appropriate code
+            summary = results.get('summary', {})
+            error_count = summary.get('errors', 0)
+            warning_count = summary.get('warnings', 0)
+            
+            if error_count > 0 or (strict_mode and warning_count > 0):
+                sys.exit(1)
+                
+        except Exception as e:
+            print(f"❌ Error running wildcard linter: {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
 
 
 def main():
@@ -485,6 +535,10 @@ Examples:
   forge-cli wildcards preview my_config  # Preview wildcard resolution
   forge-cli wildcards fix-encoding --dry-run  # Check wildcard encoding issues
   forge-cli wildcards fix-encoding    # Fix wildcard encoding issues
+  forge-cli wildcards lint            # Comprehensive wildcard linting
+  forge-cli wildcards lint --verbose  # Show detailed frequency reports
+  forge-cli wildcards lint --fix      # Auto-fix issues where possible
+  forge-cli wildcards lint --strict   # Treat warnings as errors
         """
     )
     
@@ -548,6 +602,13 @@ Examples:
     fix_parser.add_argument('--wildcards-dir', default='wildcards', help='Wildcards directory (default: wildcards)')
     fix_parser.add_argument('--dry-run', action='store_true', help='Check files without making changes')
     
+    lint_parser = wildcards_subparsers.add_parser('lint', help='Comprehensive wildcard linting and analysis')
+    lint_parser.add_argument('--wildcards-dir', default='wildcards', help='Wildcards directory (default: wildcards)')
+    lint_parser.add_argument('--strict', action='store_true', help='Treat warnings as errors')
+    lint_parser.add_argument('--fix', action='store_true', help='Automatically fix issues where possible')
+    lint_parser.add_argument('--verbose', action='store_true', help='Show detailed frequency reports')
+    lint_parser.add_argument('--json', action='store_true', help='Output results as JSON')
+    
     # Test command
     test_parser = subparsers.add_parser('test', help='Test API connection')
     
@@ -610,6 +671,8 @@ Examples:
                 cli.preview_wildcards(args.config_name, args.count)
             elif args.wildcards_command == 'fix-encoding':
                 cli.fix_wildcard_encoding(args.wildcards_dir, args.dry_run)
+            elif args.wildcards_command == 'lint':
+                cli.lint_wildcards(args.wildcards_dir, args.strict, args.fix, args.verbose, args.json)
             else:
                 print("❌ Invalid wildcards subcommand")
                 sys.exit(1)

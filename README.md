@@ -206,6 +206,42 @@ Connect to external image generation APIs:
 4. Click "Generate" to start the process
 5. Monitor progress in real-time
 
+### API Provider Selection & Testing Mode
+The application supports seamless switching between **Mock** (testing) and **Real** API providers:
+
+#### **Using Mock Mode (Recommended for Testing)**
+1. Click on the **🔌 API** status in the header
+2. Select **Mock (Testing Mode)** from the dropdown
+3. Test your prompts, wildcards, and settings **without** calling real APIs
+4. Perfect for:
+   - 🧪 Testing prompt templates before production
+   - 🎨 Validating wildcard combinations
+   - ⚙️ Verifying configuration settings
+   - 💰 Avoiding API costs during development
+
+#### **Switching to Real APIs**
+1. Click on the **🔌 API** status in the header
+2. Choose your API provider:
+   - **Local**: Automatic1111/Forge running locally
+   - **RunDiffusion**: Cloud-based service
+   - **ComfyUI**: Node-based interface
+   - **Automatic1111 WebUI**: Popular web interface
+3. Configure output folder and additional settings
+4. Click **Save Settings** to apply changes
+
+#### **Why This Approach Works**
+✅ **Same Code Path**: Mock and real APIs use identical interfaces  
+✅ **Safe Testing**: Validate everything before hitting real APIs  
+✅ **Instant Switching**: Toggle between providers with one click  
+✅ **Cost Control**: Test extensively in mock mode before production  
+✅ **Debug Friendly**: See exactly what data would be sent to APIs  
+
+#### **Configuration Options**
+- **Output Folder**: Customize where images are saved (default: `outputs/`)
+- **Auto-save Metadata**: Embed generation parameters in PNG files
+- **Show API Logs**: Display request/response logs for debugging
+- **Verify Before Send**: Show confirmation dialog before API calls
+
 ## 🧪 Testing
 
 ### Comprehensive Test Suite
@@ -258,9 +294,264 @@ The application includes a comprehensive wildcard management system for dynamic 
 - **File-based Wildcards**: Each wildcard is stored in `wildcards/wildcard_name.txt`
 - **Recursive Scanning**: Automatically finds all wildcard files in subdirectories
 - **Encoding Support**: Handles UTF-8, UTF-16, and UTF-16-BE encodings
+- **Advanced Linting**: Comprehensive validation and analysis (see below)
+
+### Wildcard Linter & Analyzer 🆕
+**Enterprise-grade wildcard validation with deep analysis capabilities:**
+
+#### Features
+- 🔍 **Empty Wildcard Detection**: Identifies files with no content or only whitespace
+- 🔄 **Cycle Detection**: Finds circular references between wildcards (A → B → A)
+- ⚖️ **Weight Sum Validation**: Verifies weighted wildcards sum to 1.0 for proper probability
+- 📝 **Encoding Validation**: Detects UTF-8/UTF-16/BOM issues, mixed line endings, Windows CRLF
+- 📊 **Frequency Analysis**: Per-token frequency reports with diversity metrics
+- 🔧 **Auto-Fix Capability**: Automatically fixes encoding and formatting issues
+- 💯 **Health Score**: Overall wildcard system health (0-100)
+- 📈 **Dry-Run Mode**: Preview changes without applying them
+
+#### CLI Usage
+```bash
+# Basic linting
+python cli.py wildcards lint
+
+# Verbose output with frequency reports
+python cli.py wildcards lint --verbose
+
+# Auto-fix issues
+python cli.py wildcards lint --fix
+
+# Strict mode (treat warnings as errors)
+python cli.py wildcards lint --strict
+
+# JSON output for automation
+python cli.py wildcards lint --json
+
+# Custom directory
+python cli.py wildcards lint --wildcards-dir custom_wildcards
+```
+
+#### What It Detects
+
+**Errors (Critical):**
+- ❌ Empty wildcard files
+- ❌ Non-UTF-8 encoding (UTF-16, etc.)
+- ❌ Circular reference cycles
+- ❌ Weight sums far from 1.0 (>0.1 difference)
+
+**Warnings:**
+- ⚠️ UTF-8 BOM markers (unnecessary)
+- ⚠️ Mixed line endings (CRLF + LF)
+- ⚠️ Duplicate items
+- ⚠️ Weight sums slightly off (~0.9-1.1)
+
+**Info:**
+- ℹ️ Windows line endings (CRLF)
+- ℹ️ Low diversity ratios
+
+#### Example Output
+```
+🔍 WILDCARD LINTER RESULTS
+================================================================================
+
+💚 Health Score: 87/100
+📁 Files Analyzed: 45
+🚨 Total Issues: 8
+   ❌ Errors: 2
+   ⚠️  Warnings: 5
+   ℹ️  Info: 1
+
+📊 Issues by Category:
+   • encoding: 3
+   • format: 4
+   • weight: 1
+
+📈 Token Frequency Reports:
+   📄 ACTIONS
+      Total tokens: 156
+      Unique tokens: 142
+      Diversity: 91.03%
+      Most common:
+         • walking: 3x
+         • running: 2x
+         • jumping: 2x
+```
+
+#### Integration with Fix-Encoding
+The linter extends the original encoding fix utility:
+```bash
+# Old: Just fix encoding
+python cli.py wildcards fix-encoding
+
+# New: Comprehensive linting + analysis
+python cli.py wildcards lint --fix
+```
+
+## 🎨 CLIP Image to Wildcard Processor
+
+### Overview
+Convert inspiration images into wildcard files automatically using CLIP Interrogator. Perfect for building wildcard collections from reference images!
+
+### Prerequisites
+1. **Automatic1111 WebUI** running (default: `http://127.0.0.1:7860`)
+2. **CLIP Interrogator Extension** installed:
+   ```bash
+   cd stable-diffusion-webui/extensions
+   git clone https://github.com/pharmapsychotic/clip-interrogator-ext
+   ```
+3. Restart Automatic1111 WebUI
+
+### Quick Start
+
+#### Web Dashboard
+1. Navigate to **CLIP Processor** page: `http://localhost:8081/clip`
+2. Test API connection
+3. Select input directory with images
+4. Choose interrogation modes
+5. Process images
+6. Download generated wildcard files
+
+#### CLI Usage
+```bash
+# Process a directory with subdirectories as themes
+python -m core.clip_processor /path/to/images
+
+# Single theme
+python -m core.clip_processor /path/to/dog_images --theme dogs
+
+# Specific modes only
+python -m core.clip_processor /path/to/images --modes fast simple
+
+# Test connection
+python -m core.clip_processor --test
+```
+
+### Interrogation Modes
+
+| Mode | Speed | Detail Level | Best For |
+|------|-------|--------------|----------|
+| **fast** | ⚡ Fastest | Basic | Quick previews, large batches |
+| **simple** | 🚀 Fast | Moderate | General use, balanced |
+| **detailed** | 🐌 Slow | High | Quality wildcards, styles |
+| **best** | 🐌 Slowest | Highest | Maximum detail + tags |
+
+### Directory Structure
+
+Organize images in subdirectories for automatic theme detection:
+
+```
+inspiration/
+├── dogs/
+│   ├── golden_retriever1.jpg
+│   ├── labrador1.jpg
+│   └── husky1.jpg
+├── cars/
+│   ├── sports_car1.jpg
+│   └── vintage_car1.jpg
+└── landscapes/
+    ├── mountain1.jpg
+    └── sunset1.jpg
+```
+
+**Generated Output:**
+```
+wildcards/clip_generated/
+├── dogs_fast.txt
+├── dogs_simple.txt
+├── dogs_detailed.txt
+├── dogs_best.txt
+├── cars_fast.txt
+├── cars_simple.txt
+├── cars_detailed.txt
+└── cars_best.txt
+```
+
+### Example Workflow
+
+1. **Collect Inspiration Images**
+   - Browse Pinterest/ArtStation for reference images
+   - Download to themed folders (e.g., `inspiration/cyberpunk/`)
+
+2. **Process Through CLIP**
+   ```bash
+   python -m core.clip_processor inspiration/ --modes detailed best
+   ```
+
+3. **Review Generated Wildcards**
+   - Check `wildcards/clip_generated/cyberpunk_detailed.txt`
+   - Contains tags like: `neon lights`, `futuristic cityscape`, `cyberpunk aesthetic`
+
+4. **Use in Prompts**
+   ```
+   __CYBERPUNK_DETAILED__ character in urban setting
+   ```
+
+### Features
+
+- ✅ **Batch Processing**: Process hundreds of images automatically
+- ✅ **Theme Detection**: Subdirectories become wildcard themes
+- ✅ **Mode Selection**: Choose detail level per workflow
+- ✅ **Deduplication**: Removes duplicate tags across images
+- ✅ **Progress Tracking**: Real-time progress in web UI
+- ✅ **Error Handling**: Graceful failures, continues on errors
+- ✅ **Image Resizing**: Automatically resizes large images
+
+### API Response Format
+
+CLIP Interrogator returns prompts like:
+```
+"a golden retriever playing fetch in a sunny park, detailed fur, vibrant colors, outdoor scene"
+```
+
+The processor:
+1. Splits by commas
+2. Cleans tags (removes weights, parens)
+3. Deduplicates across all images in theme
+4. Saves to `theme_mode.txt`
+
+### Performance Tips
+
+- **GPU Recommended**: CLIP models are faster on GPU
+- **Image Size**: Resize large images (>2MB) to speed up processing
+- **Batch Size**: Process 10-20 images at a time for responsiveness
+- **Mode Selection**: Use `fast` for previews, `detailed`/`best` for final
+
+### Integration with Existing Wildcards
+
+Generated wildcards integrate seamlessly:
+
+```python
+# In your prompts
+prompt = "a __CLIP_DOGS_DETAILED__ in __ARTISTIC__ style"
+
+# Expands to something like:
+# "a golden retriever with playful expression in oil painting style"
+```
+
+### Troubleshooting
+
+**"CLIP Interrogator extension not found"**
+- Ensure extension is installed in `extensions/` folder
+- Restart Automatic1111 WebUI
+- Check Settings > CLIP Interrogator for configuration
+
+**"API connection failed"**
+- Verify Automatic1111 is running
+- Check API URL in settings (default: `http://127.0.0.1:7860`)
+- Test with curl: `curl http://127.0.0.1:7860/sdapi/v1/progress`
+
+**"Processing is slow"**
+- Use GPU instead of CPU
+- Reduce image size
+- Use `fast` or `simple` modes
+- Process fewer images per batch
+
+**"Generated wildcards have few tags"**
+- Images may be too abstract/simple
+- Try `detailed` or `best` modes
+- Check image quality (low res = poor results)
 
 ### Wildcard Encoding Fix Utility
-Built-in utility to fix encoding issues in wildcard files:
+Built-in utility to fix encoding issues in wildcard files (now part of linter):
 
 #### CLI Usage
 ```bash
@@ -374,6 +665,31 @@ The application uses a centralized logging system with structured output:
 - **Maintenance Operations**: Wildcard encoding fixes, cache clearing, etc.
 
 ## 🔄 Recent Updates
+
+### Version 2.4 - CLIP Image to Wildcard Processor
+- **CLIP Interrogator Integration**: Convert images to wildcard files using CLIP + BLIP models
+- **Batch Image Processing**: Process entire directories with automatic theme detection
+- **Multiple Interrogation Modes**: Fast, simple, detailed, and best modes for varying detail levels
+- **Theme-Based Output**: Subdirectories automatically become themed wildcards (e.g., `dogs_fast.txt`)
+- **Web Dashboard**: Beautiful UI for image processing with progress tracking
+- **API Integration**: Seamless connection to Automatic1111 CLIP Interrogator extension
+- **Auto-Deduplication**: Removes duplicate tags across images for cleaner wildcards
+
+### Version 2.3 - Wildcard Linter & Advanced Analysis
+- **Comprehensive Wildcard Linter**: Enterprise-grade validation with cycle detection, weight validation, and encoding checks
+- **Token Frequency Analysis**: Per-wildcard frequency reports with diversity metrics
+- **Auto-Fix Capability**: Automatically fix encoding, line endings, and formatting issues
+- **Health Scoring**: Overall wildcard system health score (0-100)
+- **Dry-Run Mode**: Preview changes before applying
+- **CLI Integration**: New `wildcards lint` command with `--fix`, `--strict`, `--verbose`, and `--json` flags
+
+### Version 2.2 - API Provider Management & Testing Mode
+- **API Provider Selection UI**: Easy switching between Mock and Real APIs via dashboard
+- **Testing Mode**: Test prompts and settings without calling real APIs (saves money!)
+- **Unified API Interface**: Same code path for mock and real providers using Strategy Pattern
+- **Output Folder Configuration**: Customize where generated images are saved
+- **Enhanced Settings**: Auto-save metadata, API logs, and verification options
+- **Smart Architecture**: Perfect for testing before production deployment
 
 ### Version 2.1 - Wildcard Management & Maintenance
 - **Wildcard Encoding Fix**: Comprehensive utility to fix encoding issues in wildcard files

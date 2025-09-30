@@ -12,6 +12,170 @@ from core.centralized_logger import logger
 generation_bp = Blueprint('generation', __name__)
 
 
+@generation_bp.route('/api/wildcards/process', methods=['POST'])
+def process_wildcards():
+    """Process wildcards in a prompt."""
+    try:
+        from flask import g
+        app_context = g.app_context
+        
+        # Get request data
+        data = request.get_json()
+        if not data or 'prompt' not in data:
+            return jsonify({'error': 'Prompt is required'}), 400
+        
+        prompt = data['prompt']
+        iterations = data.get('iterations', 1)
+        
+        # Get prompt builder
+        prompt_builder = app_context.get_prompt_builder()
+        if not prompt_builder:
+            return jsonify({'error': 'Prompt builder not available'}), 500
+        
+        # Process wildcards
+        processed_prompts = []
+        for i in range(iterations):
+            processed_prompt = prompt_builder.build_prompt(prompt)
+            processed_prompts.append({
+                'iteration': i + 1,
+                'prompt': processed_prompt,
+                'wildcards_used': prompt_builder.get_last_wildcards_used()
+            })
+        
+        return jsonify({
+            'success': True,
+            'original_prompt': prompt,
+            'iterations': iterations,
+            'processed_prompts': processed_prompts
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing wildcards: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@generation_bp.route('/api/wildcards/preview', methods=['POST'])
+def preview_wildcards():
+    """Preview wildcard expansion for a prompt."""
+    try:
+        from flask import g
+        import re
+        app_context = g.app_context
+        
+        # Get request data
+        data = request.get_json()
+        if not data or 'prompt' not in data:
+            return jsonify({'error': 'Prompt is required'}), 400
+        
+        prompt = data['prompt']
+        max_previews = data.get('max_previews', 3)
+        
+        # Get prompt builder
+        prompt_builder = app_context.get_prompt_builder()
+        if not prompt_builder:
+            return jsonify({'error': 'Prompt builder not available'}), 500
+        
+        # Find wildcards in the prompt
+        wildcard_pattern = r'\{([^}]+)\}'
+        wildcards_found = re.findall(wildcard_pattern, prompt)
+        
+        # Get wildcard info
+        wildcard_info = {}
+        for wildcard_name in wildcards_found:
+            try:
+                items = prompt_builder.wildcard_manager.get_wildcard_items(wildcard_name)
+                wildcard_info[wildcard_name] = {
+                    'available': True,
+                    'item_count': len(items),
+                    'sample_items': items[:5]  # Show first 5 items as examples
+                }
+            except Exception:
+                wildcard_info[wildcard_name] = {
+                    'available': False,
+                    'item_count': 0,
+                    'sample_items': []
+                }
+        
+        # Generate preview expansions
+        previews = []
+        for i in range(min(max_previews, 5)):
+            try:
+                preview_prompt = prompt_builder.build_prompt(prompt)
+                previews.append({
+                    'preview_id': i + 1,
+                    'prompt': preview_prompt,
+                    'wildcards_used': prompt_builder.get_last_wildcards_used()
+                })
+            except Exception as e:
+                logger.warning(f"Error generating preview {i + 1}: {e}")
+                break
+        
+        return jsonify({
+            'success': True,
+            'original_prompt': prompt,
+            'wildcards_found': wildcards_found,
+            'wildcard_info': wildcard_info,
+            'previews': previews
+        })
+        
+    except Exception as e:
+        logger.error(f"Error previewing wildcards: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@generation_bp.route('/api/wildcards/suggest', methods=['GET'])
+def suggest_wildcards():
+    """Get wildcard suggestions for autocomplete."""
+    try:
+        from flask import g, request
+        app_context = g.app_context
+        
+        query = request.args.get('q', '').lower()
+        limit = int(request.args.get('limit', 10))
+        
+        # Get prompt builder
+        prompt_builder = app_context.get_prompt_builder()
+        if not prompt_builder:
+            return jsonify({'error': 'Prompt builder not available'}), 500
+        
+        # Get all available wildcards
+        all_wildcards = prompt_builder.wildcard_manager.get_available_wildcards()
+        
+        # Filter and rank suggestions
+        suggestions = []
+        for wildcard_name in all_wildcards:
+            if query in wildcard_name.lower():
+                try:
+                    items = prompt_builder.wildcard_manager.get_wildcard_items(wildcard_name)
+                    suggestions.append({
+                        'name': wildcard_name,
+                        'item_count': len(items),
+                        'sample_items': items[:3]  # Show first 3 items
+                    })
+                except Exception:
+                    suggestions.append({
+                        'name': wildcard_name,
+                        'item_count': 0,
+                        'sample_items': []
+                    })
+        
+        # Sort by relevance (exact matches first, then by length)
+        suggestions.sort(key=lambda x: (
+            not x['name'].lower().startswith(query),  # Exact matches first
+            len(x['name'])  # Shorter names first
+        ))
+        
+        return jsonify({
+            'suggestions': suggestions[:limit],
+            'query': query,
+            'total_found': len(suggestions)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting wildcard suggestions: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @generation_bp.route('/api/generate', methods=['POST'])
 def generate_image():
     """Generate an image."""

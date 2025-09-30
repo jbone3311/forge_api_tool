@@ -20,6 +20,8 @@ from services.wildcard_service import WildcardService
 from routes.main_routes import main_bp
 from routes.generation_routes import generation_bp, register_socketio_events
 from routes.config_routes import config_bp
+from routes.batch_routes import batch_bp
+from routes.clip_routes import clip_bp
 from core.centralized_logger import logger
 
 
@@ -62,6 +64,8 @@ def create_app(project_root: str = None) -> tuple[Flask, SocketIO]:
     app.register_blueprint(main_bp)
     app.register_blueprint(generation_bp)
     app.register_blueprint(config_bp)
+    app.register_blueprint(batch_bp)
+    app.register_blueprint(clip_bp)
     
     # Register Socket.IO events
     register_socketio_events(socketio, app_context)

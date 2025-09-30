@@ -251,7 +251,7 @@ class _WildcardFileManager:
         self.usage_stats = self._load_usage_stats()
 
     def _load_items(self) -> List[str]:
-        """Load wildcard items from file."""
+        """Load wildcard items from file with smart encoding handling."""
         if not os.path.exists(self.file_path):
             return []
         
@@ -259,6 +259,35 @@ class _WildcardFileManager:
             with open(self.file_path, 'r', encoding='utf-8') as f:
                 items = [line.strip() for line in f.readlines() if line.strip()]
             return items
+        except UnicodeDecodeError:
+            # Try alternative encodings and auto-fix
+            for encoding in ['latin-1', 'cp1252', 'iso-8859-1']:
+                try:
+                    with open(self.file_path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                    
+                    # Auto-fix: save with proper UTF-8 encoding
+                    try:
+                        with open(self.file_path, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                        print(f"Auto-fixed encoding for {self.file_path}")
+                    except Exception as fix_error:
+                        print(f"Could not auto-fix encoding for {self.file_path}: {fix_error}")
+                    
+                    items = [line.strip() for line in content.splitlines() if line.strip()]
+                    return items
+                except UnicodeDecodeError:
+                    continue
+            
+            # Last resort: use error replacement
+            try:
+                with open(self.file_path, 'r', encoding='utf-8', errors='replace') as f:
+                    items = [line.strip() for line in f.readlines() if line.strip()]
+                print(f"Loaded {self.file_path} with character replacement")
+                return items
+            except Exception:
+                print(f"Could not load wildcard file {self.file_path} with any method")
+                return []
         except Exception as e:
             print(f"Error loading wildcard file {self.file_path}: {e}")
             return []

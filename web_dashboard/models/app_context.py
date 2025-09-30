@@ -93,6 +93,10 @@ class AppContext:
         """Get a component by name."""
         return self._components.get(name)
     
+    def set_component(self, name: str, component: Any):
+        """Set a component by name."""
+        self._components[name] = component
+    
     def get_config_handler(self) -> UnifiedConfigHandler:
         """Get the configuration handler."""
         return self._components['config_handler']
